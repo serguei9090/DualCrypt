@@ -1,20 +1,40 @@
-use denc_core::sss::SecretShare;
+use denc_core::sss::{KeyFilePayload, SecretShare};
 use denc_core::ExportedKeyShare;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use zip::write::SimpleFileOptions;
 use zip::ZipWriter;
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct KeyFileParseResponse {
+    pub share: Option<SecretShare>,
+    pub is_pin_protected: bool,
+    pub custodian_id: u8,
+}
+
 #[tauri::command]
-pub fn save_keyfile(file_path: String, share: SecretShare) -> Result<(), String> {
-    let json = serde_json::to_string_pretty(&share).map_err(|e| e.to_string())?;
-    
+pub fn save_keyfile(
+    file_path: String,
+    share: SecretShare,
+    pin: Option<String>,
+) -> Result<(), String> {
     if let Some(parent) = Path::new(&file_path).parent() {
         if !parent.as_os_str().is_empty() {
             let _ = std::fs::create_dir_all(parent);
         }
     }
+
+    let json = if let Some(pin_str) = pin.as_deref().filter(|p| !p.trim().is_empty()) {
+        let enc_share = share
+            .encrypt_with_pin(pin_str)
+            .map_err(|e| format!("Failed to encrypt share with PIN: {e}"))?;
+        serde_json::to_string_pretty(&enc_share).map_err(|e| e.to_string())?
+    } else {
+        serde_json::to_string_pretty(&share).map_err(|e| e.to_string())?
+    };
 
     std::fs::write(&file_path, json).map_err(|e| format!("Failed to save key file to '{file_path}': {e}"))?;
     Ok(())
@@ -24,6 +44,7 @@ pub fn save_keyfile(file_path: String, share: SecretShare) -> Result<(), String>
 pub fn save_all_keyfiles_zip(
     file_path: String,
     shares: Vec<ExportedKeyShare>,
+    pins: Option<HashMap<u8, String>>,
 ) -> Result<(), String> {
     if let Some(parent) = Path::new(&file_path).parent() {
         if !parent.as_os_str().is_empty() {
@@ -37,6 +58,9 @@ pub fn save_all_keyfiles_zip(
     let options = SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Deflated);
 
+    let empty_pins = HashMap::new();
+    let pins_map = pins.as_ref().unwrap_or(&empty_pins);
+
     for s in &shares {
         let sanitized_label: String = s
             .label
@@ -48,8 +72,17 @@ pub fn save_all_keyfiles_zip(
         zip.start_file(&filename, options)
             .map_err(|e| format!("Failed to add entry '{filename}' to zip: {e}"))?;
 
-        let json = serde_json::to_string_pretty(&s.share)
-            .map_err(|e| format!("Serialization error for {filename}: {e}"))?;
+        let json = if let Some(pin) = pins_map.get(&s.custodian_id).filter(|p| !p.trim().is_empty()) {
+            let enc_share = s
+                .share
+                .encrypt_with_pin(pin)
+                .map_err(|e| format!("Failed to encrypt share with PIN: {e}"))?;
+            serde_json::to_string_pretty(&enc_share)
+                .map_err(|e| format!("Serialization error for {filename}: {e}"))?
+        } else {
+            serde_json::to_string_pretty(&s.share)
+                .map_err(|e| format!("Serialization error for {filename}: {e}"))?
+        };
 
         zip.write_all(json.as_bytes())
             .map_err(|e| format!("Write error for {filename}: {e}"))?;
@@ -64,6 +97,7 @@ pub fn save_all_keyfiles_zip(
         Total Key Shares in this archive: {}\n\n\
         INSTRUCTIONS:\n\
         - Distribute each .dkey file to its respective authorized custodian.\n\
+        - If PIN protection was enabled during export, the custodian must provide their assigned PIN to decrypt their key share.\n\
         - Do NOT store all keys on the same workstation or unencrypted channel.\n\
         - To decrypt the file, the required quorum of custodians must provide their keys in DualCrypt Enterprise.\n",
         shares.len()
@@ -78,10 +112,38 @@ pub fn save_all_keyfiles_zip(
 }
 
 #[tauri::command]
-pub fn parse_keyfile(file_path: String) -> Result<SecretShare, String> {
+pub fn parse_keyfile(file_path: String, pin: Option<String>) -> Result<KeyFileParseResponse, String> {
     let content = std::fs::read_to_string(&file_path)
         .map_err(|e| format!("Failed to read key file '{file_path}': {e}"))?;
-    let share: SecretShare = serde_json::from_str(&content)
+    
+    let parsed: KeyFilePayload = serde_json::from_str(&content)
         .map_err(|e| format!("Invalid key share file format in '{file_path}': {e}"))?;
-    Ok(share)
+
+    match parsed {
+        KeyFilePayload::Plain(share) => Ok(KeyFileParseResponse {
+            custodian_id: share.id,
+            share: Some(share),
+            is_pin_protected: false,
+        }),
+        KeyFilePayload::Encrypted(enc_share) => {
+            let custodian_id = enc_share.id;
+            if let Some(pin_str) = pin.as_deref().filter(|p| !p.trim().is_empty()) {
+                let decrypted_share = enc_share
+                    .decrypt_with_pin(pin_str)
+                    .map_err(|e| format!("PIN decryption failed: {e}"))?;
+                Ok(KeyFileParseResponse {
+                    custodian_id,
+                    share: Some(decrypted_share),
+                    is_pin_protected: true,
+                })
+            } else {
+                // PIN required
+                Ok(KeyFileParseResponse {
+                    custodian_id,
+                    share: None,
+                    is_pin_protected: true,
+                })
+            }
+        }
+    }
 }

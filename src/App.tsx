@@ -11,6 +11,7 @@ import { type ActiveTab, TabNav } from "./components/layout/TabNav";
 import { CustodianGrid } from "./components/quorum/CustodianGrid";
 import { QuorumConfigurator } from "./components/quorum/QuorumConfigurator";
 import { ThresholdMeter } from "./components/quorum/ThresholdMeter";
+import { SettingsTab } from "./components/settings/SettingsTab";
 import { useCryptoJob } from "./hooks/useCryptoJob";
 import { useQuorumState } from "./hooks/useQuorumState";
 import {
@@ -393,6 +394,9 @@ export const App: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {/* 4. SETTINGS & EMAIL DISPATCH TAB */}
+            {activeTab === "settings" && <SettingsTab />}
           </>
         )}
       </main>

@@ -121,19 +121,139 @@ export async function cancelJob(jobId: string): Promise<void> {
   await invoke("cancel_active_job", { jobId });
 }
 
-export async function saveKeyFile(filePath: string, share: unknown): Promise<void> {
-  if (!isTauriEnvironment()) return;
-  await invoke("save_keyfile", { filePath, share });
+export interface KeyFileParseResult {
+  custodian_id: number;
+  share: { id: number; data: number[] } | null;
+  is_pin_protected: boolean;
 }
 
-export async function saveAllKeyFilesZip(filePath: string, shares: ExportedShare[]): Promise<void> {
-  if (!isTauriEnvironment()) return;
-  await invoke("save_all_keyfiles_zip", { filePath, shares });
+export interface SmtpConfig {
+  host: string;
+  port: number;
+  username: string;
+  password?: string;
+  security: "tls" | "starttls" | "none";
+  from_email: string;
+  from_name: string;
 }
 
-export async function parseKeyFile(filePath: string): Promise<unknown> {
+export interface SendCustodianEmailParams {
+  config: SmtpConfig;
+  recipient_email: string;
+  custodian_label: string;
+  share_filename: string;
+  share_content: string;
+  is_pin_protected: boolean;
+  pin_code?: string;
+  custom_note?: string;
+}
+
+export interface YubiKeyDevice {
+  device_id: string;
+  product_name: string;
+  serial_number?: number;
+  is_connected: boolean;
+  supports_fido2: boolean;
+}
+
+export interface YubiKeyAuthResult {
+  success: boolean;
+  signature_hex: string;
+  key_handle: string;
+}
+
+export async function saveKeyFile(filePath: string, share: unknown, pin?: string): Promise<void> {
+  if (!isTauriEnvironment()) return;
+  await invoke("save_keyfile", { filePath, share, pin });
+}
+
+export async function saveAllKeyFilesZip(
+  filePath: string,
+  shares: ExportedShare[],
+  pins?: Record<number, string>,
+): Promise<void> {
+  if (!isTauriEnvironment()) return;
+  await invoke("save_all_keyfiles_zip", { filePath, shares, pins });
+}
+
+export async function parseKeyFile(filePath: string, pin?: string): Promise<KeyFileParseResult> {
   if (!isTauriEnvironment()) {
-    return { id: 2, data: Array(32).fill(0xbb) };
+    return {
+      custodian_id: 2,
+      share: { id: 2, data: Array(32).fill(0xbb) },
+      is_pin_protected: false,
+    };
   }
-  return await invoke("parse_keyfile", { filePath });
+  return await invoke<KeyFileParseResult>("parse_keyfile", { filePath, pin });
+}
+
+export async function saveSmtpConfig(config: SmtpConfig): Promise<void> {
+  if (!isTauriEnvironment()) {
+    localStorage.setItem("dual_smtp_config", JSON.stringify(config));
+    return;
+  }
+  await invoke("save_smtp_config", { config });
+}
+
+export async function loadSmtpConfig(): Promise<SmtpConfig | null> {
+  if (!isTauriEnvironment()) {
+    const raw = localStorage.getItem("dual_smtp_config");
+    return raw ? JSON.parse(raw) : null;
+  }
+  return await invoke<SmtpConfig | null>("load_smtp_config");
+}
+
+export async function testSmtpConnection(
+  config: SmtpConfig,
+  testRecipient: string,
+): Promise<string> {
+  if (!isTauriEnvironment()) {
+    await new Promise((r) => setTimeout(r, 600));
+    return `[Mock Web] Test email sent successfully to ${testRecipient}`;
+  }
+  return await invoke<string>("test_smtp_connection", {
+    config,
+    testRecipient,
+  });
+}
+
+export async function sendCustodianKeyEmail(request: SendCustodianEmailParams): Promise<string> {
+  if (!isTauriEnvironment()) {
+    await new Promise((r) => setTimeout(r, 800));
+    return `[Mock Web] Share emailed to ${request.recipient_email}`;
+  }
+  return await invoke<string>("send_custodian_key_email", { request });
+}
+
+export async function listHardwareTokens(): Promise<YubiKeyDevice[]> {
+  if (!isTauriEnvironment()) {
+    return [
+      {
+        device_id: "yubikey-5-nfc",
+        product_name: "YubiKey 5 Series (FIDO2 / WebAuthn)",
+        serial_number: 18492048,
+        is_connected: true,
+        supports_fido2: true,
+      },
+    ];
+  }
+  return await invoke<YubiKeyDevice[]>("list_hardware_tokens");
+}
+
+export async function performHardwareTokenChallenge(
+  custodianId: number,
+  challengeHex: string,
+): Promise<YubiKeyAuthResult> {
+  if (!isTauriEnvironment()) {
+    await new Promise((r) => setTimeout(r, 400));
+    return {
+      success: true,
+      signature_hex: "3fa98e0c12da94812f0",
+      key_handle: `mock-fido2-${custodianId}`,
+    };
+  }
+  return await invoke<YubiKeyAuthResult>("perform_hardware_token_challenge", {
+    custodianId,
+    challengeHex,
+  });
 }

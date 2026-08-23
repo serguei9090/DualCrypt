@@ -51,6 +51,27 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
     }
   };
 
+  const handlePickFolder = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isTauriEnvironment()) {
+      const selected = await open({
+        multiple: false,
+        directory: true,
+      });
+
+      if (selected && typeof selected === "string") {
+        const name = selected.split(/[\\/]/).pop() || selected;
+        onFileSelected(selected, `📁 ${name} (Folder Archive)`);
+      }
+    } else {
+      onFileSelected(
+        "/mock/path/enterprise-folder",
+        "📁 enterprise-folder (Folder Archive)",
+        10485760,
+      );
+    }
+  };
+
   return (
     <button
       type="button"
@@ -106,15 +127,29 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
           <p className="text-xs text-zinc-400">Click to choose a different target file</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <p className="text-sm font-semibold text-zinc-200">
             {acceptDencOnly
               ? "Drag and drop your encrypted .denc file here"
-              : "Drag and drop any payload file to encrypt"}
+              : "Drag and drop any payload file or directory to encrypt"}
           </p>
-          <p className="text-xs text-zinc-400 flex items-center justify-center gap-1.5">
-            <FolderOpen className="h-3.5 w-3.5" /> or click to browse filesystem
-          </p>
+          <div className="flex items-center justify-center gap-3">
+            <span className="text-xs text-zinc-400 flex items-center gap-1.5">
+              <FolderOpen className="h-3.5 w-3.5 text-cyan-400" /> Click to browse file
+            </span>
+            {!acceptDencOnly && (
+              <>
+                <span className="text-zinc-600">•</span>
+                <button
+                  type="button"
+                  onClick={handlePickFolder}
+                  className="text-xs text-teal-400 hover:text-teal-300 underline font-semibold flex items-center gap-1 cursor-pointer bg-transparent border-none p-0"
+                >
+                  <FolderOpen className="h-3.5 w-3.5" /> Select Whole Folder
+                </button>
+              </>
+            )}
+          </div>
         </div>
       )}
     </button>

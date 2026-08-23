@@ -5,6 +5,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
+use aes_gcm::aead::{Aead, KeyInit, Payload};
+use aes_gcm::{Aes256Gcm, Key, Nonce};
+
 /// A single share of a split secret in Shamir's Secret Sharing scheme.
 #[derive(Clone, Serialize, Deserialize, Zeroize, ZeroizeOnDrop, PartialEq, Eq)]
 pub struct SecretShare {
@@ -20,6 +23,99 @@ impl std::fmt::Debug for SecretShare {
             .field("id", &self.id)
             .field("data_len", &self.data.len())
             .finish()
+    }
+}
+
+/// A PIN-protected / password-encrypted key share
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct EncryptedSecretShare {
+    pub id: u8,
+    pub is_encrypted: bool,
+    pub salt: [u8; 32],
+    pub nonce: [u8; 12],
+    pub ciphertext: Vec<u8>,
+}
+
+impl std::fmt::Debug for EncryptedSecretShare {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EncryptedSecretShare")
+            .field("id", &self.id)
+            .field("is_encrypted", &self.is_encrypted)
+            .finish()
+    }
+}
+
+impl SecretShare {
+    /// Encrypts this key share with a PIN/passphrase using Argon2id + AES-256-GCM
+    pub fn encrypt_with_pin(&self, pin: &str) -> Result<EncryptedSecretShare, DencError> {
+        let salt = crate::kdf::generate_salt();
+        let mut key = crate::kdf::derive_key_argon2id(pin.as_bytes(), &salt)?;
+        let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
+        key.zeroize();
+
+        let mut nonce = [0u8; 12];
+        OsRng.fill_bytes(&mut nonce);
+        let plain_bytes = serde_json::to_vec(self)?;
+        let ciphertext = cipher
+            .encrypt(
+                Nonce::from_slice(&nonce),
+                Payload {
+                    msg: &plain_bytes,
+                    aad: &salt,
+                },
+            )
+            .map_err(|_| DencError::Custom("Failed to encrypt share with PIN".to_string()))?;
+
+        Ok(EncryptedSecretShare {
+            id: self.id,
+            is_encrypted: true,
+            salt,
+            nonce,
+            ciphertext,
+        })
+    }
+}
+
+impl EncryptedSecretShare {
+    /// Decrypts a PIN-protected key share
+    pub fn decrypt_with_pin(&self, pin: &str) -> Result<SecretShare, DencError> {
+        let mut key = crate::kdf::derive_key_argon2id(pin.as_bytes(), &self.salt)?;
+        let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
+        key.zeroize();
+
+        let plain_bytes = cipher
+            .decrypt(
+                Nonce::from_slice(&self.nonce),
+                Payload {
+                    msg: &self.ciphertext,
+                    aad: &self.salt,
+                },
+            )
+            .map_err(|_| DencError::Custom("Invalid PIN for key share".to_string()))?;
+
+        let share: SecretShare = serde_json::from_slice(&plain_bytes)?;
+        Ok(share)
+    }
+}
+
+/// Universal wrapper representing either a plain or PIN-protected key file
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum KeyFilePayload {
+    Encrypted(EncryptedSecretShare),
+    Plain(SecretShare),
+}
+
+impl KeyFilePayload {
+    pub fn id(&self) -> u8 {
+        match self {
+            KeyFilePayload::Plain(s) => s.id,
+            KeyFilePayload::Encrypted(e) => e.id,
+        }
+    }
+
+    pub fn is_pin_protected(&self) -> bool {
+        matches!(self, KeyFilePayload::Encrypted(_))
     }
 }
 
@@ -237,5 +333,25 @@ mod tests {
         // Reconstructing with fewer shares yields mathematically bogus data, not the original secret
         let bogus = combine_shares(&subset).unwrap();
         assert_ne!(bogus, secret);
+    }
+
+    #[test]
+    fn test_pin_protected_share_roundtrip() {
+        let secret = b"Enterprise Security Token 2026";
+        let shares = split_secret(secret, 2, 2).expect("Split failed");
+        let original_share = shares[0].clone();
+
+        let pin = "987654";
+        let encrypted_share = original_share.encrypt_with_pin(pin).expect("PIN encryption failed");
+        assert!(encrypted_share.is_encrypted);
+
+        // Wrong PIN should fail
+        let wrong_res = encrypted_share.decrypt_with_pin("000000");
+        assert!(wrong_res.is_err());
+
+        // Correct PIN should recover identical SecretShare
+        let recovered_share = encrypted_share.decrypt_with_pin(pin).expect("PIN decryption failed");
+        assert_eq!(recovered_share.id, original_share.id);
+        assert_eq!(recovered_share.data, original_share.data);
     }
 }

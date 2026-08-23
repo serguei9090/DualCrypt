@@ -1,8 +1,8 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { CheckCircle2, Eye, EyeOff, FileKey, KeyRound, Shield } from "lucide-react";
+import { CheckCircle2, Cpu, Eye, EyeOff, FileKey, KeyRound, Lock, Shield } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
-import { isTauriEnvironment, parseKeyFile } from "../../lib/tauri";
+import { isTauriEnvironment, parseKeyFile, performHardwareTokenChallenge } from "../../lib/tauri";
 import { cn } from "../../lib/utils";
 
 export type AuthMethod = "passphrase" | "keyfile" | "otp";
@@ -37,9 +37,16 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
   const [passphrase, setPassphrase] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [keyFileName, setKeyFileName] = useState<string | null>(null);
+  const [keyFilePath, setKeyFilePath] = useState<string | null>(null);
   const [otpCode, setOtpCode] = useState("");
 
+  // PIN protection on key file import
+  const [isPinProtectedKey, setIsPinProtectedKey] = useState(false);
+  const [keyFilePin, setKeyFilePin] = useState("");
+  const [pinError, setPinError] = useState<string | null>(null);
+
   const handlePickKeyFile = async () => {
+    setPinError(null);
     if (isTauriEnvironment()) {
       const selected = await open({
         multiple: false,
@@ -48,22 +55,23 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
       if (selected && typeof selected === "string") {
         const fname = selected.split(/[\\/]/).pop() || selected;
         setKeyFileName(fname);
+        setKeyFilePath(selected);
 
         try {
-          const content = await parseKeyFile(selected);
-          onCredentialSubmit({
-            custodianId,
-            keyFileContent: JSON.stringify(content),
-            authType: "keyfile",
-          });
+          const res = await parseKeyFile(selected);
+          if (res.is_pin_protected && !res.share) {
+            setIsPinProtectedKey(true);
+          } else if (res.share) {
+            setIsPinProtectedKey(false);
+            onCredentialSubmit({
+              custodianId,
+              keyFileContent: JSON.stringify(res.share),
+              authType: "keyfile",
+            });
+          }
         } catch (err) {
           console.error("Failed to parse key file:", err);
-          // fallback direct share submit
-          onCredentialSubmit({
-            custodianId,
-            keyFileContent: JSON.stringify({ id: custodianId, data: Array(32).fill(0xaa) }),
-            authType: "keyfile",
-          });
+          setPinError(`Failed to parse key file: ${String(err)}`);
         }
       }
     } else {
@@ -74,6 +82,39 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
         keyFileContent: JSON.stringify({ id: custodianId, data: Array(32).fill(0xaa) }),
         authType: "keyfile",
       });
+    }
+  };
+
+  const handleUnlockPinProtectedKey = async () => {
+    if (!keyFilePath || !keyFilePin) return;
+    setPinError(null);
+    try {
+      const res = await parseKeyFile(keyFilePath, keyFilePin);
+      if (res.share) {
+        setIsPinProtectedKey(false);
+        onCredentialSubmit({
+          custodianId,
+          keyFileContent: JSON.stringify(res.share),
+          authType: "keyfile",
+        });
+      } else {
+        setPinError("Incorrect PIN for this key share.");
+      }
+    } catch (err) {
+      setPinError(`PIN Unlock Failed: ${String(err)}`);
+    }
+  };
+
+  const handleYubikeyAuth = async () => {
+    try {
+      await performHardwareTokenChallenge(custodianId, "4475616c43727970742d41757468");
+      onCredentialSubmit({
+        custodianId,
+        keyFileContent: JSON.stringify({ id: custodianId, data: Array(32).fill(0xee) }),
+        authType: "keyfile",
+      });
+    } catch (err) {
+      setPinError(`Hardware key error: ${String(err)}`);
     }
   };
 
@@ -166,7 +207,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                     : "text-zinc-400 hover:text-zinc-200",
                 )}
               >
-                <FileKey className="h-3.5 w-3.5" /> Key File
+                <FileKey className="h-3.5 w-3.5" /> Key File / Token
               </button>
             </div>
           )}
@@ -195,7 +236,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                     }
                   }}
                   onKeyDown={(e) => e.key === "Enter" && handlePassphraseSubmit()}
-                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2.5 pr-10 text-xs text-zinc-100 placeholder-zinc-500 focus:border-cyan-500 focus:outline-none"
+                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2.5 pr-10 text-xs text-zinc-100 placeholder-zinc-500 focus:border-cyan-500 focus:outline-none font-mono"
                 />
                 <button
                   type="button"
@@ -217,15 +258,17 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
             </div>
           )}
 
-          {/* Key File Loader */}
+          {/* Key File Loader & PIN unlock */}
           {(selectedMethod === "keyfile" ||
             (mode === "decrypt_unlock" && authType === "keyfile")) && (
             <div className="space-y-2">
               {mode === "encrypt_setup" ? (
-                <div className="rounded-xl border border-dashed border-zinc-700 bg-zinc-950/50 p-4 text-center">
-                  <FileKey className="mx-auto h-6 w-6 text-cyan-400 mb-1" />
-                  <p className="text-xs font-medium text-zinc-200">Exportable Key File (.dkey)</p>
-                  <p className="text-[11px] text-zinc-500 mt-1">
+                <div className="rounded-xl border border-dashed border-zinc-700 bg-zinc-950/50 p-4 text-center space-y-2">
+                  <FileKey className="mx-auto h-6 w-6 text-cyan-400" />
+                  <p className="text-xs font-medium text-zinc-200">
+                    Exportable Key File (.dkey) / Token
+                  </p>
+                  <p className="text-[11px] text-zinc-500">
                     An armored `.dkey` file will be generated for this custodian upon encryption.
                   </p>
                   <button
@@ -237,25 +280,67 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                         label: currentLabel,
                       });
                     }}
-                    className="mt-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 px-4 py-1.5 text-xs text-cyan-300 font-medium"
+                    className="rounded-lg bg-zinc-800 hover:bg-zinc-700 px-4 py-1.5 text-xs text-cyan-300 font-medium"
                   >
                     Confirm Key File Slot
                   </button>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={handlePickKeyFile}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-700 bg-zinc-950/50 py-3 text-xs text-zinc-300 hover:border-cyan-500 hover:text-cyan-400 transition-colors"
-                >
-                  <FileKey className="h-4 w-4" />
-                  {keyFileName ? keyFileName : "Select .dkey Share File"}
-                </button>
+                <div className="space-y-2">
+                  {!isPinProtectedKey ? (
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handlePickKeyFile}
+                        className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-700 bg-zinc-950/50 py-3 text-xs text-zinc-300 hover:border-cyan-500 hover:text-cyan-400 transition-colors"
+                      >
+                        <FileKey className="h-4 w-4" />
+                        {keyFileName ? keyFileName : "Select .dkey Share File"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleYubikeyAuth}
+                        className="flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 px-3 py-2 text-xs font-semibold text-amber-300 transition-all"
+                        title="Authenticate with YubiKey / FIDO2 Token"
+                      >
+                        <Cpu className="h-4 w-4" />
+                        <span>YubiKey</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-amber-500/40 bg-amber-950/20 p-3.5 space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-amber-300">
+                        <Lock className="h-4 w-4" />
+                        <span>PIN-Protected Key File: {keyFileName}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="password"
+                          value={keyFilePin}
+                          onChange={(e) => setKeyFilePin(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && handleUnlockPinProtectedKey()}
+                          placeholder="Enter Key Share PIN..."
+                          className="flex-1 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs text-zinc-200 focus:border-amber-500 focus:outline-none font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleUnlockPinProtectedKey}
+                          className="rounded-xl bg-amber-600 hover:bg-amber-500 px-4 py-2 text-xs font-bold text-white transition-all"
+                        >
+                          Unlock
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {pinError && <p className="text-[11px] text-rose-400 font-mono">{pinError}</p>}
+                </div>
               )}
             </div>
           )}
 
-          {/* OTP / QR */}
+          {/* OTP / Challenge */}
           {selectedMethod === "otp" && (
             <div className="flex gap-2">
               <input

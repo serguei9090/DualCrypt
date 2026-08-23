@@ -17,7 +17,7 @@ use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sss::{combine_shares, split_secret, SecretShare};
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Write};
+use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::Path;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
@@ -98,7 +98,31 @@ pub fn inspect_container<P: AsRef<Path>>(path: P) -> Result<HeaderInspection, De
     })
 }
 
-/// High-level function to encrypt a file with dual/threshold custody
+/// Packages a directory recursively into a TAR archive stream
+pub fn pack_directory_to_tar<P: AsRef<Path>, W: Write>(dir_path: P, writer: &mut W) -> Result<(), DencError> {
+    let mut tar_builder = tar::Builder::new(writer);
+    let dir_name = dir_path
+        .as_ref()
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "archive".to_string());
+    tar_builder
+        .append_dir_all(&dir_name, dir_path.as_ref())
+        .map_err(DencError::Io)?;
+    tar_builder.finish().map_err(DencError::Io)?;
+    Ok(())
+}
+
+/// Unpacks a TAR archive from a reader into a destination directory
+pub fn unpack_tar_archive<R: Read, P: AsRef<Path>>(reader: &mut R, target_dir: P) -> Result<(), DencError> {
+    let mut archive = tar::Archive::new(reader);
+    archive
+        .unpack(target_dir.as_ref())
+        .map_err(DencError::Io)?;
+    Ok(())
+}
+
+/// High-level function to encrypt a file or entire directory with dual/threshold custody
 pub fn encrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
     input_path: P1,
     output_path: P2,
@@ -114,7 +138,24 @@ pub fn encrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
         )));
     }
 
-    let input_file = File::open(&input_path)?;
+    let input_path_ref = input_path.as_ref();
+    let (real_input_path, _temp_tar_guard) = if input_path_ref.is_dir() {
+        let temp_tar = tempfile::Builder::new()
+            .prefix("dual_archive_")
+            .suffix(".tar")
+            .tempfile()?;
+        {
+            let file = File::create(temp_tar.path())?;
+            let mut tar_writer = BufWriter::new(file);
+            pack_directory_to_tar(input_path_ref, &mut tar_writer)?;
+            tar_writer.flush()?;
+        }
+        (temp_tar.path().to_path_buf(), Some(temp_tar))
+    } else {
+        (input_path_ref.to_path_buf(), None)
+    };
+
+    let input_file = File::open(&real_input_path)?;
     let total_bytes = input_file.metadata()?.len();
     let mut reader = BufReader::new(input_file);
 
@@ -397,5 +438,79 @@ mod tests {
         assert_eq!(dec_bytes, original_data.len() as u64);
         let decrypted_data = std::fs::read(decrypted_file.path()).unwrap();
         assert_eq!(decrypted_data, original_data);
+    }
+
+    #[test]
+    fn test_directory_encryption_roundtrip() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let sub_dir = temp_dir.path().join("subfolder");
+        std::fs::create_dir(&sub_dir).unwrap();
+        std::fs::write(temp_dir.path().join("file1.txt"), b"Document 1 contents").unwrap();
+        std::fs::write(sub_dir.join("file2.txt"), b"Nested confidential file 2").unwrap();
+
+        let encrypted_file = tempfile::NamedTempFile::new().unwrap();
+        let decrypted_tar_file = tempfile::NamedTempFile::new().unwrap();
+
+        let params = EncryptionParams {
+            cipher: CipherSuite::Aes256Gcm,
+            threshold_k: 2,
+            total_n: 2,
+            chunk_size: Some(1024),
+            custodians: vec![
+                CustodianInput {
+                    custodian_id: 1,
+                    label: "Admin 1".to_string(),
+                    auth_type: AuthType::Passphrase,
+                    passphrase: Some("admin_pass_1".to_string()),
+                },
+                CustodianInput {
+                    custodian_id: 2,
+                    label: "Admin 2".to_string(),
+                    auth_type: AuthType::Passphrase,
+                    passphrase: Some("admin_pass_2".to_string()),
+                },
+            ],
+        };
+
+        let enc_res = encrypt_file(
+            temp_dir.path(),
+            encrypted_file.path(),
+            params,
+            |_, _| {},
+            None,
+        )
+        .expect("Directory encryption failed");
+
+        assert!(enc_res.bytes_encrypted > 0);
+
+        let creds = vec![
+            CustodianCredential {
+                custodian_id: 1,
+                passphrase: Some("admin_pass_1".to_string()),
+                direct_share: None,
+            },
+            CustodianCredential {
+                custodian_id: 2,
+                passphrase: Some("admin_pass_2".to_string()),
+                direct_share: None,
+            },
+        ];
+
+        let dec_bytes = decrypt_file(
+            encrypted_file.path(),
+            decrypted_tar_file.path(),
+            creds,
+            |_, _| {},
+            None,
+        )
+        .expect("Directory decryption failed");
+
+        assert!(dec_bytes > 0);
+
+        // Verify unpacking the decrypted tar
+        let extract_dir = tempfile::tempdir().unwrap();
+        let tar_file = File::open(decrypted_tar_file.path()).unwrap();
+        let mut tar_reader = BufReader::new(tar_file);
+        unpack_tar_archive(&mut tar_reader, extract_dir.path()).expect("Unpack failed");
     }
 }

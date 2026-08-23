@@ -2,7 +2,7 @@ import { KeyRound, Lock, Unlock } from "lucide-react";
 import type React from "react";
 import { cn } from "../../lib/utils";
 
-export type ActiveTab = "encrypt" | "decrypt" | "keytools";
+export type ActiveTab = "encrypt" | "decrypt" | "keytools" | "settings";
 
 interface TabNavProps {
   activeTab: ActiveTab;
@@ -52,6 +52,19 @@ export const TabNav: React.FC<TabNavProps> = ({ activeTab, onTabChange }) => {
       >
         <KeyRound className="h-4 w-4" />
         <span>Key Escrow & Shares</span>
+      </button>
+
+      <button
+        type="button"
+        onClick={() => onTabChange("settings")}
+        className={cn(
+          "flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-medium transition-all",
+          activeTab === "settings"
+            ? "border-purple-400 text-purple-300 bg-purple-500/5"
+            : "border-transparent text-zinc-400 hover:text-zinc-200",
+        )}
+      >
+        <span>⚙️ Settings & Email</span>
       </button>
     </div>
   );

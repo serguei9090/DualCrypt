@@ -2,9 +2,13 @@ pub mod commands;
 pub mod state;
 
 use commands::decrypt::{cancel_active_job, start_decryption};
+use commands::email::{
+    load_smtp_config, save_smtp_config, send_custodian_key_email, test_smtp_connection,
+};
 use commands::encrypt::start_encryption;
 use commands::inspect::inspect_denc_file;
 use commands::shares::{parse_keyfile, save_all_keyfiles_zip, save_keyfile};
+use commands::yubikey::{list_hardware_tokens, perform_hardware_token_challenge};
 use state::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -23,7 +27,13 @@ pub fn run() {
             cancel_active_job,
             save_keyfile,
             save_all_keyfiles_zip,
-            parse_keyfile
+            parse_keyfile,
+            save_smtp_config,
+            load_smtp_config,
+            test_smtp_connection,
+            send_custodian_key_email,
+            list_hardware_tokens,
+            perform_hardware_token_challenge
         ])
         .run(tauri::generate_context!())
         .expect("error while running DualCrypt Enterprise application");
