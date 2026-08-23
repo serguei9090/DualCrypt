@@ -4,6 +4,7 @@ import type React from "react";
 import { useState } from "react";
 import { FileDropzone } from "./components/dropzone/FileDropzone";
 import { FileMetadataCard } from "./components/dropzone/FileMetadataCard";
+import { KeyEscrowView } from "./components/escrow/KeyEscrowView";
 import { CompleteDialog } from "./components/execution/CompleteDialog";
 import { LiveCryptoProgress } from "./components/execution/LiveCryptoProgress";
 import { Header } from "./components/layout/Header";
@@ -348,54 +349,7 @@ export const App: React.FC = () => {
             )}
 
             {/* 3. KEY TOOLS & ESCROW TAB */}
-            {activeTab === "keytools" && (
-              <div className="space-y-6">
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 backdrop-blur-md space-y-4">
-                  <div className="flex items-center gap-3 border-b border-zinc-800 pb-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
-                      <Lock className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-zinc-100">
-                        Enterprise Key Escrow & Disaster Recovery
-                      </h3>
-                      <p className="text-xs text-zinc-400">
-                        Information-Theoretically Secure Shamir’s Secret Sharing over Galois Field
-                        GF(256)
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-                    <div className="bg-zinc-950/70 p-4 rounded-xl border border-zinc-800 space-y-2">
-                      <div className="font-semibold text-xs text-zinc-200">
-                        Zero Trust Guarantee
-                      </div>
-                      <p className="text-xs text-zinc-400">
-                        Any party with fewer than \(k\) shares has zero mathematical knowledge of
-                        the key, even against quantum computers.
-                      </p>
-                    </div>
-
-                    <div className="bg-zinc-950/70 p-4 rounded-xl border border-zinc-800 space-y-2">
-                      <div className="font-semibold text-xs text-zinc-200">Memory Hygiene</div>
-                      <p className="text-xs text-zinc-400">
-                        Reconstructed keys and shares are protected with `ZeroizeOnDrop` and
-                        immediately purged after stream initiation.
-                      </p>
-                    </div>
-
-                    <div className="bg-zinc-950/70 p-4 rounded-xl border border-zinc-800 space-y-2">
-                      <div className="font-semibold text-xs text-zinc-200">Tamper Evident</div>
-                      <p className="text-xs text-zinc-400">
-                        Authenticated STREAM cipher with per-chunk MAC tags prevents any byte
-                        manipulation or chunk reordering.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {activeTab === "keytools" && <KeyEscrowView />}
 
             {/* 4. SETTINGS & EMAIL DISPATCH TAB */}
             {activeTab === "settings" && <SettingsTab />}

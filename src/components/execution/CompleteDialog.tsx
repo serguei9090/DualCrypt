@@ -147,6 +147,53 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
     }
   };
 
+  const handleSavePublicKey = async (share: ExportedShare) => {
+    if (!share.pqc_public_key_base64) return;
+    setSaveError(null);
+    try {
+      const sanitizedLabel = share.label.replace(/\s+/g, "_");
+      const defaultFilename = `custodian_${share.custodian_id}_${sanitizedLabel}.pqc.pub`;
+
+      if (isTauriEnvironment()) {
+        const path = await save({
+          defaultPath: defaultFilename,
+          filters: [{ name: "Post-Quantum Public Key", extensions: ["pqc.pub", "pub", "json"] }],
+        });
+        if (path) {
+          await saveKeyFile(
+            path,
+            undefined,
+            undefined,
+            share.pqc_public_key_base64,
+            undefined,
+            share.custodian_id,
+            share.label,
+          );
+        }
+      } else {
+        const payloadObj = {
+          algorithm: "NIST-FIPS-203-ML-KEM-768",
+          type: "public_key",
+          custodian_id: share.custodian_id,
+          label: share.label,
+          public_key_base64: share.pqc_public_key_base64,
+        };
+        const dataStr = `data:text/json;charset=utf-8,${encodeURIComponent(
+          JSON.stringify(payloadObj, null, 2),
+        )}`;
+        const downloadAnchor = document.createElement("a");
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", defaultFilename);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+      }
+    } catch (err) {
+      console.error("Save public key error:", err);
+      setSaveError(`Failed to save public key: ${String(err)}`);
+    }
+  };
+
   const handleBulkSaveZip = async () => {
     if (exportedShares.length === 0) return;
     setSaveError(null);
@@ -418,6 +465,19 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                         <span>
                           {copiedKey === `priv-${s.custodian_id}` ? "Copied" : "Copy PrivKey"}
                         </span>
+                      </button>
+                    )}
+
+                    {/* Save .pqc.pub Button */}
+                    {isPqc && s.pqc_public_key_base64 && (
+                      <button
+                        type="button"
+                        onClick={() => handleSavePublicKey(s)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-zinc-800 hover:bg-purple-900/80 text-purple-300 hover:text-white px-2 py-1.5 text-xs font-semibold border border-purple-900/60 hover:border-purple-500 transition-all"
+                        title="Download shareable .pqc.pub public key"
+                      >
+                        <Download className="h-3.5 w-3.5 text-purple-400" />
+                        <span>.pqc.pub</span>
                       </button>
                     )}
 

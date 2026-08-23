@@ -1,4 +1,3 @@
-use denc_core::container::AuthType;
 use denc_core::pqc::{
     decrypt_pqc_keyfile_with_pin, encrypt_pqc_keyfile_with_pin, PlainPqcKeyFile, PqcKeyFilePayload,
     PqcKeypair,
@@ -63,6 +62,15 @@ pub fn save_keyfile(
             };
             serde_json::to_string_pretty(&plain_pqc).map_err(|e| e.to_string())?
         }
+    } else if let Some(pub_b64) = pqc_public_key_base64 {
+        let pub_obj = serde_json::json!({
+            "algorithm": "NIST-FIPS-203-ML-KEM-768",
+            "type": "public_key",
+            "custodian_id": cid,
+            "label": lbl,
+            "public_key_base64": pub_b64,
+        });
+        serde_json::to_string_pretty(&pub_obj).map_err(|e| e.to_string())?
     } else if let Some(s) = share {
         if let Some(pin_str) = pin.as_deref().filter(|p| !p.trim().is_empty()) {
             let enc_share = s
@@ -99,48 +107,61 @@ pub fn save_all_keyfiles_zip(
     let options = SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Deflated);
 
-    let empty_pins = HashMap::new();
-    let pins_map = pins.as_ref().unwrap_or(&empty_pins);
+    let pins_map = pins.unwrap_or_default();
 
     for s in &shares {
-        let sanitized_label: String = s
-            .label
-            .chars()
-            .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
-            .collect();
+        let sanitized_label = s.label.replace(|c: char| !c.is_alphanumeric() && c != '_', "_");
 
-        if s.auth_type == AuthType::PostQuantum || s.pqc_private_key_base64.is_some() {
-            let filename = format!("custodian_{}_{}.pqc", s.custodian_id, sanitized_label);
-            zip.start_file(&filename, options)
-                .map_err(|e| format!("Failed to add entry '{filename}' to zip: {e}"))?;
-
+        if let Some(priv_b64) = &s.pqc_private_key_base64 {
             let pub_b64 = s.pqc_public_key_base64.clone().unwrap_or_default();
-            let priv_b64 = s.pqc_private_key_base64.clone().unwrap_or_default();
             let keypair = PqcKeypair {
                 public_key_base64: pub_b64.clone(),
                 private_key_base64: priv_b64.clone(),
                 algorithm: "NIST-FIPS-203-ML-KEM-768".to_string(),
             };
 
+            // Write Private Key (.pqc)
+            let priv_filename = format!("custodian_{}_{}.pqc", s.custodian_id, sanitized_label);
+            zip.start_file(&priv_filename, options)
+                .map_err(|e| format!("Failed to add entry '{priv_filename}' to zip: {e}"))?;
+
             let json = if let Some(pin) = pins_map.get(&s.custodian_id).filter(|p| !p.trim().is_empty()) {
                 let enc_pqc = encrypt_pqc_keyfile_with_pin(&keypair, s.custodian_id, &s.label, pin)
-                    .map_err(|e| format!("Failed to encrypt PQC key with PIN: {e}"))?;
+                    .map_err(|e| format!("Failed to encrypt PQC key with PIN for {priv_filename}: {e}"))?;
                 serde_json::to_string_pretty(&enc_pqc)
-                    .map_err(|e| format!("Serialization error for {filename}: {e}"))?
+                    .map_err(|e| format!("Serialization error for {priv_filename}: {e}"))?
             } else {
                 let plain_pqc = PlainPqcKeyFile {
                     algorithm: "NIST-FIPS-203-ML-KEM-768".to_string(),
                     custodian_id: s.custodian_id,
                     label: s.label.clone(),
-                    public_key_base64: pub_b64,
-                    private_key_base64: priv_b64,
+                    public_key_base64: pub_b64.clone(),
+                    private_key_base64: priv_b64.clone(),
                 };
                 serde_json::to_string_pretty(&plain_pqc)
-                    .map_err(|e| format!("Serialization error for {filename}: {e}"))?
+                    .map_err(|e| format!("Serialization error for {priv_filename}: {e}"))?
             };
 
             zip.write_all(json.as_bytes())
-                .map_err(|e| format!("Write error for {filename}: {e}"))?;
+                .map_err(|e| format!("Write error for {priv_filename}: {e}"))?;
+
+            // Write Public Key (.pqc.pub)
+            if !pub_b64.is_empty() {
+                let pub_filename = format!("custodian_{}_{}.pqc.pub", s.custodian_id, sanitized_label);
+                zip.start_file(&pub_filename, options)
+                    .map_err(|e| format!("Failed to add entry '{pub_filename}' to zip: {e}"))?;
+                let pub_obj = serde_json::json!({
+                    "algorithm": "NIST-FIPS-203-ML-KEM-768",
+                    "type": "public_key",
+                    "custodian_id": s.custodian_id,
+                    "label": s.label.clone(),
+                    "public_key_base64": pub_b64,
+                });
+                let pub_json = serde_json::to_string_pretty(&pub_obj)
+                    .map_err(|e| format!("Serialization error for {pub_filename}: {e}"))?;
+                zip.write_all(pub_json.as_bytes())
+                    .map_err(|e| format!("Write error for {pub_filename}: {e}"))?;
+            }
         } else if let Some(share) = &s.share {
             let filename = format!("custodian_{}_{}.dkey", s.custodian_id, sanitized_label);
             zip.start_file(&filename, options)
@@ -170,12 +191,14 @@ pub fn save_all_keyfiles_zip(
         ========================================\n\
         Total Key Share / Token slots in this archive: {}\n\n\
         FILE FORMATS:\n\
-        - .dkey : Shamir Secret Sharing (SSS) key file\n\
-        - .pqc  : NIST FIPS 203 ML-KEM-768 Post-Quantum Private Key\n\n\
+        - .dkey     : Shamir Secret Sharing (SSS) key file\n\
+        - .pqc      : NIST FIPS 203 ML-KEM-768 Post-Quantum Private Key (Secret - do not share)\n\
+        - .pqc.pub  : NIST FIPS 203 ML-KEM-768 Public Key (Shareable for future encryptions)\n\n\
         INSTRUCTIONS:\n\
-        - Distribute each key file securely to its authorized custodian.\n\
+        - Distribute each .pqc private key securely to its authorized custodian.\n\
+        - The .pqc.pub public keys can be stored in public directories or sent to team members who encrypt future files on behalf of the custodian.\n\
         - If PIN/passphrase protection was enabled during export, the custodian must enter their PIN to unlock their key during decryption.\n\
-        - Do NOT store all keys on the same workstation or unencrypted channel.\n\
+        - Do NOT store all private keys on the same workstation or unencrypted channel.\n\
         - To decrypt the container, the required quorum of custodians must provide their keys in DualCrypt Enterprise.\n",
         shares.len()
     );

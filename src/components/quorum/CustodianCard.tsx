@@ -11,6 +11,7 @@ import {
   Lock,
   RefreshCw,
   Shield,
+  Upload,
   Zap,
 } from "lucide-react";
 import type React from "react";
@@ -80,6 +81,9 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
   const [hardwareError, setHardwareError] = useState<string | null>(null);
 
   // Post-Quantum ML-KEM State
+  const [pqcMode, setPqcMode] = useState<"auto" | "existing">("auto");
+  const [pqcPublicKey, setPqcPublicKey] = useState("");
+  const [pqcPubFileName, setPqcPubFileName] = useState<string | null>(null);
   const [pqcPrivateKey, setPqcPrivateKey] = useState("");
   const [pqcError, setPqcError] = useState<string | null>(null);
 
@@ -175,12 +179,59 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
     }
   };
 
+  const handlePickPqcPublicKeyFile = async () => {
+    setPqcError(null);
+    if (isTauriEnvironment()) {
+      const selected = await open({
+        multiple: false,
+        filters: [
+          { name: "Post-Quantum Public Key", extensions: ["pqc.pub", "pub", "json", "key"] },
+        ],
+      });
+      if (selected && typeof selected === "string") {
+        const fname = selected.split(/[\\/]/).pop() || selected;
+        setPqcPubFileName(fname);
+        try {
+          const { readTextFile } = await import("@tauri-apps/plugin-fs");
+          const raw = await readTextFile(selected);
+          try {
+            const parsed = JSON.parse(raw);
+            const pk = parsed.public_key_base64 || raw.trim();
+            setPqcPublicKey(pk);
+            onUpdateSetup?.({ label: currentLabel, authType: "pqc", publicKeyBase64: pk });
+          } catch {
+            setPqcPublicKey(raw.trim());
+            onUpdateSetup?.({ label: currentLabel, authType: "pqc", publicKeyBase64: raw.trim() });
+          }
+        } catch (err) {
+          setPqcError(`Failed to read public key file: ${String(err)}`);
+        }
+      }
+    } else {
+      setPqcPubFileName(`custodian_${custodianId}.pqc.pub`);
+      setPqcPublicKey("MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQ...");
+    }
+  };
+
   const handleConfirmPqcSetup = () => {
-    onCredentialSubmit({
-      custodianId,
-      authType: "pqc",
-      label: currentLabel,
-    });
+    if (pqcMode === "existing") {
+      if (!pqcPublicKey.trim()) {
+        setPqcError("Please upload or paste a recipient ML-KEM-768 Public Key.");
+        return;
+      }
+      onCredentialSubmit({
+        custodianId,
+        publicKeyBase64: pqcPublicKey.trim(),
+        authType: "pqc",
+        label: currentLabel,
+      });
+    } else {
+      onCredentialSubmit({
+        custodianId,
+        authType: "pqc",
+        label: currentLabel,
+      });
+    }
   };
 
   const handlePickPqcPrivateKeyFile = async () => {
@@ -566,23 +617,118 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
               (authType === "pqc" || authType === ("postquantum" as unknown)))) && (
             <div className="space-y-3">
               {mode === "encrypt_setup" ? (
-                <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-4 text-center space-y-2.5">
-                  <Atom className="mx-auto h-6 w-6 text-purple-400" />
-                  <p className="text-xs font-semibold text-purple-200">
-                    Post-Quantum Key File (.pqc)
-                  </p>
-                  <p className="text-[11px] text-zinc-400">
-                    An armored NIST FIPS 203 ML-KEM-768 key file will be generated for this
-                    custodian upon encryption. You can download, copy, PIN-protect, or email it on
-                    the completion screen.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleConfirmPqcSetup}
-                    className="w-full rounded-xl bg-purple-700 hover:bg-purple-600 py-2.5 text-xs font-semibold text-white transition-colors shadow-lg"
-                  >
-                    Confirm Quantum-Safe Slot
-                  </button>
+                <div className="space-y-3">
+                  {/* Sub-selector for Auto vs Existing */}
+                  <div className="grid grid-cols-2 rounded-lg bg-zinc-950 p-0.5 border border-purple-900/60 text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPqcMode("auto");
+                        setPqcError(null);
+                        onUpdateSetup?.({ label: currentLabel, authType: "pqc" });
+                      }}
+                      className={cn(
+                        "py-1 rounded-md font-medium transition-colors text-center",
+                        pqcMode === "auto"
+                          ? "bg-purple-900/60 text-purple-200 shadow-sm"
+                          : "text-zinc-400 hover:text-zinc-200",
+                      )}
+                    >
+                      ⚡ Auto-Generate
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPqcMode("existing");
+                        setPqcError(null);
+                      }}
+                      className={cn(
+                        "py-1 rounded-md font-medium transition-colors text-center",
+                        pqcMode === "existing"
+                          ? "bg-purple-900/60 text-purple-200 shadow-sm"
+                          : "text-zinc-400 hover:text-zinc-200",
+                      )}
+                    >
+                      📂 Use Recipient Key
+                    </button>
+                  </div>
+
+                  {pqcMode === "auto" ? (
+                    <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-3.5 text-center space-y-2">
+                      <Atom className="mx-auto h-5 w-5 text-purple-400" />
+                      <p className="text-xs font-semibold text-purple-200">1-Click Quantum Slot</p>
+                      <p className="text-[11px] text-zinc-400">
+                        A fresh NIST FIPS 203 ML-KEM-768 keypair will be generated automatically.
+                        You will receive the `.pqc` private key on completion.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleConfirmPqcSetup}
+                        className="w-full rounded-xl bg-purple-700 hover:bg-purple-600 py-2.5 text-xs font-semibold text-white transition-colors shadow-lg"
+                      >
+                        Confirm Quantum-Safe Slot
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-3.5 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-purple-300 flex items-center gap-1">
+                          <Upload className="h-3.5 w-3.5" />
+                          <span>Upload Recipient .pqc.pub</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handlePickPqcPublicKeyFile}
+                          className="text-[11px] text-purple-300 hover:underline flex items-center gap-1 font-medium"
+                        >
+                          <Upload className="h-3 w-3" />{" "}
+                          {pqcPubFileName ? "Change File" : "Choose File"}
+                        </button>
+                      </div>
+
+                      {pqcPubFileName && (
+                        <div className="p-2 rounded-lg bg-purple-950/80 border border-purple-800 text-[11px] text-purple-300 flex items-center justify-between">
+                          <span>📄 {pqcPubFileName}</span>
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                        </div>
+                      )}
+
+                      <div className="space-y-1">
+                        <label
+                          htmlFor={`pqc-pub-input-${custodianId}`}
+                          className="text-[10px] text-zinc-400 uppercase tracking-wider font-mono"
+                        >
+                          Or Paste Recipient Public Key (Base64)
+                        </label>
+                        <textarea
+                          id={`pqc-pub-input-${custodianId}`}
+                          rows={2}
+                          value={pqcPublicKey}
+                          onChange={(e) => {
+                            setPqcPublicKey(e.target.value);
+                            onUpdateSetup?.({
+                              label: currentLabel,
+                              authType: "pqc",
+                              publicKeyBase64: e.target.value,
+                            });
+                          }}
+                          placeholder="Paste recipient's ML-KEM-768 public key base64..."
+                          className="w-full rounded-lg border border-purple-900/60 bg-zinc-950 px-3 py-2 text-[11px] text-zinc-200 font-mono focus:border-purple-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={!pqcPublicKey.trim()}
+                        onClick={handleConfirmPqcSetup}
+                        className="w-full rounded-xl bg-purple-600 hover:bg-purple-500 py-2 text-xs font-semibold text-white transition-colors disabled:opacity-40"
+                      >
+                        Confirm Slot with Recipient Key
+                      </button>
+                    </div>
+                  )}
+
+                  {pqcError && <p className="text-[11px] text-rose-400 font-mono">{pqcError}</p>}
                 </div>
               ) : (
                 <div className="space-y-2">

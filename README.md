@@ -86,7 +86,13 @@ The `.denc` container encapsulates the metadata and chunked authenticated stream
   * Zero server-side plaintext exposure: 100% of cryptography executes within browser memory.
 * **💻 Headless CLI (`denc-cli`)**: Standalone command-line binary `denc` for server backups, automation scripts, and CI/CD pipelines.
 * **⚛️ NIST FIPS 203 ML-KEM-768 Post-Quantum Key Encapsulation**: Quantum-safe asymmetric share encapsulation protecting against "Harvest Now, Decrypt Later" quantum adversary attacks.
-* **⚡ 1-Click Streamlined Slot Setup**: Standardized 1-click slot confirmation across Passphrase, Key File, YubiKey, and Post-Quantum modes.
+* **🔑 Actionable Key Escrow & Post-Quantum Vault**:
+  * **⚡ Standalone ML-KEM-768 Generator**: Create standalone quantum-resistant keypairs with optional Argon2id PIN encryption.
+  * **🌐 Shareable `.pqc.pub` Public Keys**: Export public keys to colleagues for future encryption jobs without sharing private secrets.
+  * **🔍 Key Token & PIN Inspector**: Inspect `.dkey`, `.pqc`, and `.pqc.pub` files offline and verify PIN unlocking directly in memory.
+* **⚡ 1-Click Streamlined Slot Setup & Recipient Key Reuse**:
+  * **`⚡ Auto-Generate` (1-Click)**: Instant auto-keypair generation for quick workflows.
+  * **`📂 Use Recipient Key`**: Upload `.pqc.pub` or paste a colleague's public key to encrypt on their behalf.
 * **🔐 Optional PIN / Passphrase Protection for Key Files**: Exported `.dkey` (SSS) and `.pqc` (ML-KEM-768) files can be PIN-protected via Argon2id key derivation and authenticated AES-256-GCM encryption.
 * **📦 Bulk Key Packaging & Direct Dispatch**: Export all custodian keys in a single ZIP archive (`.zip`) with `README_CUSTODIAN_KEYS.txt`, copy Base64 public/private keys directly to the clipboard, or dispatch via SMTP email with custom instructions.
 * **🌐 Embedded Zero-Knowledge Web Server**: Self-host locally from the desktop app or run headlessly via CLI (`denc serve`) with flexible interface binding:
