@@ -1,0 +1,34 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/v2/crates/tauri-cli/schema.json",
+  "productName": "DualCrypt Enterprise",
+  "version": "2.0.0",
+  "identifier": "com.enterprise.dualencryption",
+  "build": {
+    "beforeDevCommand": "bun run dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "bun run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "DualCrypt Enterprise // Zero-Trust Threshold Platform",
+        "width": 1180,
+        "height": 820,
+        "minWidth": 960,
+        "minHeight": 700,
+        "resizable": true,
+        "fullscreen": false,
+        "dragDropEnabled": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' asset: data:; style-src 'self' 'unsafe-inline';"
+    }
+  },
+  "plugins": {
+    "dialog": null,
+    "fs": null,
+    "opener": null
+  }
+}

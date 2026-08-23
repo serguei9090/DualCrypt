@@ -1,0 +1,26 @@
+# Rust
+/target/
+**/target/
+**/*.rs.bk
+
+# Node / Bun
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Tauri
+src-tauri/target/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# Scratch and transient files
+/scratch/
+hooks_log.txt
+.DS_Store
+Thumbs.db
+*.dkey.tmp
+*.denc.tmp

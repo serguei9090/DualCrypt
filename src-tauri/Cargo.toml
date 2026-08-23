@@ -1,0 +1,28 @@
+[package]
+name = "dual-encryption-app"
+version = "2.0.0"
+description = "DualCrypt Enterprise - Zero-Trust Threshold File Encryption Platform"
+authors = ["DualCrypt Enterprise"]
+edition = "2021"
+
+[lib]
+name = "dual_encryption_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.2", features = [] }
+
+[dependencies]
+denc-core = { path = "../crates/denc-core" }
+tauri = { version = "2.2", features = [] }
+tauri-plugin-dialog = "2.2"
+tauri-plugin-fs = "2.2"
+tauri-plugin-opener = "2.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.43", features = ["full"] }
+tokio-util = "0.7"
+uuid = { version = "1.12", features = ["v4"] }
+zeroize = { version = "1.8", features = ["derive"] }
+thiserror = "2.0"
+zip = { version = "2.2", default-features = false, features = ["deflate"] }
