@@ -1,11 +1,29 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { CheckCircle2, Cpu, Eye, EyeOff, FileKey, KeyRound, Lock, Shield } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Cpu,
+  Eye,
+  EyeOff,
+  FileKey,
+  KeyRound,
+  Lock,
+  RefreshCw,
+  Shield,
+  Zap,
+} from "lucide-react";
 import type React from "react";
-import { useState } from "react";
-import { isTauriEnvironment, parseKeyFile, performHardwareTokenChallenge } from "../../lib/tauri";
+import { useCallback, useEffect, useState } from "react";
+import {
+  isTauriEnvironment,
+  listHardwareTokens,
+  parseKeyFile,
+  performHardwareTokenChallenge,
+  type YubiKeyDevice,
+} from "../../lib/tauri";
 import { cn } from "../../lib/utils";
 
-export type AuthMethod = "passphrase" | "keyfile" | "otp";
+export type AuthMethod = "passphrase" | "keyfile" | "yubikey" | "otp";
 
 interface CustodianCardProps {
   custodianId: number;
@@ -45,6 +63,30 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
   const [keyFilePin, setKeyFilePin] = useState("");
   const [pinError, setPinError] = useState<string | null>(null);
 
+  // Hardware key detection state
+  const [detectedTokens, setDetectedTokens] = useState<YubiKeyDevice[]>([]);
+  const [isScanningTokens, setIsScanningTokens] = useState(false);
+  const [hardwareError, setHardwareError] = useState<string | null>(null);
+
+  const scanForTokens = useCallback(async () => {
+    setIsScanningTokens(true);
+    setHardwareError(null);
+    try {
+      const tokens = await listHardwareTokens();
+      setDetectedTokens(tokens);
+    } catch {
+      setDetectedTokens([]);
+    } finally {
+      setIsScanningTokens(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedMethod === "yubikey") {
+      scanForTokens();
+    }
+  }, [selectedMethod, scanForTokens]);
+
   const handlePickKeyFile = async () => {
     setPinError(null);
     if (isTauriEnvironment()) {
@@ -75,7 +117,6 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
         }
       }
     } else {
-      // Mock browser key file pick
       setKeyFileName(`custodian_${custodianId}_share.dkey`);
       onCredentialSubmit({
         custodianId,
@@ -106,15 +147,16 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
   };
 
   const handleYubikeyAuth = async () => {
+    setHardwareError(null);
     try {
       await performHardwareTokenChallenge(custodianId, "4475616c43727970742d41757468");
       onCredentialSubmit({
         custodianId,
         keyFileContent: JSON.stringify({ id: custodianId, data: Array(32).fill(0xee) }),
-        authType: "keyfile",
+        authType: "yubikey",
       });
     } catch (err) {
-      setPinError(`Hardware key error: ${String(err)}`);
+      setHardwareError(String(err));
     }
   };
 
@@ -176,9 +218,9 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
 
       {!isVerified ? (
         <div className="space-y-3.5">
-          {/* Method selector for setup mode */}
+          {/* 3-Way Method Selector for setup mode */}
           {mode === "encrypt_setup" && (
-            <div className="flex rounded-xl bg-zinc-950/80 p-1 border border-zinc-800">
+            <div className="flex rounded-xl bg-zinc-950/80 p-1 border border-zinc-800 gap-1">
               <button
                 type="button"
                 onClick={() => {
@@ -186,9 +228,9 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                   onUpdateSetup?.({ label: currentLabel, authType: "passphrase", passphrase });
                 }}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs transition-colors",
+                  "flex-1 flex items-center justify-center gap-1 rounded-lg py-1.5 text-xs transition-colors",
                   selectedMethod === "passphrase"
-                    ? "bg-zinc-800 text-cyan-400 font-semibold"
+                    ? "bg-zinc-800 text-cyan-400 font-semibold shadow-sm"
                     : "text-zinc-400 hover:text-zinc-200",
                 )}
               >
@@ -201,18 +243,33 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                   onUpdateSetup?.({ label: currentLabel, authType: "keyfile" });
                 }}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs transition-colors",
+                  "flex-1 flex items-center justify-center gap-1 rounded-lg py-1.5 text-xs transition-colors",
                   selectedMethod === "keyfile"
-                    ? "bg-zinc-800 text-cyan-400 font-semibold"
+                    ? "bg-zinc-800 text-cyan-400 font-semibold shadow-sm"
                     : "text-zinc-400 hover:text-zinc-200",
                 )}
               >
-                <FileKey className="h-3.5 w-3.5" /> Key File / Token
+                <FileKey className="h-3.5 w-3.5" /> Key File
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedMethod("yubikey");
+                  onUpdateSetup?.({ label: currentLabel, authType: "yubikey" });
+                }}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-1 rounded-lg py-1.5 text-xs transition-colors",
+                  selectedMethod === "yubikey"
+                    ? "bg-zinc-800 text-amber-400 font-semibold shadow-sm border border-amber-500/30"
+                    : "text-zinc-400 hover:text-zinc-200",
+                )}
+              >
+                <Cpu className="h-3.5 w-3.5" /> YubiKey
               </button>
             </div>
           )}
 
-          {/* Passphrase Input */}
+          {/* 1. Passphrase Input */}
           {(selectedMethod === "passphrase" ||
             (mode === "decrypt_unlock" && authType === "passphrase")) && (
             <div className="space-y-2">
@@ -258,16 +315,14 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
             </div>
           )}
 
-          {/* Key File Loader & PIN unlock */}
+          {/* 2. Key File Loader & PIN unlock */}
           {(selectedMethod === "keyfile" ||
             (mode === "decrypt_unlock" && authType === "keyfile")) && (
             <div className="space-y-2">
               {mode === "encrypt_setup" ? (
                 <div className="rounded-xl border border-dashed border-zinc-700 bg-zinc-950/50 p-4 text-center space-y-2">
                   <FileKey className="mx-auto h-6 w-6 text-cyan-400" />
-                  <p className="text-xs font-medium text-zinc-200">
-                    Exportable Key File (.dkey) / Token
-                  </p>
+                  <p className="text-xs font-medium text-zinc-200">Exportable Key File (.dkey)</p>
                   <p className="text-[11px] text-zinc-500">
                     An armored `.dkey` file will be generated for this custodian upon encryption.
                   </p>
@@ -288,26 +343,14 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
               ) : (
                 <div className="space-y-2">
                   {!isPinProtectedKey ? (
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={handlePickKeyFile}
-                        className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-700 bg-zinc-950/50 py-3 text-xs text-zinc-300 hover:border-cyan-500 hover:text-cyan-400 transition-colors"
-                      >
-                        <FileKey className="h-4 w-4" />
-                        {keyFileName ? keyFileName : "Select .dkey Share File"}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleYubikeyAuth}
-                        className="flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 px-3 py-2 text-xs font-semibold text-amber-300 transition-all"
-                        title="Authenticate with YubiKey / FIDO2 Token"
-                      >
-                        <Cpu className="h-4 w-4" />
-                        <span>YubiKey</span>
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={handlePickKeyFile}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-700 bg-zinc-950/50 py-3 text-xs text-zinc-300 hover:border-cyan-500 hover:text-cyan-400 transition-colors"
+                    >
+                      <FileKey className="h-4 w-4" />
+                      {keyFileName ? keyFileName : "Select .dkey Share File"}
+                    </button>
                   ) : (
                     <div className="rounded-xl border border-amber-500/40 bg-amber-950/20 p-3.5 space-y-2">
                       <div className="flex items-center gap-2 text-xs font-semibold text-amber-300">
@@ -340,7 +383,68 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
             </div>
           )}
 
-          {/* OTP / Challenge */}
+          {/* 3. YubiKey / Hardware Token Mode */}
+          {(selectedMethod === "yubikey" ||
+            (mode === "decrypt_unlock" && authType === "yubikey")) && (
+            <div className="space-y-2.5">
+              <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
+                    <Cpu className="h-4 w-4 text-amber-400" />
+                    <span>Hardware Token Status</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={scanForTokens}
+                    disabled={isScanningTokens}
+                    className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1"
+                  >
+                    <RefreshCw className={`h-3 w-3 ${isScanningTokens ? "animate-spin" : ""}`} />
+                    <span>Scan USB</span>
+                  </button>
+                </div>
+
+                {detectedTokens.length > 0 ? (
+                  <div className="space-y-2">
+                    <div className="p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-xs text-emerald-300 flex items-center justify-between">
+                      <span>🟢 {detectedTokens[0].product_name}</span>
+                      <span className="text-[10px] font-mono opacity-80">USB Ready</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleYubikeyAuth}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 py-2.5 text-xs font-bold text-white shadow-[0_0_20px_rgba(245,158,11,0.25)] transition-all"
+                    >
+                      <Zap className="h-4 w-4" />
+                      <span>
+                        {mode === "encrypt_setup"
+                          ? "Bind Key Share to YubiKey"
+                          : "Touch YubiKey to Authenticate"}
+                      </span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-lg bg-rose-950/20 border border-rose-500/30 text-xs text-rose-300 space-y-2">
+                    <div className="flex items-center gap-2 font-semibold">
+                      <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0" />
+                      <span>No Hardware Token Detected</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400">
+                      Please insert your physical YubiKey into a USB port, or enable Simulator Mode
+                      in the Settings tab.
+                    </p>
+                  </div>
+                )}
+
+                {hardwareError && (
+                  <p className="text-[11px] text-rose-400 font-mono">{hardwareError}</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 4. OTP / Challenge */}
           {selectedMethod === "otp" && (
             <div className="flex gap-2">
               <input

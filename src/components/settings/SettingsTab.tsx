@@ -363,7 +363,7 @@ export const SettingsTab: React.FC = () => {
                 <Cpu className="h-5 w-5 text-amber-400" />
                 <div>
                   <h4 className="text-sm font-bold text-zinc-100">Hardware Security Keys</h4>
-                  <p className="text-[11px] text-zinc-400">FIDO2 & PKCS#11 Authentication</p>
+                  <p className="text-[11px] text-zinc-400">Physical YubiKey & FIDO2 Diagnostics</p>
                 </div>
               </div>
               <button
@@ -377,34 +377,70 @@ export const SettingsTab: React.FC = () => {
               </button>
             </div>
 
+            {/* Developer Simulator Toggle */}
+            <div className="p-3 rounded-xl border border-zinc-800 bg-zinc-950/80 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-zinc-200">Virtual Simulator Mode</span>
+                <input
+                  type="checkbox"
+                  checked={isSimulationEnabled()}
+                  onChange={(e) => {
+                    setSimulationEnabled(e.target.checked);
+                    handleRefreshTokens();
+                  }}
+                  className="h-4 w-4 rounded border-zinc-750 bg-zinc-900 text-cyan-500 focus:ring-0"
+                />
+              </div>
+              <p className="text-[10px] text-zinc-400">
+                Allows testing YubiKey workflows without physical hardware. (Turn off for strict
+                physical security).
+              </p>
+            </div>
+
             <div className="space-y-2.5">
-              {tokens.map((t) => (
-                <div
-                  key={t.device_id}
-                  className="p-3 rounded-xl border border-zinc-800 bg-zinc-950/70 space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs font-bold text-zinc-200">{t.product_name}</div>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 border border-emerald-500/20">
-                      <ShieldCheck className="h-3 w-3" />
-                      Ready
-                    </span>
-                  </div>
-                  {t.serial_number && (
-                    <div className="text-[10px] font-mono text-zinc-500">
-                      S/N: {t.serial_number}
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => handleTestYubikeyChallenge(1)}
-                    className="w-full mt-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 py-1.5 text-[11px] font-semibold text-amber-300 transition-all"
+              {tokens.length > 0 ? (
+                tokens.map((t) => (
+                  <div
+                    key={t.device_id}
+                    className="p-3 rounded-xl border border-zinc-800 bg-zinc-950/70 space-y-2"
                   >
-                    <Zap className="h-3 w-3" />
-                    <span>Simulate FIDO2 Touch & Sign</span>
-                  </button>
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-bold text-zinc-200">{t.product_name}</div>
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border ${
+                          t.is_simulated
+                            ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                            : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                        }`}
+                      >
+                        <ShieldCheck className="h-3 w-3" />
+                        {t.is_simulated ? "Simulated" : "Connected"}
+                      </span>
+                    </div>
+                    {t.serial_number && (
+                      <div className="text-[10px] font-mono text-zinc-500">
+                        S/N: {t.serial_number}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleTestYubikeyChallenge(1)}
+                      className="w-full mt-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 py-1.5 text-[11px] font-semibold text-amber-300 transition-all"
+                    >
+                      <Zap className="h-3 w-3" />
+                      <span>Test Token Challenge Response</span>
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="p-3 rounded-xl border border-rose-500/20 bg-rose-950/10 text-xs text-rose-300 space-y-1">
+                  <div className="font-semibold">No Hardware Key Detected</div>
+                  <p className="text-[11px] text-zinc-400">
+                    Insert a physical YubiKey into a USB port or enable Simulator Mode above to
+                    test.
+                  </p>
                 </div>
-              ))}
+              )}
 
               {activeChallengeResult && (
                 <div className="p-2.5 rounded-lg bg-zinc-950 border border-amber-500/30 text-[11px] font-mono text-amber-300 break-all">

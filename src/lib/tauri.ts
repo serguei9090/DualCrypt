@@ -154,12 +154,70 @@ export interface YubiKeyDevice {
   serial_number?: number;
   is_connected: boolean;
   supports_fido2: boolean;
+  is_simulated: boolean;
 }
 
 export interface YubiKeyAuthResult {
   success: boolean;
   signature_hex: string;
   key_handle: string;
+  is_simulated: boolean;
+}
+
+export function isSimulationEnabled(): boolean {
+  return localStorage.getItem("dual_enable_hardware_simulation") === "true";
+}
+
+export function setSimulationEnabled(enabled: boolean): void {
+  localStorage.setItem("dual_enable_hardware_simulation", enabled ? "true" : "false");
+}
+
+export async function listHardwareTokens(allowSimulation?: boolean): Promise<YubiKeyDevice[]> {
+  const sim = allowSimulation ?? isSimulationEnabled();
+  if (!isTauriEnvironment()) {
+    return sim
+      ? [
+          {
+            device_id: "simulated-fido2",
+            product_name: "Virtual FIDO2 Security Key (Simulator Mode)",
+            serial_number: 99990001,
+            is_connected: true,
+            supports_fido2: true,
+            is_simulated: true,
+          },
+        ]
+      : [];
+  }
+  return await invoke<YubiKeyDevice[]>("list_hardware_tokens", {
+    allowSimulation: sim,
+  });
+}
+
+export async function performHardwareTokenChallenge(
+  custodianId: number,
+  challengeHex: string,
+  allowSimulation?: boolean,
+): Promise<YubiKeyAuthResult> {
+  const sim = allowSimulation ?? isSimulationEnabled();
+  if (!isTauriEnvironment()) {
+    if (!sim) {
+      throw new Error(
+        "No physical YubiKey detected. Please plug in a hardware key or enable Simulation Mode in Settings.",
+      );
+    }
+    await new Promise((r) => setTimeout(r, 400));
+    return {
+      success: true,
+      signature_hex: "3fa98e0c12da94812f0",
+      key_handle: `mock-fido2-${custodianId}`,
+      is_simulated: true,
+    };
+  }
+  return await invoke<YubiKeyAuthResult>("perform_hardware_token_challenge", {
+    custodianId,
+    challengeHex,
+    allowSimulation: sim,
+  });
 }
 
 export async function saveKeyFile(filePath: string, share: unknown, pin?: string): Promise<void> {
@@ -223,37 +281,4 @@ export async function sendCustodianKeyEmail(request: SendCustodianEmailParams): 
     return `[Mock Web] Share emailed to ${request.recipient_email}`;
   }
   return await invoke<string>("send_custodian_key_email", { request });
-}
-
-export async function listHardwareTokens(): Promise<YubiKeyDevice[]> {
-  if (!isTauriEnvironment()) {
-    return [
-      {
-        device_id: "yubikey-5-nfc",
-        product_name: "YubiKey 5 Series (FIDO2 / WebAuthn)",
-        serial_number: 18492048,
-        is_connected: true,
-        supports_fido2: true,
-      },
-    ];
-  }
-  return await invoke<YubiKeyDevice[]>("list_hardware_tokens");
-}
-
-export async function performHardwareTokenChallenge(
-  custodianId: number,
-  challengeHex: string,
-): Promise<YubiKeyAuthResult> {
-  if (!isTauriEnvironment()) {
-    await new Promise((r) => setTimeout(r, 400));
-    return {
-      success: true,
-      signature_hex: "3fa98e0c12da94812f0",
-      key_handle: `mock-fido2-${custodianId}`,
-    };
-  }
-  return await invoke<YubiKeyAuthResult>("perform_hardware_token_challenge", {
-    custodianId,
-    challengeHex,
-  });
 }
