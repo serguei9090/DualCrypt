@@ -1,8 +1,12 @@
 import { save } from "@tauri-apps/plugin-dialog";
 import {
   ArrowRight,
+  Atom,
+  Check,
   CheckCircle2,
+  Copy,
   Download,
+  FileKey,
   FolderArchive,
   KeyRound,
   Mail,
@@ -41,6 +45,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
   const [savedStatus, setSavedStatus] = useState<Record<number, string>>({});
   const [zipSavedPath, setZipSavedPath] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // PIN protection per share
   const [sharePins, setSharePins] = useState<Record<number, string>>({});
@@ -59,39 +64,81 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
     });
   }, []);
 
+  const handleCopyText = (text: string, keyId: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(keyId);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
   const handleSaveShare = async (share: ExportedShare) => {
     setSaveError(null);
     try {
       const pin = sharePins[share.custodian_id]?.trim() || undefined;
+      const sanitizedLabel = share.label.replace(/\s+/g, "_");
+      const isPqc = share.auth_type === "pqc" || !!share.pqc_private_key_base64;
 
       if (isTauriEnvironment()) {
-        const sanitizedLabel = share.label.replace(/\s+/g, "_");
-        const defaultFilename = `custodian_${share.custodian_id}_${sanitizedLabel}.dkey`;
+        const defaultFilename = isPqc
+          ? `custodian_${share.custodian_id}_${sanitizedLabel}.pqc`
+          : `custodian_${share.custodian_id}_${sanitizedLabel}.dkey`;
+
+        const filterName = isPqc ? "Post-Quantum Key File" : "DualCrypt Key Share";
+        const extensions = isPqc ? ["pqc", "json"] : ["dkey", "json"];
+
         const path = await save({
           defaultPath: defaultFilename,
-          filters: [{ name: "DualCrypt Key Share", extensions: ["dkey", "json"] }],
+          filters: [{ name: filterName, extensions }],
         });
+
         if (path) {
-          await saveKeyFile(path, share.share, pin);
+          if (isPqc) {
+            await saveKeyFile(
+              path,
+              undefined,
+              pin,
+              share.pqc_public_key_base64,
+              share.pqc_private_key_base64,
+              share.custodian_id,
+              share.label,
+            );
+          } else {
+            await saveKeyFile(path, share.share, pin);
+          }
+
           const fname = path.split(/[\\/]/).pop() || path;
           setSavedStatus((prev) => ({
             ...prev,
-            [share.custodian_id]: `${fname}${pin ? " (PIN Encrypted)" : ""}`,
+            [share.custodian_id]: `${fname}${pin ? " (PIN Protected)" : ""}`,
           }));
         }
       } else {
+        const defaultFilename = isPqc
+          ? `custodian_${share.custodian_id}.pqc`
+          : `custodian_${share.custodian_id}.dkey`;
+
+        const payloadObj = isPqc
+          ? {
+              algorithm: "NIST-FIPS-203-ML-KEM-768",
+              custodian_id: share.custodian_id,
+              label: share.label,
+              public_key_base64: share.pqc_public_key_base64,
+              private_key_base64: share.pqc_private_key_base64,
+              pin_protected: !!pin,
+            }
+          : share.share;
+
         const dataStr = `data:text/json;charset=utf-8,${encodeURIComponent(
-          JSON.stringify(share.share, null, 2),
+          JSON.stringify(payloadObj, null, 2),
         )}`;
         const downloadAnchor = document.createElement("a");
         downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", `custodian_${share.custodian_id}.dkey`);
+        downloadAnchor.setAttribute("download", defaultFilename);
         document.body.appendChild(downloadAnchor);
         downloadAnchor.click();
         downloadAnchor.remove();
         setSavedStatus((prev) => ({
           ...prev,
-          [share.custodian_id]: `custodian_${share.custodian_id}.dkey`,
+          [share.custodian_id]: defaultFilename,
         }));
       }
     } catch (err) {
@@ -117,7 +164,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
         }
       } else {
         const bundle = {
-          description: "DualCrypt Enterprise Key Shares",
+          description: "DualCrypt Enterprise Key Shares & Post-Quantum Tokens",
           timestamp: new Date().toISOString(),
           shares: exportedShares,
         };
@@ -159,8 +206,23 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
 
     try {
       const pin = sharePins[emailModalShare.custodian_id]?.trim() || undefined;
-      const shareFilename = `custodian_${emailModalShare.custodian_id}_${emailModalShare.label.replace(/\s+/g, "_")}.dkey`;
-      const shareContent = JSON.stringify(emailModalShare.share, null, 2);
+      const isPqc = emailModalShare.auth_type === "pqc" || !!emailModalShare.pqc_private_key_base64;
+      const ext = isPqc ? "pqc" : "dkey";
+      const shareFilename = `custodian_${emailModalShare.custodian_id}_${emailModalShare.label.replace(/\s+/g, "_")}.${ext}`;
+
+      const shareContent = isPqc
+        ? JSON.stringify(
+            {
+              algorithm: "NIST-FIPS-203-ML-KEM-768",
+              custodian_id: emailModalShare.custodian_id,
+              label: emailModalShare.label,
+              public_key_base64: emailModalShare.pqc_public_key_base64,
+              private_key_base64: emailModalShare.pqc_private_key_base64,
+            },
+            null,
+            2,
+          )
+        : JSON.stringify(emailModalShare.share, null, 2);
 
       const res = await sendCustodianKeyEmail({
         config: smtpConfig,
@@ -221,11 +283,11 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <h4 className="text-xs font-semibold text-zinc-200 uppercase tracking-wider">
-                Exported Custodian Key Shares ({exportedShares.length} Keys)
+                Exported Custodian Key Shares & Tokens ({exportedShares.length} Slots)
               </h4>
               <p className="text-[11px] text-zinc-400">
-                Save locally or directly email to authorized custodians. Optional PIN encryption
-                protects keyfiles on transit.
+                Download key files, copy public/private keys, or email directly. Optional PIN
+                protection encrypts key material.
               </p>
             </div>
 
@@ -259,25 +321,50 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
               const isSaved = !!savedStatus[s.custodian_id];
               const savedName = savedStatus[s.custodian_id];
               const currentPin = sharePins[s.custodian_id] || "";
+              const isPqc = s.auth_type === "pqc" || !!s.pqc_private_key_base64;
 
               return (
                 <div
                   key={s.custodian_id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between bg-zinc-900/90 border border-zinc-800 p-3.5 rounded-xl hover:border-zinc-700 transition-colors gap-3"
+                  className="flex flex-col lg:flex-row lg:items-center justify-between bg-zinc-900/90 border border-zinc-800 p-3.5 rounded-xl hover:border-zinc-700 transition-colors gap-3"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="font-mono text-xs bg-zinc-800 text-cyan-400 px-2.5 py-1 rounded-lg border border-zinc-700 font-bold">
+                    <span
+                      className={cn(
+                        "font-mono text-xs px-2.5 py-1 rounded-lg border font-bold",
+                        isPqc
+                          ? "bg-purple-950/60 text-purple-400 border-purple-800/60"
+                          : "bg-zinc-800 text-cyan-400 border-zinc-700",
+                      )}
+                    >
                       P{s.custodian_id}
                     </span>
                     <div>
-                      <div className="text-xs text-zinc-100 font-medium">{s.label}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-zinc-100 font-medium">{s.label}</span>
+                        {isPqc ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-purple-950/80 border border-purple-500/30 px-2 py-0.5 text-[9px] font-mono text-purple-300">
+                            <Atom className="h-2.5 w-2.5 text-purple-400" />
+                            ML-KEM-768
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-cyan-950/80 border border-cyan-500/30 px-2 py-0.5 text-[9px] font-mono text-cyan-300">
+                            <FileKey className="h-2.5 w-2.5 text-cyan-400" />
+                            SSS Share
+                          </span>
+                        )}
+                      </div>
                       <div className="text-[11px] text-zinc-500 font-mono">
-                        {isSaved ? `✓ ${savedName}` : "Secret share ready for export"}
+                        {isSaved
+                          ? `✓ ${savedName}`
+                          : isPqc
+                            ? "Quantum-safe keypair generated & share encapsulated"
+                            : "Secret share ready for export"}
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     {/* Optional PIN Input */}
                     <div className="flex items-center gap-1 bg-zinc-950 border border-zinc-750 px-2 py-1 rounded-lg">
                       <KeyRound className="h-3 w-3 text-amber-400" />
@@ -292,6 +379,48 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                       />
                     </div>
 
+                    {/* Copy Public Key for PQC */}
+                    {isPqc && s.pqc_public_key_base64 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleCopyText(s.pqc_public_key_base64 || "", `pub-${s.custodian_id}`)
+                        }
+                        className="inline-flex items-center gap-1 rounded-lg bg-zinc-800 hover:bg-purple-700 text-zinc-300 hover:text-white px-2 py-1.5 text-xs font-semibold border border-zinc-700 hover:border-purple-500 transition-all"
+                        title="Copy ML-KEM-768 Public Key Base64"
+                      >
+                        {copiedKey === `pub-${s.custodian_id}` ? (
+                          <Check className="h-3.5 w-3.5 text-emerald-400" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5 text-purple-400" />
+                        )}
+                        <span>
+                          {copiedKey === `pub-${s.custodian_id}` ? "Copied" : "Copy PubKey"}
+                        </span>
+                      </button>
+                    )}
+
+                    {/* Copy Private Key for PQC */}
+                    {isPqc && s.pqc_private_key_base64 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleCopyText(s.pqc_private_key_base64 || "", `priv-${s.custodian_id}`)
+                        }
+                        className="inline-flex items-center gap-1 rounded-lg bg-zinc-800 hover:bg-purple-700 text-zinc-300 hover:text-white px-2 py-1.5 text-xs font-semibold border border-zinc-700 hover:border-purple-500 transition-all"
+                        title="Copy ML-KEM-768 Private Key Base64"
+                      >
+                        {copiedKey === `priv-${s.custodian_id}` ? (
+                          <Check className="h-3.5 w-3.5 text-emerald-400" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5 text-purple-300" />
+                        )}
+                        <span>
+                          {copiedKey === `priv-${s.custodian_id}` ? "Copied" : "Copy PrivKey"}
+                        </span>
+                      </button>
+                    )}
+
                     {/* Email Share Button */}
                     <button
                       type="button"
@@ -303,7 +432,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                       <span>Email</span>
                     </button>
 
-                    {/* Save .dkey Button */}
+                    {/* Save .dkey or .pqc Button */}
                     <button
                       type="button"
                       onClick={() => handleSaveShare(s)}
@@ -311,11 +440,13 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                         "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
                         isSaved
                           ? "border border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
-                          : "bg-zinc-800 hover:bg-cyan-600 text-zinc-200 hover:text-white border border-zinc-700 hover:border-cyan-500",
+                          : isPqc
+                            ? "bg-purple-900/80 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-700 hover:border-purple-400"
+                            : "bg-zinc-800 hover:bg-cyan-600 text-zinc-200 hover:text-white border border-zinc-700 hover:border-cyan-500",
                       )}
                     >
                       <Download className="h-3.5 w-3.5" />
-                      <span>{isSaved ? "Saved" : "Save .dkey"}</span>
+                      <span>{isSaved ? "Saved" : isPqc ? "Save .pqc" : "Save .dkey"}</span>
                     </button>
                   </div>
                 </div>
@@ -333,7 +464,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
               <div className="flex items-center gap-2">
                 <Mail className="h-5 w-5 text-teal-400" />
                 <h4 className="text-sm font-bold text-zinc-100">
-                  Email Key Share: {emailModalShare.label}
+                  Email Key Token: {emailModalShare.label}
                 </h4>
               </div>
               <button
@@ -393,7 +524,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                     rows={2}
                     value={customNote}
                     onChange={(e) => setCustomNote(e.target.value)}
-                    placeholder="e.g. Please save this file to your secure encrypted USB token."
+                    placeholder="e.g. Please save this key file to your secure encrypted USB drive."
                     className="w-full rounded-xl border border-zinc-750 bg-zinc-950 px-3 py-2 text-xs text-zinc-200 focus:border-teal-500 focus:outline-none"
                   />
                 </div>
@@ -402,7 +533,10 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                   <div>
                     Attachment:{" "}
                     <span className="text-teal-400">
-                      custodian_{emailModalShare.custodian_id}.dkey
+                      custodian_{emailModalShare.custodian_id}.
+                      {emailModalShare.auth_type === "pqc" || emailModalShare.pqc_private_key_base64
+                        ? "pqc"
+                        : "dkey"}
                     </span>
                   </div>
                   <div>

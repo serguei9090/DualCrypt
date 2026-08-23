@@ -130,16 +130,26 @@ pub fn wasm_encrypt_payload(
                 exported_shares.push(ExportedKeyShare {
                     custodian_id: custodian.custodian_id,
                     label: custodian.label.clone(),
-                    share,
+                    auth_type: custodian.auth_type,
+                    share: Some(share),
+                    pqc_public_key_base64: None,
+                    pqc_private_key_base64: None,
                 });
             }
             AuthType::PostQuantum => {
-                let pub_key_b64 = custodian
+                let (pub_key_b64, priv_key_b64) = if let Some(pk) = custodian
                     .public_key_base64
                     .as_deref()
-                    .ok_or_else(|| JsValue::from_str(&format!("ML-KEM Public Key required for custodian {}", custodian.label)))?;
+                    .filter(|s| !s.trim().is_empty())
+                {
+                    (pk.to_string(), None)
+                } else {
+                    let kp = generate_ml_kem_keypair()
+                        .map_err(|e| JsValue::from_str(&format!("PQC keygen error: {}", e)))?;
+                    (kp.public_key_base64.clone(), Some(kp.private_key_base64.clone()))
+                };
 
-                let pqc_share = encapsulate_share_ml_kem(pub_key_b64, &share)
+                let pqc_share = encapsulate_share_ml_kem(&pub_key_b64, &share)
                     .map_err(|e| JsValue::from_str(&format!("ML-KEM Encapsulation failed: {}", e)))?;
                 let share_bytes = serde_json::to_vec(&pqc_share)
                     .map_err(|e| JsValue::from_str(&format!("Serialize PQC share error: {}", e)))?;
@@ -150,6 +160,15 @@ pub fn wasm_encrypt_payload(
                     label: custodian.label.clone(),
                     salt: custodian_salt,
                     encrypted_share: share_bytes,
+                });
+
+                exported_shares.push(ExportedKeyShare {
+                    custodian_id: custodian.custodian_id,
+                    label: custodian.label.clone(),
+                    auth_type: AuthType::PostQuantum,
+                    share: None,
+                    pqc_public_key_base64: Some(pub_key_b64),
+                    pqc_private_key_base64: priv_key_b64,
                 });
             }
         }

@@ -4,7 +4,7 @@ use aes_gcm::aead::{Aead, KeyInit, Payload};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
 use ml_kem::kem::{Decapsulate, DecapsulationKey, Encapsulate, EncapsulationKey};
 use ml_kem::{Encoded, EncodedSizeUser, KemCore, MlKem768, MlKem768Params};
-use rand_core::OsRng;
+use rand_core::{OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use zeroize::{Zeroize, ZeroizeOnDrop};
@@ -16,6 +16,124 @@ pub struct PqcKeypair {
     pub private_key_base64: String,
     #[zeroize(skip)]
     pub algorithm: String,
+}
+
+/// Plain Post-Quantum Key File structure
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
+pub struct PlainPqcKeyFile {
+    pub algorithm: String,
+    pub custodian_id: u8,
+    pub label: String,
+    pub public_key_base64: String,
+    pub private_key_base64: String,
+}
+
+/// PIN-Protected Post-Quantum Key File structure
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
+pub struct EncryptedPqcKeyFile {
+    pub algorithm: String,
+    pub custodian_id: u8,
+    pub label: String,
+    pub public_key_base64: String,
+    pub is_pin_protected: bool,
+    pub salt: [u8; 32],
+    pub nonce: [u8; 12],
+    pub encrypted_private_key: Vec<u8>,
+}
+
+/// Universal wrapper for Post-Quantum Key Files
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum PqcKeyFilePayload {
+    Encrypted(EncryptedPqcKeyFile),
+    Plain(PlainPqcKeyFile),
+}
+
+impl PqcKeyFilePayload {
+    pub fn custodian_id(&self) -> u8 {
+        match self {
+            PqcKeyFilePayload::Plain(p) => p.custodian_id,
+            PqcKeyFilePayload::Encrypted(e) => e.custodian_id,
+        }
+    }
+
+    pub fn label(&self) -> &str {
+        match self {
+            PqcKeyFilePayload::Plain(p) => &p.label,
+            PqcKeyFilePayload::Encrypted(e) => &e.label,
+        }
+    }
+
+    pub fn public_key_base64(&self) -> &str {
+        match self {
+            PqcKeyFilePayload::Plain(p) => &p.public_key_base64,
+            PqcKeyFilePayload::Encrypted(e) => &e.public_key_base64,
+        }
+    }
+
+    pub fn is_pin_protected(&self) -> bool {
+        matches!(self, PqcKeyFilePayload::Encrypted(_))
+    }
+}
+
+/// Encrypts an ML-KEM private key with a PIN/passphrase
+pub fn encrypt_pqc_keyfile_with_pin(
+    keypair: &PqcKeypair,
+    custodian_id: u8,
+    label: &str,
+    pin: &str,
+) -> Result<EncryptedPqcKeyFile, DencError> {
+    let salt = crate::kdf::generate_salt();
+    let mut key = crate::kdf::derive_key_argon2id(pin.as_bytes(), &salt)?;
+    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
+    key.zeroize();
+
+    let mut nonce = [0u8; 12];
+    OsRng.fill_bytes(&mut nonce);
+
+    let encrypted_private_key = cipher
+        .encrypt(
+            Nonce::from_slice(&nonce),
+            Payload {
+                msg: keypair.private_key_base64.as_bytes(),
+                aad: &salt,
+            },
+        )
+        .map_err(|_| DencError::Custom("Failed to encrypt PQC private key with PIN".to_string()))?;
+
+    Ok(EncryptedPqcKeyFile {
+        algorithm: keypair.algorithm.clone(),
+        custodian_id,
+        label: label.to_string(),
+        public_key_base64: keypair.public_key_base64.clone(),
+        is_pin_protected: true,
+        salt,
+        nonce,
+        encrypted_private_key,
+    })
+}
+
+/// Decrypts a PIN-protected ML-KEM private key
+pub fn decrypt_pqc_keyfile_with_pin(
+    enc_file: &EncryptedPqcKeyFile,
+    pin: &str,
+) -> Result<String, DencError> {
+    let mut key = crate::kdf::derive_key_argon2id(pin.as_bytes(), &enc_file.salt)?;
+    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
+    key.zeroize();
+
+    let decrypted_bytes = cipher
+        .decrypt(
+            Nonce::from_slice(&enc_file.nonce),
+            Payload {
+                msg: &enc_file.encrypted_private_key,
+                aad: &enc_file.salt,
+            },
+        )
+        .map_err(|_| DencError::Custom("Invalid PIN for Post-Quantum key".to_string()))?;
+
+    String::from_utf8(decrypted_bytes)
+        .map_err(|e| DencError::Custom(format!("Corrupted private key UTF-8: {}", e)))
 }
 
 /// Encapsulated Post-Quantum Share Payload
@@ -213,5 +331,20 @@ mod tests {
 
         assert_eq!(original_share.id, recovered_share.id);
         assert_eq!(original_share.data, recovered_share.data);
+    }
+
+    #[test]
+    fn test_pqc_keyfile_pin_protection() {
+        let keypair = generate_ml_kem_keypair().expect("Keypair gen failed");
+        let enc = encrypt_pqc_keyfile_with_pin(&keypair, 2, "Security Officer", "MyPin#2026")
+            .expect("PIN encryption failed");
+        assert!(enc.is_pin_protected);
+
+        // Wrong PIN
+        assert!(decrypt_pqc_keyfile_with_pin(&enc, "WrongPin").is_err());
+
+        // Correct PIN
+        let priv_key = decrypt_pqc_keyfile_with_pin(&enc, "MyPin#2026").expect("PIN decryption failed");
+        assert_eq!(priv_key, keypair.private_key_base64);
     }
 }

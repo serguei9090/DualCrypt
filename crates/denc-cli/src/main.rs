@@ -260,11 +260,26 @@ async fn handle_encrypt(
         std::fs::create_dir_all(&target_key_dir)?;
 
         for s in &res.exported_shares {
-            let key_filename = format!("custodian_{}.dkey", s.custodian_id);
-            let key_path = target_key_dir.join(&key_filename);
-            let json = serde_json::to_string_pretty(&s.share)?;
-            std::fs::write(&key_path, json)?;
-            println!("  ✔ Saved Share P{} -> {:?}", s.custodian_id, key_path);
+            if s.auth_type == AuthType::PostQuantum {
+                let key_filename = format!("custodian_{}.pqc", s.custodian_id);
+                let key_path = target_key_dir.join(&key_filename);
+                let pqc_file = denc_core::pqc::PlainPqcKeyFile {
+                    algorithm: "NIST-FIPS-203-ML-KEM-768".to_string(),
+                    custodian_id: s.custodian_id,
+                    label: s.label.clone(),
+                    public_key_base64: s.pqc_public_key_base64.clone().unwrap_or_default(),
+                    private_key_base64: s.pqc_private_key_base64.clone().unwrap_or_default(),
+                };
+                let json = serde_json::to_string_pretty(&pqc_file)?;
+                std::fs::write(&key_path, json)?;
+                println!("  ✔ Saved Post-Quantum Key P{} -> {:?}", s.custodian_id, key_path);
+            } else if let Some(share) = &s.share {
+                let key_filename = format!("custodian_{}.dkey", s.custodian_id);
+                let key_path = target_key_dir.join(&key_filename);
+                let json = serde_json::to_string_pretty(share)?;
+                std::fs::write(&key_path, json)?;
+                println!("  ✔ Saved Share P{} -> {:?}", s.custodian_id, key_path);
+            }
         }
     }
 

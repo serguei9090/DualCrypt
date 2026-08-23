@@ -85,16 +85,18 @@ The `.denc` container encapsulates the metadata and chunked authenticated stream
   * Direct in-browser cryptographic engine compiling pure Rust core to WebAssembly.
   * Zero server-side plaintext exposure: 100% of cryptography executes within browser memory.
 * **💻 Headless CLI (`denc-cli`)**: Standalone command-line binary `denc` for server backups, automation scripts, and CI/CD pipelines.
-* **🌐 Embedded Local Web Server**: Lightweight built-in HTTP server (`axum`) with configurable network binding:
-  * `🔒 Localhost (127.0.0.1)` for zero-trust single workstation isolation.
+* **⚛️ NIST FIPS 203 ML-KEM-768 Post-Quantum Key Encapsulation**: Quantum-safe asymmetric share encapsulation protecting against "Harvest Now, Decrypt Later" quantum adversary attacks.
+* **⚡ 1-Click Streamlined Slot Setup**: Standardized 1-click slot confirmation across Passphrase, Key File, YubiKey, and Post-Quantum modes.
+* **🔐 Optional PIN / Passphrase Protection for Key Files**: Exported `.dkey` (SSS) and `.pqc` (ML-KEM-768) files can be PIN-protected via Argon2id key derivation and authenticated AES-256-GCM encryption.
+* **📦 Bulk Key Packaging & Direct Dispatch**: Export all custodian keys in a single ZIP archive (`.zip`) with `README_CUSTODIAN_KEYS.txt`, copy Base64 public/private keys directly to the clipboard, or dispatch via SMTP email with custom instructions.
+* **🌐 Embedded Zero-Knowledge Web Server**: Self-host locally from the desktop app or run headlessly via CLI (`denc serve`) with flexible interface binding:
+  * `🔒 Localhost Only (127.0.0.1)` for local-machine security.
   * `🌐 Local LAN (0.0.0.0)` for team access across local subnet/Wi-Fi.
 * **⚙️ Enterprise Settings Sidebar**: 2-column sidebar navigation organizing Email/SMTP, Local Web Server, Hardware/YubiKey, and Cryptographic Defaults.
 * **🛡️ $k$-of-$n$ Quorum Flexibility**: Configure strict dual-custody (2-of-2), majority board quorums (3-of-5), or disaster escrow models (2-of-3).
 * **⚡ High-Throughput Streaming**: Processes gigabyte-scale files at disk speeds with constant $O(1)$ memory consumption ($<20\text{ MB}$ RAM).
 * **📁 Directory & Folder Archiving**: Native streaming TAR bundling to encrypt entire directory hierarchies seamlessly into a single `.denc` container.
-* **🔐 PIN-Protected `.dkey` Key Shares**: Exported key share files can be encrypted with an optional PIN/password using Argon2id + AES-256-GCM.
-* **📧 One-Click Custodian Email Dispatch**: Directly dispatch `.dkey` shares and instructions to authorized custodians from the completion screen.
-* **🔑 Hardware Token & YubiKey Support**: Real physical USB device scanning (`VID_1050`) with an explicit 4-way selector (`[ Passphrase ]`, `[ Key File ]`, `[ YubiKey ]`, `[ ⚛️ Post-Quantum ]`).
+* **🔑 Hardware Token & YubiKey Support**: Real physical USB device scanning (`VID_1050`) with an explicit 4-way selector (`[ Passphrase ]`, `[ Key File ]`, `[ YubiKey ]`, `[ ⚛️ PQC KEM ]`).
 
 ---
 

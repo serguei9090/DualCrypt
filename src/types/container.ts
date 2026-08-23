@@ -1,4 +1,4 @@
-export type AuthType = "passphrase" | "keyfile" | "otp";
+export type AuthType = "passphrase" | "keyfile" | "otp" | "pqc" | "postquantum" | "yubikey";
 
 export interface CustodianDescriptorInfo {
   custodian_id: number;
@@ -24,5 +24,8 @@ export interface SecretShareData {
 export interface ExportedShare {
   custodian_id: number;
   label: string;
-  share: SecretShareData;
+  auth_type?: AuthType | string;
+  share?: SecretShareData;
+  pqc_public_key_base64?: string;
+  pqc_private_key_base64?: string;
 }

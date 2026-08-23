@@ -124,7 +124,9 @@ export async function cancelJob(jobId: string): Promise<void> {
 export interface KeyFileParseResult {
   custodian_id: number;
   share: { id: number; data: number[] } | null;
+  pqc_private_key_base64?: string;
   is_pin_protected: boolean;
+  is_pqc: boolean;
 }
 
 export interface SmtpConfig {
@@ -220,9 +222,25 @@ export async function performHardwareTokenChallenge(
   });
 }
 
-export async function saveKeyFile(filePath: string, share: unknown, pin?: string): Promise<void> {
+export async function saveKeyFile(
+  filePath: string,
+  share?: unknown,
+  pin?: string,
+  pqcPublicKeyBase64?: string,
+  pqcPrivateKeyBase64?: string,
+  custodianId?: number,
+  label?: string,
+): Promise<void> {
   if (!isTauriEnvironment()) return;
-  await invoke("save_keyfile", { filePath, share, pin });
+  await invoke("save_keyfile", {
+    filePath,
+    share,
+    pin,
+    pqcPublicKeyBase64,
+    pqcPrivateKeyBase64,
+    custodianId,
+    label,
+  });
 }
 
 export async function saveAllKeyFilesZip(
@@ -258,6 +276,7 @@ export async function parseKeyFile(filePath: string, pin?: string): Promise<KeyF
       custodian_id: 2,
       share: { id: 2, data: Array(32).fill(0xbb) },
       is_pin_protected: false,
+      is_pqc: false,
     };
   }
   return await invoke<KeyFileParseResult>("parse_keyfile", { filePath, pin });

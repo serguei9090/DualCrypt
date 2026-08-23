@@ -47,7 +47,10 @@ pub struct EncryptionParams {
 pub struct ExportedKeyShare {
     pub custodian_id: u8,
     pub label: String,
-    pub share: SecretShare,
+    pub auth_type: AuthType,
+    pub share: Option<SecretShare>,
+    pub pqc_public_key_base64: Option<String>,
+    pub pqc_private_key_base64: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -223,16 +226,25 @@ pub fn encrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
                 exported_shares.push(ExportedKeyShare {
                     custodian_id: custodian.custodian_id,
                     label: custodian.label.clone(),
-                    share,
+                    auth_type: custodian.auth_type,
+                    share: Some(share),
+                    pqc_public_key_base64: None,
+                    pqc_private_key_base64: None,
                 });
             }
             AuthType::PostQuantum => {
-                let pub_key_b64 = custodian
+                let (pub_key_b64, priv_key_b64) = if let Some(pk) = custodian
                     .public_key_base64
                     .as_deref()
-                    .ok_or_else(|| DencError::Custom(format!("ML-KEM Public Key required for custodian {}", custodian.label)))?;
+                    .filter(|s| !s.trim().is_empty())
+                {
+                    (pk.to_string(), None)
+                } else {
+                    let kp = pqc::generate_ml_kem_keypair()?;
+                    (kp.public_key_base64.clone(), Some(kp.private_key_base64.clone()))
+                };
 
-                let pqc_share = encapsulate_share_ml_kem(pub_key_b64, &share)?;
+                let pqc_share = encapsulate_share_ml_kem(&pub_key_b64, &share)?;
                 let share_bytes = serde_json::to_vec(&pqc_share)?;
 
                 descriptors.push(CustodianDescriptor {
@@ -241,6 +253,15 @@ pub fn encrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
                     label: custodian.label.clone(),
                     salt: custodian_salt,
                     encrypted_share: share_bytes,
+                });
+
+                exported_shares.push(ExportedKeyShare {
+                    custodian_id: custodian.custodian_id,
+                    label: custodian.label.clone(),
+                    auth_type: AuthType::PostQuantum,
+                    share: None,
+                    pqc_public_key_base64: Some(pub_key_b64),
+                    pqc_private_key_base64: priv_key_b64,
                 });
             }
         }
@@ -437,7 +458,7 @@ mod tests {
         .expect("Encryption failed");
 
         assert_eq!(enc_res.exported_shares.len(), 1);
-        let party2_share = enc_res.exported_shares[0].share.clone();
+        let party2_share = enc_res.exported_shares[0].share.clone().unwrap();
 
         // Inspect header
         let inspection = inspect_container(encrypted_file.path()).expect("Inspection failed");

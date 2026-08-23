@@ -1,10 +1,9 @@
-import { open, save } from "@tauri-apps/plugin-dialog";
+import { open } from "@tauri-apps/plugin-dialog";
 import {
   AlertTriangle,
   Atom,
   CheckCircle2,
   Cpu,
-  Download,
   Eye,
   EyeOff,
   FileKey,
@@ -17,17 +16,16 @@ import {
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import {
-  generatePqcKeypair,
   isTauriEnvironment,
   listHardwareTokens,
-  type PqcKeypair,
   parseKeyFile,
   performHardwareTokenChallenge,
   type YubiKeyDevice,
 } from "../../lib/tauri";
 import { cn } from "../../lib/utils";
+import type { AuthType } from "../../types/container";
 
-export type AuthMethod = "passphrase" | "keyfile" | "yubikey" | "pqc" | "otp";
+export type AuthMethod = AuthType;
 
 interface CustodianCardProps {
   custodianId: number;
@@ -82,10 +80,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
   const [hardwareError, setHardwareError] = useState<string | null>(null);
 
   // Post-Quantum ML-KEM State
-  const [pqcPublicKey, setPqcPublicKey] = useState("");
   const [pqcPrivateKey, setPqcPrivateKey] = useState("");
-  const [generatedKeypair, setGeneratedKeypair] = useState<PqcKeypair | null>(null);
-  const [isGeneratingPqc, setIsGeneratingPqc] = useState(false);
   const [pqcError, setPqcError] = useState<string | null>(null);
 
   const scanForTokens = useCallback(async () => {
@@ -180,79 +175,9 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
     }
   };
 
-  const handleGeneratePqc = async () => {
-    setIsGeneratingPqc(true);
-    setPqcError(null);
-    try {
-      const keypair = await generatePqcKeypair();
-      setGeneratedKeypair(keypair);
-      setPqcPublicKey(keypair.public_key_base64);
-      onUpdateSetup?.({
-        label: currentLabel,
-        authType: "pqc",
-        publicKeyBase64: keypair.public_key_base64,
-      });
-    } catch (err) {
-      setPqcError(`ML-KEM Key Generation Error: ${String(err)}`);
-    } finally {
-      setIsGeneratingPqc(false);
-    }
-  };
-
-  const handleDownloadPrivateKey = async () => {
-    if (!generatedKeypair) return;
-    if (isTauriEnvironment()) {
-      const savePath = await save({
-        defaultPath: `custodian_${custodianId}_ml_kem_768_private.pqc`,
-        filters: [{ name: "Post-Quantum Private Key", extensions: ["pqc", "key"] }],
-      });
-      if (savePath) {
-        // Will write file via saveKeyFile or direct write
-        const blob = JSON.stringify(
-          {
-            algorithm: generatedKeypair.algorithm,
-            custodian_id: custodianId,
-            label: currentLabel,
-            private_key_base64: generatedKeypair.private_key_base64,
-          },
-          null,
-          2,
-        );
-        const { writeTextFile } = await import("@tauri-apps/plugin-fs");
-        await writeTextFile(savePath, blob);
-      }
-    } else {
-      const blob = new Blob(
-        [
-          JSON.stringify(
-            {
-              algorithm: generatedKeypair.algorithm,
-              custodian_id: custodianId,
-              label: currentLabel,
-              private_key_base64: generatedKeypair.private_key_base64,
-            },
-            null,
-            2,
-          ),
-        ],
-        { type: "application/json" },
-      );
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `custodian_${custodianId}_ml_kem_768_private.pqc`;
-      a.click();
-    }
-  };
-
   const handleConfirmPqcSetup = () => {
-    if (!pqcPublicKey.trim()) {
-      setPqcError("Please generate or paste an ML-KEM-768 Public Key.");
-      return;
-    }
     onCredentialSubmit({
       custodianId,
-      publicKeyBase64: pqcPublicKey.trim(),
       authType: "pqc",
       label: currentLabel,
     });
@@ -266,26 +191,54 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
         filters: [{ name: "Post-Quantum Private Key", extensions: ["pqc", "key", "json"] }],
       });
       if (selected && typeof selected === "string") {
-        const { readTextFile } = await import("@tauri-apps/plugin-fs");
-        const raw = await readTextFile(selected);
+        const fname = selected.split(/[\\/]/).pop() || selected;
+        setKeyFileName(fname);
+        setKeyFilePath(selected);
+
         try {
-          const parsed = JSON.parse(raw);
-          const privKey = parsed.private_key_base64 || raw.trim();
-          setPqcPrivateKey(privKey);
-          onCredentialSubmit({
-            custodianId,
-            pqcPrivateKeyBase64: privKey,
-            authType: "pqc",
-          });
-        } catch {
-          setPqcPrivateKey(raw.trim());
-          onCredentialSubmit({
-            custodianId,
-            pqcPrivateKeyBase64: raw.trim(),
-            authType: "pqc",
-          });
+          const res = await parseKeyFile(selected);
+          if (res.is_pin_protected && !res.pqc_private_key_base64 && !res.share) {
+            setIsPinProtectedKey(true);
+          } else if (res.pqc_private_key_base64) {
+            setIsPinProtectedKey(false);
+            onCredentialSubmit({
+              custodianId,
+              pqcPrivateKeyBase64: res.pqc_private_key_base64,
+              authType: "pqc",
+            });
+          }
+        } catch (err) {
+          console.error("Failed to parse PQC key file:", err);
+          setPqcError(`Failed to parse PQC key file: ${String(err)}`);
         }
       }
+    } else {
+      setKeyFileName(`custodian_${custodianId}.pqc`);
+      onCredentialSubmit({
+        custodianId,
+        pqcPrivateKeyBase64: "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQ...",
+        authType: "pqc",
+      });
+    }
+  };
+
+  const handleUnlockPinProtectedPqcKey = async () => {
+    if (!keyFilePath || !keyFilePin) return;
+    setPqcError(null);
+    try {
+      const res = await parseKeyFile(keyFilePath, keyFilePin);
+      if (res.pqc_private_key_base64) {
+        setIsPinProtectedKey(false);
+        onCredentialSubmit({
+          custodianId,
+          pqcPrivateKeyBase64: res.pqc_private_key_base64,
+          authType: "pqc",
+        });
+      } else {
+        setPqcError("Incorrect PIN for this Post-Quantum key.");
+      }
+    } catch (err) {
+      setPqcError(`PIN Unlock Failed: ${String(err)}`);
     }
   };
 
@@ -341,7 +294,6 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                     label: e.target.value,
                     authType: selectedMethod,
                     passphrase,
-                    publicKeyBase64: pqcPublicKey,
                   });
                 }}
                 className="bg-transparent font-semibold text-sm text-zinc-100 focus:outline-none focus:underline"
@@ -419,7 +371,6 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                   onUpdateSetup?.({
                     label: currentLabel,
                     authType: "pqc",
-                    publicKeyBase64: pqcPublicKey,
                   });
                 }}
                 className={cn(
@@ -615,104 +566,94 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
               (authType === "pqc" || authType === ("postquantum" as unknown)))) && (
             <div className="space-y-3">
               {mode === "encrypt_setup" ? (
-                <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-3.5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-xs font-semibold text-purple-300">
-                      <Atom className="h-4 w-4 text-purple-400" />
-                      <span>NIST FIPS 203 ML-KEM-768</span>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={isGeneratingPqc}
-                      onClick={handleGeneratePqc}
-                      className="rounded-lg bg-purple-800/60 hover:bg-purple-700/80 px-2.5 py-1 text-[11px] text-purple-200 font-medium transition-colors"
-                    >
-                      {isGeneratingPqc ? "Generating..." : "⚡ Generate Keypair"}
-                    </button>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label
-                      htmlFor={`pqc-pub-${custodianId}`}
-                      className="text-[10px] text-zinc-400 uppercase tracking-wider font-mono"
-                    >
-                      Recipient ML-KEM Public Key (Base64)
-                    </label>
-                    <textarea
-                      id={`pqc-pub-${custodianId}`}
-                      rows={2}
-                      value={pqcPublicKey}
-                      onChange={(e) => {
-                        setPqcPublicKey(e.target.value);
-                        onUpdateSetup?.({
-                          label: currentLabel,
-                          authType: "pqc",
-                          publicKeyBase64: e.target.value,
-                        });
-                      }}
-                      placeholder="Paste recipient's ML-KEM-768 public key here or click 'Generate Keypair' above..."
-                      className="w-full rounded-lg border border-purple-900/60 bg-zinc-950 px-3 py-2 text-[11px] text-zinc-200 font-mono focus:border-purple-500 focus:outline-none"
-                    />
-                  </div>
-
-                  {generatedKeypair && (
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-purple-900/30 border border-purple-500/30 text-[11px] text-purple-300">
-                      <span>🔑 Private Key Generated</span>
-                      <button
-                        type="button"
-                        onClick={handleDownloadPrivateKey}
-                        className="flex items-center gap-1 rounded bg-purple-700 hover:bg-purple-600 px-2 py-1 text-[10px] font-bold text-white transition-colors"
-                      >
-                        <Download className="h-3 w-3" /> Download .pqc
-                      </button>
-                    </div>
-                  )}
-
+                <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-4 text-center space-y-2.5">
+                  <Atom className="mx-auto h-6 w-6 text-purple-400" />
+                  <p className="text-xs font-semibold text-purple-200">
+                    Post-Quantum Key File (.pqc)
+                  </p>
+                  <p className="text-[11px] text-zinc-400">
+                    An armored NIST FIPS 203 ML-KEM-768 key file will be generated for this
+                    custodian upon encryption. You can download, copy, PIN-protect, or email it on
+                    the completion screen.
+                  </p>
                   <button
                     type="button"
                     onClick={handleConfirmPqcSetup}
-                    disabled={!pqcPublicKey}
-                    className="w-full rounded-xl bg-purple-600 hover:bg-purple-500 py-2.5 text-xs font-semibold text-white transition-colors disabled:opacity-40"
+                    className="w-full rounded-xl bg-purple-700 hover:bg-purple-600 py-2.5 text-xs font-semibold text-white transition-colors shadow-lg"
                   >
                     Confirm Quantum-Safe Slot
                   </button>
                 </div>
               ) : (
-                <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-3.5 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-xs font-semibold text-purple-300">
-                      <Atom className="h-4 w-4 text-purple-400" />
-                      <span>Decapsulate ML-KEM-768 Share</span>
+                <div className="space-y-2">
+                  {!isPinProtectedKey ? (
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={handlePickPqcPrivateKeyFile}
+                        className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-purple-800/60 bg-purple-950/30 py-3 text-xs text-purple-200 hover:border-purple-500 hover:text-purple-100 transition-colors"
+                      >
+                        <FileKey className="h-4 w-4 text-purple-400" />
+                        {keyFileName ? keyFileName : "Select .pqc Key File"}
+                      </button>
+
+                      <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                          <span className="w-full border-t border-zinc-800" />
+                        </div>
+                        <div className="relative flex justify-center text-[10px] uppercase font-mono">
+                          <span className="bg-zinc-900 px-2 text-zinc-500">or paste base64</span>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={pqcPrivateKey}
+                          onChange={(e) => setPqcPrivateKey(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && handlePqcPrivateDecryptSubmit()}
+                          placeholder="Paste ML-KEM Private Key..."
+                          className="flex-1 rounded-xl border border-purple-900/60 bg-zinc-950 px-3 py-2 text-[11px] text-zinc-200 font-mono focus:border-purple-500 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          disabled={!pqcPrivateKey.trim()}
+                          onClick={handlePqcPrivateDecryptSubmit}
+                          className="rounded-xl bg-purple-600 hover:bg-purple-500 px-3 py-2 text-xs font-semibold text-white transition-colors disabled:opacity-40"
+                        >
+                          Verify
+                        </button>
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handlePickPqcPrivateKeyFile}
-                      className="text-[11px] text-purple-300 hover:underline flex items-center gap-1"
-                    >
-                      <FileKey className="h-3.5 w-3.5" /> Upload .pqc
-                    </button>
-                  </div>
+                  ) : (
+                    <div className="rounded-xl border border-amber-500/40 bg-amber-950/20 p-3.5 space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-amber-300">
+                        <Lock className="h-4 w-4" />
+                        <span>PIN-Protected Post-Quantum Key: {keyFileName}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="password"
+                          value={keyFilePin}
+                          onChange={(e) => setKeyFilePin(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && handleUnlockPinProtectedPqcKey()}
+                          placeholder="Enter Key PIN..."
+                          className="flex-1 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs text-zinc-200 focus:border-amber-500 focus:outline-none font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleUnlockPinProtectedPqcKey}
+                          className="rounded-xl bg-amber-600 hover:bg-amber-500 px-4 py-2 text-xs font-bold text-white transition-all"
+                        >
+                          Unlock
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
-                  <textarea
-                    rows={2}
-                    value={pqcPrivateKey}
-                    onChange={(e) => setPqcPrivateKey(e.target.value)}
-                    placeholder="Paste ML-KEM-768 Private Key Base64..."
-                    className="w-full rounded-lg border border-purple-900/60 bg-zinc-950 px-3 py-2 text-[11px] text-zinc-200 font-mono focus:border-purple-500 focus:outline-none"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={handlePqcPrivateDecryptSubmit}
-                    disabled={!pqcPrivateKey}
-                    className="w-full rounded-xl bg-purple-600 hover:bg-purple-500 py-2.5 text-xs font-semibold text-white transition-colors disabled:opacity-40"
-                  >
-                    Decapsulate & Verify Share
-                  </button>
+                  {pqcError && <p className="text-[11px] text-rose-400 font-mono">{pqcError}</p>}
                 </div>
               )}
-
-              {pqcError && <p className="text-[11px] text-rose-400 font-mono">{pqcError}</p>}
             </div>
           )}
 
