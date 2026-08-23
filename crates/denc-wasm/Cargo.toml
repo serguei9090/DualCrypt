@@ -1,0 +1,21 @@
+[package]
+name = "denc-wasm"
+version = "0.1.0"
+edition = "2021"
+authors = ["DualCrypt Enterprise"]
+description = "Zero-Knowledge WebAssembly (Wasm) Engine for DualCrypt Enterprise"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+denc-core = { path = "../denc-core" }
+wasm-bindgen = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+getrandom = { version = "0.2", features = ["js"] }
+js-sys = "0.3"
+serde-wasm-bindgen = "0.6"
+aes-gcm = "0.10"
+rand_core = "0.6"
+zeroize = "1.8"

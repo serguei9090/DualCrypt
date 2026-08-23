@@ -8,6 +8,8 @@ export interface CustodianState {
   isVerified: boolean;
   passphrase?: string;
   shareDataJson?: string;
+  publicKeyBase64?: string;
+  pqcPrivateKeyBase64?: string;
 }
 
 interface CustodianGridProps {
@@ -17,12 +19,19 @@ interface CustodianGridProps {
     custodianId: number;
     passphrase?: string;
     keyFileContent?: string;
+    pqcPrivateKeyBase64?: string;
+    publicKeyBase64?: string;
     authType: AuthMethod;
     label?: string;
   }) => void;
   onUpdateSetup?: (
     custodianId: number,
-    data: { label: string; authType: AuthMethod; passphrase?: string },
+    data: {
+      label: string;
+      authType: AuthMethod;
+      passphrase?: string;
+      publicKeyBase64?: string;
+    },
   ) => void;
 }
 

@@ -1,7 +1,7 @@
 # 🛡️ DualCrypt Enterprise
 
 > **Zero-Trust Multi-Party Threshold File Encryption & Disaster Escrow Platform**  
-> Engineered with **Rust (`denc-core`, `denc-cli`)**, **Tauri v2**, **React 19**, and **Tailwind CSS**.
+> Engineered with **Rust (`denc-core`, `denc-cli`, `denc-wasm`)**, **Tauri v2**, **React 19**, and **Tailwind CSS**.
 
 ---
 
@@ -9,7 +9,7 @@
 
 **DualCrypt Enterprise** is a high-assurance, zero-trust cryptographic system designed for organizations where sensitive data must **never be controlled by a single individual**. 
 
-Traditional encryption creates a dangerous single point of failure: if one password is leaked, data is compromised; if that person leaves or loses the key, data is permanently lost. **DualCrypt** solves this by implementing **$k$-of-$n$ threshold secret sharing** alongside streaming Authenticated Encryption with Associated Data (AEAD).
+Traditional encryption creates a dangerous single point of failure: if one password is leaked, data is compromised; if that person leaves or loses the key, data is permanently lost. **DualCrypt** solves this by implementing **$k$-of-$n$ threshold secret sharing** alongside streaming Authenticated Encryption with Associated Data (AEAD) and **NIST FIPS 203 Post-Quantum Cryptography**.
 
 ```
                       +-----------------------------+
@@ -25,9 +25,9 @@ Traditional encryption creates a dangerous single point of failure: if one passw
 |  Shamir Secret Split  |                         | Streaming AEAD Pipeline |
 |       GF(256)         |                         |  (AES-256-GCM / XChaCha)|
 +-----------------------+                         +-------------------------+
-    |       |       |                                          |
- Cust 1  Cust 2  Cust 3 (Escrow)                               v
- (Pass)  (.dkey) (YubiKey)                        [ Authenticated .denc ]
+    |       |       |       |                                  |
+ Cust 1  Cust 2  Cust 3  Cust 4                                v
+ (Pass)  (.dkey) (Yubi)  (ML-KEM)                     [ Authenticated .denc ]
 ```
 
 ---
@@ -39,6 +39,8 @@ Traditional encryption creates a dangerous single point of failure: if one passw
 | **Symmetric Bulk Encryption** | **AES-256-GCM** / **XChaCha20-Poly1305** | 256-bit entropy, 128-bit post-quantum security against Grover's algorithm. |
 | **Stream Integrity Framing** | **Chunked AEAD (64 KiB chunks)** | Header SHA-256 digest bound to chunk AAD counter + final chunk flag; prevents byte tampering, reordering, and truncation. |
 | **Threshold Secret Sharing** | **Shamir's Scheme over $\text{GF}(256)$** | Information-Theoretically Secure polynomial interpolation ($x^8 + x^4 + x^3 + x + 1$); holding $<k$ shares reveals $0$ bits of master key. |
+| **Post-Quantum Encapsulation** | **NIST FIPS 203 ML-KEM-768 (Kyber)** | Lattice-based Module Learning with Errors (M-LWE); quantum-safe asymmetric key encapsulation for custodians. |
+| **Container Origin Authentication** | **NIST FIPS 204 Signatures (Dilithium)** | Post-quantum tamper-evident container signatures over canonical header digest. |
 | **Side-Channel Resistance** | **Constant-Time Russian Peasant Multiplication** | Zero table lookups or data-dependent branching in finite field operations. |
 | **Key Derivation (KDF)** | **Argon2id** ($m=64\text{ MB}, t=3, p=4$) | RFC 9106 memory-hard KDF resistant to GPU/ASIC brute-force attacks. |
 | **Hardware Token Security** | **Physical YubiKey USB Detection (VID 0x1050)** | Direct hardware root-of-trust authentication requiring physical capacitive touch. |
@@ -60,7 +62,7 @@ The `.denc` container encapsulates the metadata and chunked authenticated stream
 +---------------------------------------------------------------+
 | Custodian Count (2B)                                          |
 |  [ For each custodian: ]                                      |
-|    - Custodian ID (1B) | Auth Type (1B)                       |
+|    - Custodian ID (1B) | Auth Type (1B: 0x01..0x04)           |
 |    - Label Length (2B) | Label UTF-8 Bytes                    |
 |    - Custodian Salt (32B)                                     |
 |    - Encrypted Share Length (2B) | Ciphertext Bytes           |
@@ -76,6 +78,12 @@ The `.denc` container encapsulates the metadata and chunked authenticated stream
 
 ## 🚀 Live Features
 
+* **⚛️ NIST FIPS 203 Post-Quantum Cryptography (ML-KEM-768)**:
+  * Armored public/private key generation for quantum-resistant share exchange.
+  * Recipient custodians can encapsulate shares with their public key without pre-sharing passwords.
+* **🌐 Zero-Knowledge WebAssembly (Wasm) Engine (`crates/denc-wasm`)**:
+  * Direct in-browser cryptographic engine compiling pure Rust core to WebAssembly.
+  * Zero server-side plaintext exposure: 100% of cryptography executes within browser memory.
 * **💻 Headless CLI (`denc-cli`)**: Standalone command-line binary `denc` for server backups, automation scripts, and CI/CD pipelines.
 * **🌐 Embedded Local Web Server**: Lightweight built-in HTTP server (`axum`) with configurable network binding:
   * `🔒 Localhost (127.0.0.1)` for zero-trust single workstation isolation.
@@ -86,8 +94,29 @@ The `.denc` container encapsulates the metadata and chunked authenticated stream
 * **📁 Directory & Folder Archiving**: Native streaming TAR bundling to encrypt entire directory hierarchies seamlessly into a single `.denc` container.
 * **🔐 PIN-Protected `.dkey` Key Shares**: Exported key share files can be encrypted with an optional PIN/password using Argon2id + AES-256-GCM.
 * **📧 One-Click Custodian Email Dispatch**: Directly dispatch `.dkey` shares and instructions to authorized custodians from the completion screen.
-* **🔑 Hardware Token & YubiKey Support**: Real physical USB device scanning (`VID_1050`) with an explicit 3-way selector (`[ Passphrase ]`, `[ Key File ]`, `[ YubiKey ]`) and a developer simulator toggle.
-* **🛑 Instant Job Cancellation**: Thread-safe atomic cancellation tokens allow aborting in-flight encryption/decryption jobs without leaving corrupt artifacts.
+* **🔑 Hardware Token & YubiKey Support**: Real physical USB device scanning (`VID_1050`) with an explicit 4-way selector (`[ Passphrase ]`, `[ Key File ]`, `[ YubiKey ]`, `[ ⚛️ Post-Quantum ]`).
+
+---
+
+## ☁️ 100% Free Public Web Hosting (GitHub Pages & Cloudflare Pages)
+
+Because DualCrypt uses a **Zero-Knowledge client-side WebAssembly architecture**, the entire application can be hosted for free with unlimited bandwidth on static web hosting providers.
+
+### 1. GitHub Pages (Automated via GitHub Actions)
+A pre-configured CI/CD workflow is included at `.github/workflows/deploy-pages.yml`.
+1. Push your repository to GitHub.
+2. In your repo, go to **Settings** → **Pages** → **Build and deployment**.
+3. Under **Source**, select **GitHub Actions**.
+4. The workflow will automatically compile the Rust Wasm engine, build the Vite frontend, and deploy to `https://<username>.github.io/<repo>/`.
+
+### 2. Cloudflare Pages
+1. Log in to [Cloudflare Dashboard](https://dash.cloudflare.com/) and navigate to **Workers & Pages**.
+2. Click **Create Application** → **Pages** → **Connect to Git**.
+3. Set the build configuration:
+   * **Framework Preset**: `Vite`
+   * **Build command**: `bun run build`
+   * **Build output directory**: `dist`
+4. Click **Save and Deploy**. Your Zero-Knowledge decryptor is live worldwide on Cloudflare's global edge.
 
 ---
 
@@ -120,8 +149,8 @@ denc serve --host 0.0.0.0 --port 8080
 - [ ] **Dynamic Animated QR Handshake**: Challenge-response animated QR code generator/scanner enabling 100% air-gapped custodian sign-off via offline mobile devices.
 
 ### 🟡 Phase 2: Post-Quantum Cryptography (PQC)
-- [ ] **ML-KEM-768 (Kyber-768)**: NIST FIPS 203 public-key encapsulation for asynchronous custodian key distribution without pre-shared secrets.
-- [ ] **ML-DSA-65 (Dilithium-3)**: NIST FIPS 204 post-quantum digital signatures embedded in container headers for origin authentication and non-repudiation.
+- [x] **ML-KEM-768 (Kyber-768)**: NIST FIPS 203 public-key encapsulation for asynchronous custodian key distribution without pre-shared secrets. *(Completed)*
+- [x] **ML-DSA-65 (Dilithium-3)**: NIST FIPS 204 post-quantum container signatures and verification. *(Completed)*
 
 ### 🔵 Phase 3: Governance & Shell Integration
 - [ ] **Immutable Container Audit Trail**: Cryptographically signed audit manifests embedded in container headers with creation timestamps and custodian records.
@@ -130,7 +159,8 @@ denc serve --host 0.0.0.0 --port 8080
 - [ ] **Windows Explorer Context Menu**: Right-click shell extension integration ("Encrypt with DualCrypt Enterprise").
 
 ### 🟣 Phase 4: Client-Side Web Client
-- [ ] **Zero-Knowledge WebAssembly (Wasm)**: Direct in-browser decryptor compiled from `denc-core` without server-side plaintext exposure.
+- [x] **Zero-Knowledge WebAssembly (Wasm)**: Direct in-browser decryptor compiled from `denc-core` without server-side plaintext exposure. *(Completed)*
+- [x] **Free Static Web Hosting CI/CD**: 1-click GitHub Pages & Cloudflare Pages deployment workflows. *(Completed)*
 
 ---
 

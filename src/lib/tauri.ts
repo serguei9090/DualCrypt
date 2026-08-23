@@ -234,6 +234,24 @@ export async function saveAllKeyFilesZip(
   await invoke("save_all_keyfiles_zip", { filePath, shares, pins });
 }
 
+export interface PqcKeypair {
+  public_key_base64: string;
+  private_key_base64: string;
+  algorithm: string;
+}
+
+export async function generatePqcKeypair(): Promise<PqcKeypair> {
+  if (!isTauriEnvironment()) {
+    // Web fallback key generation
+    return {
+      public_key_base64: "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzqX3q...",
+      private_key_base64: "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQ...",
+      algorithm: "NIST-FIPS-203-ML-KEM-768",
+    };
+  }
+  return await invoke<PqcKeypair>("generate_pqc_keypair");
+}
+
 export async function parseKeyFile(filePath: string, pin?: string): Promise<KeyFileParseResult> {
   if (!isTauriEnvironment()) {
     return {

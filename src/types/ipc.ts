@@ -15,6 +15,7 @@ export interface EncryptCustodianRequest {
   label: string;
   auth_type: string;
   passphrase?: string;
+  public_key_base64?: string;
 }
 
 export interface StartEncryptRequest {
@@ -36,6 +37,7 @@ export interface DecryptCredentialRequest {
   custodian_id: number;
   passphrase?: string;
   share_data_json?: string;
+  pqc_private_key_base64?: string;
 }
 
 export interface StartDecryptRequest {

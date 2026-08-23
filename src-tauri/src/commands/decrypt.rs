@@ -23,6 +23,7 @@ pub struct DecryptCredentialPayload {
     pub custodian_id: u8,
     pub passphrase: Option<String>,
     pub share_data_json: Option<String>,
+    pub pqc_private_key_base64: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -62,6 +63,7 @@ pub async fn start_decryption(
             custodian_id: c.custodian_id,
             passphrase: c.passphrase,
             direct_share,
+            pqc_private_key_base64: c.pqc_private_key_base64,
         });
     }
 

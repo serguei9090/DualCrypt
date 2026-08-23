@@ -1,8 +1,10 @@
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import {
   AlertTriangle,
+  Atom,
   CheckCircle2,
   Cpu,
+  Download,
   Eye,
   EyeOff,
   FileKey,
@@ -15,15 +17,17 @@ import {
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import {
+  generatePqcKeypair,
   isTauriEnvironment,
   listHardwareTokens,
+  type PqcKeypair,
   parseKeyFile,
   performHardwareTokenChallenge,
   type YubiKeyDevice,
 } from "../../lib/tauri";
 import { cn } from "../../lib/utils";
 
-export type AuthMethod = "passphrase" | "keyfile" | "yubikey" | "otp";
+export type AuthMethod = "passphrase" | "keyfile" | "yubikey" | "pqc" | "otp";
 
 interface CustodianCardProps {
   custodianId: number;
@@ -35,10 +39,17 @@ interface CustodianCardProps {
     custodianId: number;
     passphrase?: string;
     keyFileContent?: string;
+    pqcPrivateKeyBase64?: string;
+    publicKeyBase64?: string;
     authType: AuthMethod;
     label?: string;
   }) => void;
-  onUpdateSetup?: (data: { label: string; authType: AuthMethod; passphrase?: string }) => void;
+  onUpdateSetup?: (data: {
+    label: string;
+    authType: AuthMethod;
+    passphrase?: string;
+    publicKeyBase64?: string;
+  }) => void;
 }
 
 export const CustodianCard: React.FC<CustodianCardProps> = ({
@@ -50,7 +61,9 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
   onCredentialSubmit,
   onUpdateSetup,
 }) => {
-  const [selectedMethod, setSelectedMethod] = useState<AuthMethod>(authType);
+  const [selectedMethod, setSelectedMethod] = useState<AuthMethod>(
+    authType === ("postquantum" as unknown) ? "pqc" : authType,
+  );
   const [currentLabel, setCurrentLabel] = useState(label);
   const [passphrase, setPassphrase] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -67,6 +80,13 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
   const [detectedTokens, setDetectedTokens] = useState<YubiKeyDevice[]>([]);
   const [isScanningTokens, setIsScanningTokens] = useState(false);
   const [hardwareError, setHardwareError] = useState<string | null>(null);
+
+  // Post-Quantum ML-KEM State
+  const [pqcPublicKey, setPqcPublicKey] = useState("");
+  const [pqcPrivateKey, setPqcPrivateKey] = useState("");
+  const [generatedKeypair, setGeneratedKeypair] = useState<PqcKeypair | null>(null);
+  const [isGeneratingPqc, setIsGeneratingPqc] = useState(false);
+  const [pqcError, setPqcError] = useState<string | null>(null);
 
   const scanForTokens = useCallback(async () => {
     setIsScanningTokens(true);
@@ -160,6 +180,127 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
     }
   };
 
+  const handleGeneratePqc = async () => {
+    setIsGeneratingPqc(true);
+    setPqcError(null);
+    try {
+      const keypair = await generatePqcKeypair();
+      setGeneratedKeypair(keypair);
+      setPqcPublicKey(keypair.public_key_base64);
+      onUpdateSetup?.({
+        label: currentLabel,
+        authType: "pqc",
+        publicKeyBase64: keypair.public_key_base64,
+      });
+    } catch (err) {
+      setPqcError(`ML-KEM Key Generation Error: ${String(err)}`);
+    } finally {
+      setIsGeneratingPqc(false);
+    }
+  };
+
+  const handleDownloadPrivateKey = async () => {
+    if (!generatedKeypair) return;
+    if (isTauriEnvironment()) {
+      const savePath = await save({
+        defaultPath: `custodian_${custodianId}_ml_kem_768_private.pqc`,
+        filters: [{ name: "Post-Quantum Private Key", extensions: ["pqc", "key"] }],
+      });
+      if (savePath) {
+        // Will write file via saveKeyFile or direct write
+        const blob = JSON.stringify(
+          {
+            algorithm: generatedKeypair.algorithm,
+            custodian_id: custodianId,
+            label: currentLabel,
+            private_key_base64: generatedKeypair.private_key_base64,
+          },
+          null,
+          2,
+        );
+        const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+        await writeTextFile(savePath, blob);
+      }
+    } else {
+      const blob = new Blob(
+        [
+          JSON.stringify(
+            {
+              algorithm: generatedKeypair.algorithm,
+              custodian_id: custodianId,
+              label: currentLabel,
+              private_key_base64: generatedKeypair.private_key_base64,
+            },
+            null,
+            2,
+          ),
+        ],
+        { type: "application/json" },
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `custodian_${custodianId}_ml_kem_768_private.pqc`;
+      a.click();
+    }
+  };
+
+  const handleConfirmPqcSetup = () => {
+    if (!pqcPublicKey.trim()) {
+      setPqcError("Please generate or paste an ML-KEM-768 Public Key.");
+      return;
+    }
+    onCredentialSubmit({
+      custodianId,
+      publicKeyBase64: pqcPublicKey.trim(),
+      authType: "pqc",
+      label: currentLabel,
+    });
+  };
+
+  const handlePickPqcPrivateKeyFile = async () => {
+    setPqcError(null);
+    if (isTauriEnvironment()) {
+      const selected = await open({
+        multiple: false,
+        filters: [{ name: "Post-Quantum Private Key", extensions: ["pqc", "key", "json"] }],
+      });
+      if (selected && typeof selected === "string") {
+        const { readTextFile } = await import("@tauri-apps/plugin-fs");
+        const raw = await readTextFile(selected);
+        try {
+          const parsed = JSON.parse(raw);
+          const privKey = parsed.private_key_base64 || raw.trim();
+          setPqcPrivateKey(privKey);
+          onCredentialSubmit({
+            custodianId,
+            pqcPrivateKeyBase64: privKey,
+            authType: "pqc",
+          });
+        } catch {
+          setPqcPrivateKey(raw.trim());
+          onCredentialSubmit({
+            custodianId,
+            pqcPrivateKeyBase64: raw.trim(),
+            authType: "pqc",
+          });
+        }
+      }
+    }
+  };
+
+  const handlePqcPrivateDecryptSubmit = () => {
+    if (!pqcPrivateKey.trim()) {
+      setPqcError("Please paste or upload your ML-KEM Private Key.");
+      return;
+    }
+    onCredentialSubmit({
+      custodianId,
+      pqcPrivateKeyBase64: pqcPrivateKey.trim(),
+      authType: "pqc",
+    });
+  };
+
   const handlePassphraseSubmit = () => {
     if (!passphrase) return;
     if (mode === "encrypt_setup") {
@@ -196,7 +337,12 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                 value={currentLabel}
                 onChange={(e) => {
                   setCurrentLabel(e.target.value);
-                  onUpdateSetup?.({ label: e.target.value, authType: selectedMethod, passphrase });
+                  onUpdateSetup?.({
+                    label: e.target.value,
+                    authType: selectedMethod,
+                    passphrase,
+                    publicKeyBase64: pqcPublicKey,
+                  });
                 }}
                 className="bg-transparent font-semibold text-sm text-zinc-100 focus:outline-none focus:underline"
               />
@@ -218,9 +364,9 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
 
       {!isVerified ? (
         <div className="space-y-3.5">
-          {/* 3-Way Method Selector for setup mode */}
+          {/* 4-Way Method Selector for setup mode */}
           {mode === "encrypt_setup" && (
-            <div className="flex rounded-xl bg-zinc-950/80 p-1 border border-zinc-800 gap-1">
+            <div className="grid grid-cols-4 rounded-xl bg-zinc-950/80 p-1 border border-zinc-800 gap-1">
               <button
                 type="button"
                 onClick={() => {
@@ -228,13 +374,13 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                   onUpdateSetup?.({ label: currentLabel, authType: "passphrase", passphrase });
                 }}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-1 rounded-lg py-1.5 text-xs transition-colors",
+                  "flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] transition-colors",
                   selectedMethod === "passphrase"
                     ? "bg-zinc-800 text-cyan-400 font-semibold shadow-sm"
                     : "text-zinc-400 hover:text-zinc-200",
                 )}
               >
-                <KeyRound className="h-3.5 w-3.5" /> Passphrase
+                <KeyRound className="h-3.5 w-3.5" /> Pass
               </button>
               <button
                 type="button"
@@ -243,7 +389,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                   onUpdateSetup?.({ label: currentLabel, authType: "keyfile" });
                 }}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-1 rounded-lg py-1.5 text-xs transition-colors",
+                  "flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] transition-colors",
                   selectedMethod === "keyfile"
                     ? "bg-zinc-800 text-cyan-400 font-semibold shadow-sm"
                     : "text-zinc-400 hover:text-zinc-200",
@@ -258,13 +404,32 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                   onUpdateSetup?.({ label: currentLabel, authType: "yubikey" });
                 }}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-1 rounded-lg py-1.5 text-xs transition-colors",
+                  "flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] transition-colors",
                   selectedMethod === "yubikey"
                     ? "bg-zinc-800 text-amber-400 font-semibold shadow-sm border border-amber-500/30"
                     : "text-zinc-400 hover:text-zinc-200",
                 )}
               >
                 <Cpu className="h-3.5 w-3.5" /> YubiKey
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedMethod("pqc");
+                  onUpdateSetup?.({
+                    label: currentLabel,
+                    authType: "pqc",
+                    publicKeyBase64: pqcPublicKey,
+                  });
+                }}
+                className={cn(
+                  "flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] transition-colors",
+                  selectedMethod === "pqc"
+                    ? "bg-purple-950/80 text-purple-300 font-semibold shadow-sm border border-purple-500/40"
+                    : "text-zinc-400 hover:text-zinc-200",
+                )}
+              >
+                <Atom className="h-3.5 w-3.5" /> PQC KEM
               </button>
             </div>
           )}
@@ -444,7 +609,114 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
             </div>
           )}
 
-          {/* 4. OTP / Challenge */}
+          {/* 4. Post-Quantum Cryptography (ML-KEM-768 / Kyber) Mode */}
+          {(selectedMethod === "pqc" ||
+            (mode === "decrypt_unlock" &&
+              (authType === "pqc" || authType === ("postquantum" as unknown)))) && (
+            <div className="space-y-3">
+              {mode === "encrypt_setup" ? (
+                <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-3.5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-purple-300">
+                      <Atom className="h-4 w-4 text-purple-400" />
+                      <span>NIST FIPS 203 ML-KEM-768</span>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isGeneratingPqc}
+                      onClick={handleGeneratePqc}
+                      className="rounded-lg bg-purple-800/60 hover:bg-purple-700/80 px-2.5 py-1 text-[11px] text-purple-200 font-medium transition-colors"
+                    >
+                      {isGeneratingPqc ? "Generating..." : "⚡ Generate Keypair"}
+                    </button>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor={`pqc-pub-${custodianId}`}
+                      className="text-[10px] text-zinc-400 uppercase tracking-wider font-mono"
+                    >
+                      Recipient ML-KEM Public Key (Base64)
+                    </label>
+                    <textarea
+                      id={`pqc-pub-${custodianId}`}
+                      rows={2}
+                      value={pqcPublicKey}
+                      onChange={(e) => {
+                        setPqcPublicKey(e.target.value);
+                        onUpdateSetup?.({
+                          label: currentLabel,
+                          authType: "pqc",
+                          publicKeyBase64: e.target.value,
+                        });
+                      }}
+                      placeholder="Paste recipient's ML-KEM-768 public key here or click 'Generate Keypair' above..."
+                      className="w-full rounded-lg border border-purple-900/60 bg-zinc-950 px-3 py-2 text-[11px] text-zinc-200 font-mono focus:border-purple-500 focus:outline-none"
+                    />
+                  </div>
+
+                  {generatedKeypair && (
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-purple-900/30 border border-purple-500/30 text-[11px] text-purple-300">
+                      <span>🔑 Private Key Generated</span>
+                      <button
+                        type="button"
+                        onClick={handleDownloadPrivateKey}
+                        className="flex items-center gap-1 rounded bg-purple-700 hover:bg-purple-600 px-2 py-1 text-[10px] font-bold text-white transition-colors"
+                      >
+                        <Download className="h-3 w-3" /> Download .pqc
+                      </button>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmPqcSetup}
+                    disabled={!pqcPublicKey}
+                    className="w-full rounded-xl bg-purple-600 hover:bg-purple-500 py-2.5 text-xs font-semibold text-white transition-colors disabled:opacity-40"
+                  >
+                    Confirm Quantum-Safe Slot
+                  </button>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-3.5 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-purple-300">
+                      <Atom className="h-4 w-4 text-purple-400" />
+                      <span>Decapsulate ML-KEM-768 Share</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handlePickPqcPrivateKeyFile}
+                      className="text-[11px] text-purple-300 hover:underline flex items-center gap-1"
+                    >
+                      <FileKey className="h-3.5 w-3.5" /> Upload .pqc
+                    </button>
+                  </div>
+
+                  <textarea
+                    rows={2}
+                    value={pqcPrivateKey}
+                    onChange={(e) => setPqcPrivateKey(e.target.value)}
+                    placeholder="Paste ML-KEM-768 Private Key Base64..."
+                    className="w-full rounded-lg border border-purple-900/60 bg-zinc-950 px-3 py-2 text-[11px] text-zinc-200 font-mono focus:border-purple-500 focus:outline-none"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={handlePqcPrivateDecryptSubmit}
+                    disabled={!pqcPrivateKey}
+                    className="w-full rounded-xl bg-purple-600 hover:bg-purple-500 py-2.5 text-xs font-semibold text-white transition-colors disabled:opacity-40"
+                  >
+                    Decapsulate & Verify Share
+                  </button>
+                </div>
+              )}
+
+              {pqcError && <p className="text-[11px] text-rose-400 font-mono">{pqcError}</p>}
+            </div>
+          )}
+
+          {/* 5. OTP / Challenge */}
           {selectedMethod === "otp" && (
             <div className="flex gap-2">
               <input

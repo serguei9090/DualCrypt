@@ -23,8 +23,9 @@ pub struct ProgressPayload {
 pub struct EncryptCustodianPayload {
     pub custodian_id: u8,
     pub label: String,
-    pub auth_type: String, // "passphrase" | "keyfile" | "otp"
+    pub auth_type: String, // "passphrase" | "keyfile" | "otp" | "postquantum"
     pub passphrase: Option<String>,
+    pub public_key_base64: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -64,6 +65,7 @@ pub async fn start_encryption(
         let auth_type = match c.auth_type.to_lowercase().as_str() {
             "keyfile" => AuthType::KeyFile,
             "otp" => AuthType::OtpChallenge,
+            "postquantum" | "pqc" => AuthType::PostQuantum,
             _ => AuthType::Passphrase,
         };
         custodians.push(CustodianInput {
@@ -71,6 +73,7 @@ pub async fn start_encryption(
             label: c.label,
             auth_type,
             passphrase: c.passphrase,
+            public_key_base64: c.public_key_base64,
         });
     }
 

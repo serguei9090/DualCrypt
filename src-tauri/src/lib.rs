@@ -10,7 +10,7 @@ use commands::inspect::inspect_denc_file;
 use commands::server::{
     get_local_web_server_status, start_local_web_server, stop_local_web_server,
 };
-use commands::shares::{parse_keyfile, save_all_keyfiles_zip, save_keyfile};
+use commands::shares::{generate_pqc_keypair, parse_keyfile, save_all_keyfiles_zip, save_keyfile};
 use commands::yubikey::{list_hardware_tokens, perform_hardware_token_challenge};
 use state::AppState;
 
@@ -31,6 +31,7 @@ pub fn run() {
             save_keyfile,
             save_all_keyfiles_zip,
             parse_keyfile,
+            generate_pqc_keypair,
             save_smtp_config,
             load_smtp_config,
             test_smtp_connection,

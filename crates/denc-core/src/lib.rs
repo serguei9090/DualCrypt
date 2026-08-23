@@ -2,6 +2,7 @@ pub mod cipher;
 pub mod container;
 pub mod error;
 pub mod kdf;
+pub mod pqc;
 pub mod sss;
 
 use aes_gcm::aead::{Aead, KeyInit, Payload};
@@ -12,6 +13,7 @@ use cipher::{
 use container::{AuthType, CustodianDescriptor, DencHeader, FORMAT_VERSION_1};
 use error::DencError;
 use kdf::{derive_key_argon2id, generate_salt};
+use pqc::{decapsulate_share_ml_kem, encapsulate_share_ml_kem, PqcEncryptedShare};
 use rand::rngs::OsRng;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
@@ -29,6 +31,7 @@ pub struct CustodianInput {
     pub label: String,
     pub auth_type: AuthType,
     pub passphrase: Option<String>,
+    pub public_key_base64: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -223,6 +226,23 @@ pub fn encrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
                     share,
                 });
             }
+            AuthType::PostQuantum => {
+                let pub_key_b64 = custodian
+                    .public_key_base64
+                    .as_deref()
+                    .ok_or_else(|| DencError::Custom(format!("ML-KEM Public Key required for custodian {}", custodian.label)))?;
+
+                let pqc_share = encapsulate_share_ml_kem(pub_key_b64, &share)?;
+                let share_bytes = serde_json::to_vec(&pqc_share)?;
+
+                descriptors.push(CustodianDescriptor {
+                    custodian_id: custodian.custodian_id,
+                    auth_type: AuthType::PostQuantum,
+                    label: custodian.label.clone(),
+                    salt: custodian_salt,
+                    encrypted_share: share_bytes,
+                });
+            }
         }
     }
 
@@ -271,6 +291,7 @@ pub struct CustodianCredential {
     pub custodian_id: u8,
     pub passphrase: Option<String>,
     pub direct_share: Option<SecretShare>,
+    pub pqc_private_key_base64: Option<String>,
 }
 
 /// High-level function to decrypt a .denc file given quorum credentials
@@ -313,6 +334,16 @@ pub fn decrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
                 pass_key.zeroize();
 
                 let share: SecretShare = serde_json::from_slice(&decrypted_json)?;
+                recovered_shares.push(share);
+            } else if descriptor.auth_type == AuthType::PostQuantum {
+                let priv_key_b64 = cred.pqc_private_key_base64.as_deref().ok_or_else(|| {
+                    DencError::Custom(format!("ML-KEM Private Key required for custodian {}", descriptor.label))
+                })?;
+
+                let pqc_share: PqcEncryptedShare = serde_json::from_slice(&descriptor.encrypted_share)
+                    .map_err(|e| DencError::Custom(format!("Failed to parse PQC share payload: {}", e)))?;
+
+                let share = decapsulate_share_ml_kem(priv_key_b64, &pqc_share)?;
                 recovered_shares.push(share);
             }
         }
@@ -383,12 +414,14 @@ mod tests {
                     label: "Party 1 (Finance Officer)".to_string(),
                     auth_type: AuthType::Passphrase,
                     passphrase: Some("FinanceMasterSecret#2026".to_string()),
+                    public_key_base64: None,
                 },
                 CustodianInput {
                     custodian_id: 2,
                     label: "Party 2 (Security Officer)".to_string(),
                     auth_type: AuthType::KeyFile,
                     passphrase: None,
+                    public_key_base64: None,
                 },
             ],
         };
@@ -418,11 +451,13 @@ mod tests {
                 custodian_id: 1,
                 passphrase: Some("FinanceMasterSecret#2026".to_string()),
                 direct_share: None,
+                pqc_private_key_base64: None,
             },
             CustodianCredential {
                 custodian_id: 2,
                 passphrase: None,
                 direct_share: Some(party2_share),
+                pqc_private_key_base64: None,
             },
         ];
 
@@ -462,12 +497,14 @@ mod tests {
                     label: "Admin 1".to_string(),
                     auth_type: AuthType::Passphrase,
                     passphrase: Some("admin_pass_1".to_string()),
+                    public_key_base64: None,
                 },
                 CustodianInput {
                     custodian_id: 2,
                     label: "Admin 2".to_string(),
                     auth_type: AuthType::Passphrase,
                     passphrase: Some("admin_pass_2".to_string()),
+                    public_key_base64: None,
                 },
             ],
         };
@@ -488,11 +525,13 @@ mod tests {
                 custodian_id: 1,
                 passphrase: Some("admin_pass_1".to_string()),
                 direct_share: None,
+                pqc_private_key_base64: None,
             },
             CustodianCredential {
                 custodian_id: 2,
                 passphrase: Some("admin_pass_2".to_string()),
                 direct_share: None,
+                pqc_private_key_base64: None,
             },
         ];
 
@@ -512,5 +551,81 @@ mod tests {
         let tar_file = File::open(decrypted_tar_file.path()).unwrap();
         let mut tar_reader = BufReader::new(tar_file);
         unpack_tar_archive(&mut tar_reader, extract_dir.path()).expect("Unpack failed");
+    }
+
+    #[test]
+    fn test_post_quantum_ml_kem_dual_custody_roundtrip() {
+        use crate::pqc::generate_ml_kem_keypair;
+
+        let input_file = NamedTempFile::new().unwrap();
+        let encrypted_file = NamedTempFile::new().unwrap();
+        let decrypted_file = NamedTempFile::new().unwrap();
+
+        let original_data = b"TOP SECRET QUANTUM-SAFE ARCHIVE PAYLOAD".repeat(100);
+        std::fs::write(input_file.path(), &original_data).unwrap();
+
+        // Generate PQC keypair for Custodian 2
+        let pqc_keypair = generate_ml_kem_keypair().expect("PQC keygen failed");
+
+        let params = EncryptionParams {
+            cipher: CipherSuite::Aes256Gcm,
+            threshold_k: 2,
+            total_n: 2,
+            chunk_size: Some(1024),
+            custodians: vec![
+                CustodianInput {
+                    custodian_id: 1,
+                    label: "Party 1 (Passphrase)".to_string(),
+                    auth_type: AuthType::Passphrase,
+                    passphrase: Some("PassphraseSecret#1".to_string()),
+                    public_key_base64: None,
+                },
+                CustodianInput {
+                    custodian_id: 2,
+                    label: "Party 2 (Post-Quantum ML-KEM)".to_string(),
+                    auth_type: AuthType::PostQuantum,
+                    passphrase: None,
+                    public_key_base64: Some(pqc_keypair.public_key_base64.clone()),
+                },
+            ],
+        };
+
+        encrypt_file(
+            input_file.path(),
+            encrypted_file.path(),
+            params,
+            |_, _| {},
+            None,
+        )
+        .expect("PQC encryption failed");
+
+        // Decrypt with Custodian 1 password and Custodian 2 ML-KEM private key
+        let creds = vec![
+            CustodianCredential {
+                custodian_id: 1,
+                passphrase: Some("PassphraseSecret#1".to_string()),
+                direct_share: None,
+                pqc_private_key_base64: None,
+            },
+            CustodianCredential {
+                custodian_id: 2,
+                passphrase: None,
+                direct_share: None,
+                pqc_private_key_base64: Some(pqc_keypair.private_key_base64.clone()),
+            },
+        ];
+
+        let dec_bytes = decrypt_file(
+            encrypted_file.path(),
+            decrypted_file.path(),
+            creds,
+            |_, _| {},
+            None,
+        )
+        .expect("PQC decryption failed");
+
+        assert_eq!(dec_bytes, original_data.len() as u64);
+        let decrypted_data = std::fs::read(decrypted_file.path()).unwrap();
+        assert_eq!(decrypted_data, original_data);
     }
 }

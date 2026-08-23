@@ -35,7 +35,12 @@ export function useQuorumState(initialK = 2, initialN = 2) {
 
   const handleUpdateSetup = (
     custodianId: number,
-    data: { label: string; authType: AuthMethod; passphrase?: string },
+    data: {
+      label: string;
+      authType: AuthMethod;
+      passphrase?: string;
+      publicKeyBase64?: string;
+    },
   ) => {
     setCustodians((prev) =>
       prev.map((c) =>
@@ -45,6 +50,7 @@ export function useQuorumState(initialK = 2, initialN = 2) {
               label: data.label,
               authType: data.authType,
               passphrase: data.passphrase,
+              publicKeyBase64: data.publicKeyBase64,
             }
           : c,
       ),
@@ -55,6 +61,8 @@ export function useQuorumState(initialK = 2, initialN = 2) {
     custodianId: number;
     passphrase?: string;
     keyFileContent?: string;
+    pqcPrivateKeyBase64?: string;
+    publicKeyBase64?: string;
     authType: AuthMethod;
     label?: string;
   }) => {
@@ -66,6 +74,8 @@ export function useQuorumState(initialK = 2, initialN = 2) {
               isVerified: true,
               passphrase: data.passphrase,
               shareDataJson: data.keyFileContent,
+              publicKeyBase64: data.publicKeyBase64,
+              pqcPrivateKeyBase64: data.pqcPrivateKeyBase64,
               label: data.label || c.label,
               authType: data.authType,
             }

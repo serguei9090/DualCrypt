@@ -214,6 +214,7 @@ async fn handle_encrypt(
             label: format!("Custodian {}", i),
             auth_type,
             passphrase: pass,
+            public_key_base64: None,
         });
     }
 
@@ -305,6 +306,7 @@ async fn handle_decrypt(
                     custodian_id: id,
                     passphrase: Some(pass.to_string()),
                     direct_share: None,
+                    pqc_private_key_base64: None,
                 });
             }
         }
@@ -319,6 +321,7 @@ async fn handle_decrypt(
                     custodian_id: id,
                     passphrase: None,
                     direct_share: Some(share),
+                    pqc_private_key_base64: None,
                 });
             }
         }
@@ -382,6 +385,7 @@ fn handle_inspect(input: PathBuf, json: bool) -> Result<(), Box<dyn std::error::
             AuthType::Passphrase => "Passphrase (Embedded)".green(),
             AuthType::KeyFile => "Key File / Token (.dkey)".cyan(),
             AuthType::OtpChallenge => "OTP Challenge".purple(),
+            AuthType::PostQuantum => "Post-Quantum (ML-KEM-768)".magenta(),
         };
         println!(
             "   • [P{}] {:<22} | Auth: {}",

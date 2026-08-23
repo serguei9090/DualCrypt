@@ -108,8 +108,9 @@ export const App: React.FC = () => {
           custodians: quorum.custodians.map((c) => ({
             custodian_id: c.custodianId,
             label: c.label,
-            auth_type: c.authType,
+            auth_type: c.authType === "pqc" ? "postquantum" : c.authType,
             passphrase: c.passphrase,
+            public_key_base64: c.publicKeyBase64,
           })),
         },
         job.updateProgress,
@@ -153,6 +154,7 @@ export const App: React.FC = () => {
             custodian_id: c.custodianId,
             passphrase: c.passphrase,
             share_data_json: c.shareDataJson,
+            pqc_private_key_base64: c.pqcPrivateKeyBase64,
           })),
         },
         job.updateProgress,

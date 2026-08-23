@@ -2,6 +2,7 @@
 members = [
     "crates/denc-core",
     "crates/denc-cli",
+    "crates/denc-wasm",
     "src-tauri"
 ]
 resolver = "2"

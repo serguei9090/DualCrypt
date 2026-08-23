@@ -147,3 +147,9 @@ pub fn parse_keyfile(file_path: String, pin: Option<String>) -> Result<KeyFilePa
         }
     }
 }
+
+#[tauri::command]
+pub fn generate_pqc_keypair() -> Result<denc_core::pqc::PqcKeypair, String> {
+    denc_core::pqc::generate_ml_kem_keypair()
+        .map_err(|e| format!("ML-KEM keypair generation failed: {e}"))
+}

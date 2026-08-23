@@ -32,6 +32,7 @@ pub fn inspect_denc_file(file_path: String) -> Result<HeaderMetadataResponse, St
                 AuthType::Passphrase => "passphrase",
                 AuthType::KeyFile => "keyfile",
                 AuthType::OtpChallenge => "otp",
+                AuthType::PostQuantum => "pqc",
             };
             CustodianMetadata {
                 custodian_id: c.custodian_id,

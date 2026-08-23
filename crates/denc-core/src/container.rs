@@ -14,6 +14,7 @@ pub enum AuthType {
     Passphrase = 0x01,
     KeyFile = 0x02,
     OtpChallenge = 0x03,
+    PostQuantum = 0x04,
 }
 
 impl TryFrom<u8> for AuthType {
@@ -23,6 +24,7 @@ impl TryFrom<u8> for AuthType {
             0x01 => Ok(AuthType::Passphrase),
             0x02 => Ok(AuthType::KeyFile),
             0x03 => Ok(AuthType::OtpChallenge),
+            0x04 => Ok(AuthType::PostQuantum),
             _ => Err(DencError::Custom(format!("Unknown auth type: {val}"))),
         }
     }
