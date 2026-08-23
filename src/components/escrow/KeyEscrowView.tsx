@@ -1,5 +1,6 @@
 import { open, save } from "@tauri-apps/plugin-dialog";
 import {
+  AlertTriangle,
   Atom,
   Check,
   CheckCircle2,
@@ -445,24 +446,26 @@ export const KeyEscrowView: React.FC = () => {
 
               {/* Download & Copy Action Buttons */}
               <div className="grid grid-cols-2 gap-2 pt-1">
-                {/* Download .pqc.pub */}
+                {/* Public Key (.pqc.pub) */}
                 <button
                   type="button"
                   onClick={handleSavePublicKey}
                   className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-purple-500/50 bg-purple-900/40 hover:bg-purple-800/60 py-2 text-xs font-semibold text-purple-200 hover:text-white transition-colors"
+                  title="Save NIST FIPS 203 ML-KEM-768 shareable public key"
                 >
                   <Download className="h-3.5 w-3.5 text-purple-400" />
-                  <span>Download .pqc.pub</span>
+                  <span>Public Key (.pqc.pub)</span>
                 </button>
 
-                {/* Download .pqc */}
+                {/* Private Key (.pqc) */}
                 <button
                   type="button"
                   onClick={handleSavePrivateKey}
                   className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 py-2 text-xs font-bold text-white transition-colors shadow-sm"
+                  title="Save secret private key (keep confidential)"
                 >
                   <Download className="h-3.5 w-3.5" />
-                  <span>Download .pqc</span>
+                  <span>Private Key (.pqc)</span>
                 </button>
 
                 {/* Copy Public Key */}
@@ -476,7 +479,7 @@ export const KeyEscrowView: React.FC = () => {
                   ) : (
                     <Copy className="h-3.5 w-3.5 text-purple-400" />
                   )}
-                  <span>{copiedKey === "pub-key" ? "Copied" : "Copy PubKey"}</span>
+                  <span>{copiedKey === "pub-key" ? "Copied" : "Copy Public Key"}</span>
                 </button>
 
                 {/* Email Public Key */}
@@ -488,10 +491,21 @@ export const KeyEscrowView: React.FC = () => {
                     setEmailError(null);
                     setEmailModalOpen(true);
                   }}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-teal-600/40 bg-teal-950/40 hover:bg-teal-900/60 py-1.5 text-xs text-teal-300 hover:text-white transition-colors"
+                  className="relative inline-flex items-center justify-center gap-1.5 rounded-lg border border-teal-600/40 bg-teal-950/40 hover:bg-teal-900/60 py-1.5 text-xs text-teal-300 hover:text-white transition-colors"
+                  title={
+                    !smtpConfig
+                      ? "SMTP server is not configured in Settings"
+                      : "Send public key via email"
+                  }
                 >
                   <Mail className="h-3.5 w-3.5 text-teal-400" />
-                  <span>Email PubKey</span>
+                  <span>Email Public Key</span>
+                  {!smtpConfig && (
+                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500 border border-zinc-900" />
+                    </span>
+                  )}
                 </button>
               </div>
             </div>
@@ -652,6 +666,22 @@ export const KeyEscrowView: React.FC = () => {
               </div>
             ) : (
               <form onSubmit={handleSendEmail} className="space-y-3.5">
+                {!smtpConfig && (
+                  <div className="p-3.5 rounded-xl border border-rose-500/40 bg-rose-950/30 text-xs text-rose-200 flex items-start gap-2.5">
+                    <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-semibold text-rose-300">
+                        SMTP Email Server Not Configured
+                      </div>
+                      <p className="text-[11px] text-zinc-300 mt-0.5">
+                        The outbound SMTP email server has not been configured yet. Please configure
+                        your email host, port, and credentials in the Settings tab before sending
+                        keys.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {emailError && (
                   <div className="p-3 rounded-xl border border-rose-500/30 bg-rose-950/40 text-xs text-rose-300 font-mono">
                     {emailError}

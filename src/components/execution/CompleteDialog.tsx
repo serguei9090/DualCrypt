@@ -1,5 +1,6 @@
 import { save } from "@tauri-apps/plugin-dialog";
 import {
+  AlertTriangle,
   ArrowRight,
   Atom,
   Check,
@@ -434,7 +435,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                           handleCopyText(s.pqc_public_key_base64 || "", `pub-${s.custodian_id}`)
                         }
                         className="inline-flex items-center gap-1 rounded-lg bg-zinc-800 hover:bg-purple-700 text-zinc-300 hover:text-white px-2 py-1.5 text-xs font-semibold border border-zinc-700 hover:border-purple-500 transition-all"
-                        title="Copy ML-KEM-768 Public Key Base64"
+                        title="Copy NIST FIPS 203 ML-KEM-768 Public Key Base64"
                       >
                         {copiedKey === `pub-${s.custodian_id}` ? (
                           <Check className="h-3.5 w-3.5 text-emerald-400" />
@@ -442,7 +443,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                           <Copy className="h-3.5 w-3.5 text-purple-400" />
                         )}
                         <span>
-                          {copiedKey === `pub-${s.custodian_id}` ? "Copied" : "Copy PubKey"}
+                          {copiedKey === `pub-${s.custodian_id}` ? "Copied" : "Copy Public Key"}
                         </span>
                       </button>
                     )}
@@ -455,7 +456,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                           handleCopyText(s.pqc_private_key_base64 || "", `priv-${s.custodian_id}`)
                         }
                         className="inline-flex items-center gap-1 rounded-lg bg-zinc-800 hover:bg-purple-700 text-zinc-300 hover:text-white px-2 py-1.5 text-xs font-semibold border border-zinc-700 hover:border-purple-500 transition-all"
-                        title="Copy ML-KEM-768 Private Key Base64"
+                        title="Copy NIST FIPS 203 ML-KEM-768 Private Key Base64"
                       >
                         {copiedKey === `priv-${s.custodian_id}` ? (
                           <Check className="h-3.5 w-3.5 text-emerald-400" />
@@ -463,21 +464,21 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                           <Copy className="h-3.5 w-3.5 text-purple-300" />
                         )}
                         <span>
-                          {copiedKey === `priv-${s.custodian_id}` ? "Copied" : "Copy PrivKey"}
+                          {copiedKey === `priv-${s.custodian_id}` ? "Copied" : "Copy Private Key"}
                         </span>
                       </button>
                     )}
 
-                    {/* Save .pqc.pub Button */}
+                    {/* Save .pqc.pub Public Key Button */}
                     {isPqc && s.pqc_public_key_base64 && (
                       <button
                         type="button"
                         onClick={() => handleSavePublicKey(s)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-zinc-800 hover:bg-purple-900/80 text-purple-300 hover:text-white px-2 py-1.5 text-xs font-semibold border border-purple-900/60 hover:border-purple-500 transition-all"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-800 hover:bg-purple-900/80 text-purple-300 hover:text-white px-2.5 py-1.5 text-xs font-semibold border border-purple-900/60 hover:border-purple-500 transition-all"
                         title="Download shareable .pqc.pub public key"
                       >
                         <Download className="h-3.5 w-3.5 text-purple-400" />
-                        <span>.pqc.pub</span>
+                        <span>Public Key (.pqc.pub)</span>
                       </button>
                     )}
 
@@ -485,14 +486,24 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                     <button
                       type="button"
                       onClick={() => handleOpenEmailModal(s)}
-                      className="inline-flex items-center gap-1 rounded-lg bg-zinc-800 hover:bg-teal-600 text-zinc-300 hover:text-white px-2.5 py-1.5 text-xs font-semibold border border-zinc-700 hover:border-teal-500 transition-all"
-                      title="Send directly to custodian via email"
+                      className="relative inline-flex items-center gap-1 rounded-lg bg-zinc-800 hover:bg-teal-600 text-zinc-300 hover:text-white px-2.5 py-1.5 text-xs font-semibold border border-zinc-700 hover:border-teal-500 transition-all"
+                      title={
+                        !smtpConfig
+                          ? "SMTP server is not configured in Settings"
+                          : "Send directly to custodian via email"
+                      }
                     >
                       <Mail className="h-3.5 w-3.5" />
                       <span>Email</span>
+                      {!smtpConfig && (
+                        <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500 border border-zinc-900" />
+                        </span>
+                      )}
                     </button>
 
-                    {/* Save .dkey or .pqc Button */}
+                    {/* Save Key File / Private Key Button */}
                     <button
                       type="button"
                       onClick={() => handleSaveShare(s)}
@@ -506,7 +517,9 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                       )}
                     >
                       <Download className="h-3.5 w-3.5" />
-                      <span>{isSaved ? "Saved" : isPqc ? "Save .pqc" : "Save .dkey"}</span>
+                      <span>
+                        {isSaved ? "Saved" : isPqc ? "Private Key (.pqc)" : "Key Share (.dkey)"}
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -551,9 +564,17 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
             ) : (
               <form onSubmit={handleSendEmail} className="space-y-3.5">
                 {!smtpConfig && (
-                  <div className="p-3 rounded-xl border border-amber-500/40 bg-amber-950/20 text-xs text-amber-300">
-                    ⚠️ SMTP server has not been configured yet. Please open the Settings tab to
-                    configure your email server.
+                  <div className="p-3.5 rounded-xl border border-rose-500/40 bg-rose-950/30 text-xs text-rose-200 flex items-start gap-2.5">
+                    <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-semibold text-rose-300">
+                        SMTP Email Server Not Configured
+                      </div>
+                      <p className="text-[11px] text-zinc-300 mt-0.5">
+                        The outbound SMTP email server has not been configured yet. Please configure
+                        your email server credentials in the Settings tab before sending keys.
+                      </p>
+                    </div>
                   </div>
                 )}
 
