@@ -13,7 +13,7 @@ Traditional encryption creates a dangerous single point of failure: if one passw
 
 ```
                       +-----------------------------+
-                      |   Source File (Plaintext)   |
+                      |   Source File / Directory   |
                       +-----------------------------+
                                      |
                 [ Random 256-bit Ephemeral Master DEK ]
@@ -27,7 +27,7 @@ Traditional encryption creates a dangerous single point of failure: if one passw
 +-----------------------+                         +-------------------------+
     |       |       |                                          |
  Cust 1  Cust 2  Cust 3 (Escrow)                               v
- (Pass)  (.dkey) (.dkey)                          [ Authenticated .denc ]
+ (Pass)  (.dkey) (YubiKey)                        [ Authenticated .denc ]
 ```
 
 ---
@@ -41,6 +41,7 @@ Traditional encryption creates a dangerous single point of failure: if one passw
 | **Threshold Secret Sharing** | **Shamir's Scheme over $\text{GF}(256)$** | Information-Theoretically Secure polynomial interpolation ($x^8 + x^4 + x^3 + x + 1$); holding $<k$ shares reveals $0$ bits of master key. |
 | **Side-Channel Resistance** | **Constant-Time Russian Peasant Multiplication** | Zero table lookups or data-dependent branching in finite field operations. |
 | **Key Derivation (KDF)** | **Argon2id** ($m=64\text{ MB}, t=3, p=4$) | RFC 9106 memory-hard KDF resistant to GPU/ASIC brute-force attacks. |
+| **Hardware Token Security** | **Physical YubiKey USB Detection (VID 0x1050)** | Direct hardware root-of-trust authentication requiring physical capacitive touch. |
 | **Memory Hygiene** | **`Zeroize` & `ZeroizeOnDrop`** | Master DEKs, intermediate keys, and reconstructed shares are purged from RAM immediately on drop. |
 
 ---
@@ -73,43 +74,45 @@ The `.denc` container encapsulates the metadata and chunked authenticated stream
 
 ---
 
-## 🚀 Key Features
+## 🚀 Live Features
 
 * **🛡️ $k$-of-$n$ Quorum Flexibility**: Configure strict dual-custody (2-of-2), majority board quorums (3-of-5), or disaster escrow models (2-of-3).
 * **⚡ High-Throughput Streaming**: Processes gigabyte-scale files at disk speeds with constant $O(1)$ memory consumption ($<20\text{ MB}$ RAM).
-* **🔑 Key Escrow & Share Management**: Export keys as standalone `.dkey` files, zip archives with automated README instructions, or embed them directly inside the `.denc` container protected by Argon2id passphrases.
+* **📁 Directory & Folder Archiving**: Native streaming TAR bundling to encrypt entire directory hierarchies seamlessly into a single `.denc` container.
+* **🔐 PIN-Protected `.dkey` Key Shares**: Exported key share files can be encrypted with an optional PIN/password using Argon2id + AES-256-GCM.
+* **⚙️ Settings Tab & Integrated SMTP Email Relay**: Configure custom SMTP relay servers (Host, Port, STARTTLS/TLS, Credentials) with interactive test-send diagnostics and encrypted local OS storage.
+* **📧 One-Click Custodian Email Dispatch**: Directly dispatch `.dkey` shares and instructions to authorized custodians from the completion screen.
+* **🔑 Hardware Token & YubiKey Support**: Real physical USB device scanning (`VID_1050`) with an explicit 3-way selector (`[ Passphrase ]`, `[ Key File ]`, `[ YubiKey ]`) and a developer simulator toggle.
 * **🛑 Instant Job Cancellation**: Thread-safe atomic cancellation tokens allow aborting in-flight encryption/decryption jobs without leaving corrupt artifacts.
 
 ---
 
 ## 🗺️ Product Roadmap
 
-### 🟢 Phase 1: Near-Term Enhancements (Low & Medium Complexity)
-- [ ] **PIN-Protected `.dkey` Key Exports**: Option to encrypt exported `.dkey` files with a local password/PIN using Argon2id + AES-256-GCM.
-- [ ] **Folder & Multi-File Archiving**: Native in-memory TAR packaging to encrypt entire folders and directories into a single `.denc` file.
-- [ ] **Settings Tab & Integrated SMTP Email Dispatch**: Built-in SMTP server configuration (Host, Port, STARTTLS/SSL, Credentials) allowing direct email delivery of `.dkey` shares to authorized custodians upon encryption completion.
-- [ ] **YubiKey / FIDO2 Hardware Token Support**: Authorize custodian shares using WebAuthn / PKCS#11 hardware keys (HMAC-SHA1 challenge-response or FIDO2 credentials).
+### 🟢 Phase 1: Air-Gapped Co-Presence & Mobile
+- [ ] **Dynamic Animated QR Handshake**: Challenge-response animated QR code generator/scanner enabling 100% air-gapped custodian sign-off via offline mobile devices.
 
-### 🟡 Phase 2: Advanced Co-Presence & Interoperability
-- [ ] **Air-Gapped Mobile QR Handshake**: Dynamic animated QR code generator/scanner for zero-network mobile device share approval.
-- [ ] **Post-Quantum Hybrid KEM (ML-KEM / Kyber-768)**: NIST FIPS 203 public-key encapsulation for asynchronous custodian key distribution.
-- [ ] **Tamper-Proof Audit Logging**: Cryptographically signed audit manifests embedded in container headers.
-- [ ] **Standalone Headless CLI (`denc-cli`)**: Command-line binary for automated server backups and CI/CD pipelines.
+### 🟡 Phase 2: Post-Quantum Cryptography (PQC)
+- [ ] **ML-KEM-768 (Kyber-768)**: NIST FIPS 203 public-key encapsulation for asynchronous custodian key distribution without pre-shared secrets.
+- [ ] **ML-DSA-65 (Dilithium-3)**: NIST FIPS 204 post-quantum digital signatures embedded in container headers for origin authentication and non-repudiation.
+
+### 🔵 Phase 3: Governance, Automation & Shell Integration
+- [ ] **Immutable Container Audit Trail**: Cryptographically signed audit manifests embedded in container headers with creation timestamps and custodian records.
+- [ ] **Headless CLI (`denc-cli`)**: Standalone binary for automated server backups, scripts, and CI/CD pipelines.
+- [ ] **Windows Explorer Context Menu**: Right-click shell extension integration ("Encrypt with DualCrypt Enterprise").
+
+### 🟣 Phase 4: Client-Side Web Client
+- [ ] **Zero-Knowledge WebAssembly (Wasm)**: Direct in-browser decryptor compiled from `denc-core` without server-side plaintext exposure.
 
 ---
 
 ## 🌐 API Feasibility Analysis: Should DualCrypt Provide an API?
-
-When considering whether to expose an API for DualCrypt, we must weigh enterprise integration against zero-trust threat models:
 
 | Architecture Model | Pros | Cons / Risks | Recommendation |
 | :--- | :--- | :--- | :--- |
 | **Option A: Local Headless CLI / Local Named Pipe IPC** | • 100% Zero-Network attack surface.<br>• Perfect for CI/CD, backup scripts, and local service automation.<br>• No plaintext keys over HTTP. | • Requires local binary installation on target machines. | **✅ Highly Recommended** |
 | **Option B: Embedded Rust Crate / C-FFI / Wasm Library** | • In-process zero-overhead integration into existing apps.<br>• Compiles to WebAssembly for zero-knowledge web clients. | • Requires developers to write integration code in their language. | **✅ Already Implemented (`denc-core`)** |
 | **Option C: Centralized Remote REST / gRPC Server** | • Easy remote trigger from webhooks or backend services. | • **Violates Zero-Trust**: Plaintext files or master key shares would transit a central network daemon.<br>• Major honeypot target for attackers. | **❌ Strongly Discouraged** (Except as an air-gapped KMS plugin). |
-
-### Conclusion on API:
-DualCrypt should prioritize a **Local Headless CLI (`denc-cli`)** and **Wasm/C-FFI SDK** rather than a remote cloud HTTP API, ensuring that **private data and secret shares never touch an unauthenticated network server**.
 
 ---
 

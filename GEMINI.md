@@ -31,10 +31,11 @@ Always use the specified tools for their respective runtimes. Do not invoke lega
   * `refactor(<scope>): <description>` for code restructuring without behavioral changes.
   * `test(<scope>): <description>` for new unit/integration test suites.
   * `docs(<scope>): <description>` for documentation updates.
-* **Pre-Commit Quality Gate**:
+* **Pre-Commit Quality Gate & Documentation Synchronization**:
   * Before committing, always run:
     1. `biome check --write .` (for JS/TS)
     2. `cargo check` and `cargo test` (for Rust crypto core)
+  * **Continuous Documentation Sync**: Whenever a new feature, UI/UX workflow, configuration tab, or architectural design is implemented or modified, **`README.md` MUST be updated** in the same commit to keep documentation 100% in sync with the codebase.
   * Ensure working directory is clean and buildable.
 
 ---
@@ -87,4 +88,5 @@ Always use the specified tools for their respective runtimes. Do not invoke lega
 2. [ ] **Unit Tests**: All cryptographic tests pass (`cargo test`).
 3. [ ] **Lint & Format**: Cleaned with `biome check --write .` (and `cargo fmt`).
 4. [ ] **Memory Inspection**: Sensitive key variables are properly dropped/zeroized.
-5. [ ] **Git State**: Clean commit created with conventional commit message.
+5. [ ] **Documentation**: `README.md` updated to reflect any new features, settings, or architectural additions.
+6. [ ] **Git State**: Clean commit created with conventional commit message.
