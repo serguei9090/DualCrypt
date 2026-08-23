@@ -1,0 +1,23 @@
+[package]
+name = "denc-cli"
+version = "0.1.0"
+edition = "2021"
+authors = ["DualCrypt Enterprise"]
+description = "Headless CLI for DualCrypt Zero-Trust Threshold File Encryption & Web Server"
+
+[[bin]]
+name = "denc"
+path = "src/main.rs"
+
+[dependencies]
+denc-core = { path = "../denc-core" }
+clap = { version = "4.5", features = ["derive", "cargo"] }
+indicatif = "0.17"
+tokio = { version = "1.43", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+axum = "0.8"
+tower-http = { version = "0.6", features = ["fs", "cors", "trace"] }
+colored = "3.0"
+zeroize = "1.8"
+rand = "0.8"

@@ -4,3 +4,4 @@ pub mod encrypt;
 pub mod inspect;
 pub mod shares;
 pub mod yubikey;
+pub mod server;

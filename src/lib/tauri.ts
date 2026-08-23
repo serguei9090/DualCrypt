@@ -282,3 +282,42 @@ export async function sendCustodianKeyEmail(request: SendCustodianEmailParams): 
   }
   return await invoke<string>("send_custodian_key_email", { request });
 }
+
+export interface WebServerStatus {
+  is_running: boolean;
+  host: string;
+  port: number;
+  url: string;
+  is_public: boolean;
+}
+
+export async function startLocalWebServer(host: string, port: number): Promise<WebServerStatus> {
+  if (!isTauriEnvironment()) {
+    return {
+      is_running: true,
+      host,
+      port,
+      url: host === "0.0.0.0" ? `http://localhost:${port}` : `http://${host}:${port}`,
+      is_public: host === "0.0.0.0",
+    };
+  }
+  return await invoke<WebServerStatus>("start_local_web_server", { host, port });
+}
+
+export async function stopLocalWebServer(): Promise<void> {
+  if (!isTauriEnvironment()) return;
+  await invoke("stop_local_web_server");
+}
+
+export async function getLocalWebServerStatus(): Promise<WebServerStatus> {
+  if (!isTauriEnvironment()) {
+    return {
+      is_running: false,
+      host: "127.0.0.1",
+      port: 8080,
+      url: "http://127.0.0.1:8080",
+      is_public: false,
+    };
+  }
+  return await invoke<WebServerStatus>("get_local_web_server_status");
+}

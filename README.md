@@ -1,7 +1,7 @@
 # 🛡️ DualCrypt Enterprise
 
 > **Zero-Trust Multi-Party Threshold File Encryption & Disaster Escrow Platform**  
-> Engineered with **Rust (`denc-core`)**, **Tauri v2**, **React 19**, and **Tailwind CSS**.
+> Engineered with **Rust (`denc-core`, `denc-cli`)**, **Tauri v2**, **React 19**, and **Tailwind CSS**.
 
 ---
 
@@ -76,14 +76,41 @@ The `.denc` container encapsulates the metadata and chunked authenticated stream
 
 ## 🚀 Live Features
 
+* **💻 Headless CLI (`denc-cli`)**: Standalone command-line binary `denc` for server backups, automation scripts, and CI/CD pipelines.
+* **🌐 Embedded Local Web Server**: Lightweight built-in HTTP server (`axum`) with configurable network binding:
+  * `🔒 Localhost (127.0.0.1)` for zero-trust single workstation isolation.
+  * `🌐 Local LAN (0.0.0.0)` for team access across local subnet/Wi-Fi.
+* **⚙️ Enterprise Settings Sidebar**: 2-column sidebar navigation organizing Email/SMTP, Local Web Server, Hardware/YubiKey, and Cryptographic Defaults.
 * **🛡️ $k$-of-$n$ Quorum Flexibility**: Configure strict dual-custody (2-of-2), majority board quorums (3-of-5), or disaster escrow models (2-of-3).
 * **⚡ High-Throughput Streaming**: Processes gigabyte-scale files at disk speeds with constant $O(1)$ memory consumption ($<20\text{ MB}$ RAM).
 * **📁 Directory & Folder Archiving**: Native streaming TAR bundling to encrypt entire directory hierarchies seamlessly into a single `.denc` container.
 * **🔐 PIN-Protected `.dkey` Key Shares**: Exported key share files can be encrypted with an optional PIN/password using Argon2id + AES-256-GCM.
-* **⚙️ Settings Tab & Integrated SMTP Email Relay**: Configure custom SMTP relay servers (Host, Port, STARTTLS/TLS, Credentials) with interactive test-send diagnostics and encrypted local OS storage.
 * **📧 One-Click Custodian Email Dispatch**: Directly dispatch `.dkey` shares and instructions to authorized custodians from the completion screen.
 * **🔑 Hardware Token & YubiKey Support**: Real physical USB device scanning (`VID_1050`) with an explicit 3-way selector (`[ Passphrase ]`, `[ Key File ]`, `[ YubiKey ]`) and a developer simulator toggle.
 * **🛑 Instant Job Cancellation**: Thread-safe atomic cancellation tokens allow aborting in-flight encryption/decryption jobs without leaving corrupt artifacts.
+
+---
+
+## 💻 Standalone CLI Tool (`denc`)
+
+DualCrypt provides a native command-line utility for automation and headless server environments:
+
+```bash
+# 1. Encrypt a file with 2-of-2 dual custody
+denc encrypt secret_backup.tar.gz -o backup.denc -k 2 -n 2 -p 1:CustOnePass -p 2:CustTwoPass
+
+# 2. Encrypt an entire directory and export keyfiles (.dkey)
+denc encrypt ./data_vault/ -o vault.denc -k 2 -n 3 --key-dir ./keys/
+
+# 3. Decrypt a container with passphrases & key files
+denc decrypt backup.denc -o restored_backup.tar.gz -p 1:CustOnePass -p 2:CustTwoPass
+
+# 4. Inspect container metadata without decrypting
+denc inspect backup.denc
+
+# 5. Launch the embedded web server on custom interface & port
+denc serve --host 0.0.0.0 --port 8080
+```
 
 ---
 
@@ -96,23 +123,14 @@ The `.denc` container encapsulates the metadata and chunked authenticated stream
 - [ ] **ML-KEM-768 (Kyber-768)**: NIST FIPS 203 public-key encapsulation for asynchronous custodian key distribution without pre-shared secrets.
 - [ ] **ML-DSA-65 (Dilithium-3)**: NIST FIPS 204 post-quantum digital signatures embedded in container headers for origin authentication and non-repudiation.
 
-### 🔵 Phase 3: Governance, Automation & Shell Integration
+### 🔵 Phase 3: Governance & Shell Integration
 - [ ] **Immutable Container Audit Trail**: Cryptographically signed audit manifests embedded in container headers with creation timestamps and custodian records.
-- [ ] **Headless CLI (`denc-cli`)**: Standalone binary for automated server backups, scripts, and CI/CD pipelines.
+- [x] **Headless CLI (`denc-cli`)**: Standalone binary for automated server backups, scripts, and CI/CD pipelines. *(Completed)*
+- [x] **Embedded Local Web Server**: Workstation & CLI HTTP server with Localhost/LAN binding. *(Completed)*
 - [ ] **Windows Explorer Context Menu**: Right-click shell extension integration ("Encrypt with DualCrypt Enterprise").
 
 ### 🟣 Phase 4: Client-Side Web Client
 - [ ] **Zero-Knowledge WebAssembly (Wasm)**: Direct in-browser decryptor compiled from `denc-core` without server-side plaintext exposure.
-
----
-
-## 🌐 API Feasibility Analysis: Should DualCrypt Provide an API?
-
-| Architecture Model | Pros | Cons / Risks | Recommendation |
-| :--- | :--- | :--- | :--- |
-| **Option A: Local Headless CLI / Local Named Pipe IPC** | • 100% Zero-Network attack surface.<br>• Perfect for CI/CD, backup scripts, and local service automation.<br>• No plaintext keys over HTTP. | • Requires local binary installation on target machines. | **✅ Highly Recommended** |
-| **Option B: Embedded Rust Crate / C-FFI / Wasm Library** | • In-process zero-overhead integration into existing apps.<br>• Compiles to WebAssembly for zero-knowledge web clients. | • Requires developers to write integration code in their language. | **✅ Already Implemented (`denc-core`)** |
-| **Option C: Centralized Remote REST / gRPC Server** | • Easy remote trigger from webhooks or backend services. | • **Violates Zero-Trust**: Plaintext files or master key shares would transit a central network daemon.<br>• Major honeypot target for attackers. | **❌ Strongly Discouraged** (Except as an air-gapped KMS plugin). |
 
 ---
 
@@ -130,9 +148,12 @@ bun install
 
 # Run desktop application in development mode
 bun run tauri dev
+
+# Run CLI directly
+cargo run -p denc-cli -- --help
 ```
 
-### Run Core Cryptographic Tests
+### Run Full Test Suite
 ```bash
 cargo test --workspace
 ```

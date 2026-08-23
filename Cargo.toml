@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/denc-core",
+    "crates/denc-cli",
     "src-tauri"
 ]
 resolver = "2"

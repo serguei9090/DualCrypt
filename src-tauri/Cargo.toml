@@ -28,3 +28,5 @@ sha2 = "0.10"
 thiserror = "2.0"
 zip = { version = "2.2", default-features = false, features = ["deflate"] }
 lettre = { version = "0.11", default-features = false, features = ["tokio1-rustls-tls", "builder", "smtp-transport", "pool"] }
+axum = "0.8"
+tower-http = { version = "0.6", features = ["fs", "cors"] }

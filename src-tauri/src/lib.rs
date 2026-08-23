@@ -7,6 +7,9 @@ use commands::email::{
 };
 use commands::encrypt::start_encryption;
 use commands::inspect::inspect_denc_file;
+use commands::server::{
+    get_local_web_server_status, start_local_web_server, stop_local_web_server,
+};
 use commands::shares::{parse_keyfile, save_all_keyfiles_zip, save_keyfile};
 use commands::yubikey::{list_hardware_tokens, perform_hardware_token_challenge};
 use state::AppState;
@@ -33,7 +36,10 @@ pub fn run() {
             test_smtp_connection,
             send_custodian_key_email,
             list_hardware_tokens,
-            perform_hardware_token_challenge
+            perform_hardware_token_challenge,
+            start_local_web_server,
+            stop_local_web_server,
+            get_local_web_server_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running DualCrypt Enterprise application");
