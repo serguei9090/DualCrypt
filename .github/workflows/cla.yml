@@ -26,6 +26,6 @@ jobs:
           path-to-signatures: 'signatures/version1/cla.json'
           path-to-document: 'https://github.com/${{ github.repository }}/blob/main/CLA.md'
           branch: 'main'
-          allowlist: 'bot*serguei9090,serguei246,dependabot[bot]'
+          allowlist: 'bot*serguei9090,dependabot[bot]'
           empty-commit-flag: false
           origin: ${{ github.repository }}

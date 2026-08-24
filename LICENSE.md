@@ -1,7 +1,7 @@
 DualCrypt Source-Available License 1.0
 
 Licensor:
-    Serguei (serguei246@gmail.com) / DualCrypt Enterprise
+    Serguei (serguei@aiopsforge.com) / DualCrypt Enterprise
 
 Software:
     DualCrypt Enterprise (including denc-core, denc-cli, denc-wasm, desktop and mobile applications).
@@ -35,7 +35,7 @@ from the Licensor:
         the thresholds in Section 2 (revenue of $1,000,000 USD or more, or 25 or more employees).
 
 Organizations or individuals seeking permission for uses exceeding the Free Use Grant
-may contact the Licensor directly at: serguei246@gmail.com.
+may contact the Licensor directly at: serguei@aiopsforge.com.
 
 4. Research & Open Engineering Notice
 

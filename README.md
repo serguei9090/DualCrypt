@@ -300,7 +300,7 @@ DualCrypt Enterprise is licensed under the **[DualCrypt Source-Available License
   - Internal business use by any company, startup, or non-profit organization with **less than \$1,000,000 in annual revenue** AND **fewer than 25 employees**.
 * **🏢 Organizations & Permissions**:
   - Reselling, redistributing for a fee, or offering the software as a paid hosted cloud/SaaS service requires prior written permission.
-  - Organizations exceeding the Free Use thresholds (revenue $\ge$ \$1M or $\ge$ 25 employees) seeking permission can contact: [`serguei246@gmail.com`](mailto:serguei246@gmail.com).
+  - Organizations exceeding the Free Use thresholds (revenue $\ge$ \$1M or $\ge$ 25 employees) seeking permission can contact: [`serguei@aiopsforge.com`](mailto:serguei@aiopsforge.com).
 
 ### 2. Contributor License Agreement (CLA)
 To ensure long-term architectural integrity and licensing rights, all contributors submitting pull requests must agree to the automated **[Contributor License Agreement (CLA)](file:///CLA.md)** via the repository's CLA bot.
