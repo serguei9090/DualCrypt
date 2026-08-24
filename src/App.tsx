@@ -277,7 +277,13 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#070a12] text-slate-100 cyber-grid flex flex-col">
-      <Header />
+      <Header
+        activeTab={activeTab}
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          handleReset();
+        }}
+      />
       <TabNav
         activeTab={activeTab}
         onTabChange={(tab) => {

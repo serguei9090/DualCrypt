@@ -72,19 +72,6 @@ export const TabNav: React.FC<TabNavProps> = ({ activeTab, onTabChange }) => {
           <span>Activity & Audit History</span>
         </button>
       )}
-
-      <button
-        type="button"
-        onClick={() => onTabChange("settings")}
-        className={cn(
-          "flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-medium transition-all",
-          activeTab === "settings"
-            ? "border-purple-400 text-purple-300 bg-purple-500/5"
-            : "border-transparent text-zinc-400 hover:text-zinc-200",
-        )}
-      >
-        <span>⚙️ Settings & Email</span>
-      </button>
     </div>
   );
 };
