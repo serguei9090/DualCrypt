@@ -2,10 +2,8 @@ import { Cpu, RefreshCw, ShieldCheck, Zap } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import {
-  isSimulationEnabled,
   listHardwareTokens,
   performHardwareTokenChallenge,
-  setSimulationEnabled,
   type YubiKeyDevice,
 } from "../../../lib/tauri";
 
@@ -67,34 +65,6 @@ export const HardwarePanel: React.FC = () => {
         </button>
       </div>
 
-      {/* Developer Simulator Toggle */}
-      <div className="p-4 rounded-2xl border border-slate-800 bg-slate-950/80 space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-200">
-              Virtual Key Simulator Mode (Dev Mode)
-            </span>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
-              OPTIONAL
-            </span>
-          </div>
-          <input
-            type="checkbox"
-            checked={isSimulationEnabled()}
-            onChange={(e) => {
-              setSimulationEnabled(e.target.checked);
-              handleRefreshTokens();
-            }}
-            className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-cyan-500 focus:ring-0 cursor-pointer accent-cyan-500"
-          />
-        </div>
-        <p className="text-xs text-slate-400">
-          Enables virtual security keys for development, automated testing, and demonstrations
-          without physical hardware plugged in. Turn off for strict production physical key
-          enforcement.
-        </p>
-      </div>
-
       {/* Connected Hardware Device List */}
       <div className="space-y-3">
         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
@@ -148,8 +118,7 @@ export const HardwarePanel: React.FC = () => {
           <div className="p-4 rounded-2xl border border-rose-500/20 bg-rose-950/10 text-xs text-rose-300 space-y-1">
             <div className="font-semibold text-sm">No Hardware Key Detected</div>
             <p className="text-xs text-slate-400">
-              Insert a physical YubiKey into a USB port and click &apos;Scan&apos;, or enable
-              Virtual Simulator Mode above to test.
+              Insert a physical YubiKey into a USB port and click the scan button above.
             </p>
           </div>
         )}
