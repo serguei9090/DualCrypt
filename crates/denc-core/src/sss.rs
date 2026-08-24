@@ -218,6 +218,7 @@ pub fn split_secret(
             }
             share.data[byte_idx] = val;
         }
+        coeffs.zeroize();
     }
 
     Ok(shares)
