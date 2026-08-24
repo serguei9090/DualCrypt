@@ -20,6 +20,7 @@ import {
   exportAuditHistoryJson,
   getAuditHistory,
 } from "../../lib/historyStore";
+import { cn } from "../../lib/utils";
 
 export const AuditHistoryView: React.FC = () => {
   const [events, setEvents] = useState<AuditEvent[]>(() => getAuditHistory());
@@ -78,167 +79,171 @@ export const AuditHistoryView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/60 pb-6">
-        <div>
-          <div className="flex items-center gap-3 mb-1.5">
-            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
-              <History className="w-6 h-6" />
+    <div className="space-y-6 animate-in fade-in duration-300">
+      {/* Header Banner */}
+      <div className="rounded-2xl border border-amber-500/30 bg-zinc-900/60 p-6 backdrop-blur-md space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">
+              <History className="h-6 w-6 text-amber-400" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-                Operational Audit & Activity Ledger
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 font-mono">
+              <h3 className="text-base font-bold text-zinc-100 flex items-center gap-2 flex-wrap">
+                <span>Operational Audit & Activity Ledger</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-950/80 border border-amber-500/30 px-2 py-0.5 text-[10px] font-mono text-amber-300">
+                  <ShieldCheck className="h-2.5 w-2.5 text-amber-400" />
                   Tamper-Resistant Log
                 </span>
-              </h2>
-              <p className="text-xs text-muted-foreground">
+              </h3>
+              <p className="text-xs text-zinc-400">
                 High-level operational timeline of cryptographic split-lock encryptions and
                 multi-custodian decryptions.
               </p>
             </div>
           </div>
-        </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={exportAuditHistoryCsv}
-            disabled={events.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-secondary/80 hover:bg-secondary text-foreground border border-border/60 hover:border-border transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5 text-primary" />
-            Export CSV
-          </button>
-          <button
-            type="button"
-            onClick={exportAuditHistoryJson}
-            disabled={events.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-secondary/80 hover:bg-secondary text-foreground border border-border/60 hover:border-border transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5 text-primary" />
-            Export JSON
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowClearConfirm(true)}
-            disabled={events.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/20 hover:border-destructive/40 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            Clear Ledger
-          </button>
+          {/* Action Controls */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={exportAuditHistoryCsv}
+              disabled={events.length === 0}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800/80 hover:bg-zinc-700/90 px-3.5 py-2 text-xs font-semibold text-zinc-200 hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Export CSV</span>
+            </button>
+            <button
+              type="button"
+              onClick={exportAuditHistoryJson}
+              disabled={events.length === 0}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800/80 hover:bg-zinc-700/90 px-3.5 py-2 text-xs font-semibold text-zinc-200 hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Export JSON</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowClearConfirm(true)}
+              disabled={events.length === 0}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-950/40 hover:bg-rose-900/60 px-3.5 py-2 text-xs font-semibold text-rose-300 hover:text-rose-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+              <span>Clear Ledger</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Stats Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-card/40 border border-border/60 rounded-xl p-4 flex items-center gap-3.5 backdrop-blur-sm">
-          <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 text-primary">
-            <Layers className="w-5 h-5" />
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 flex items-center gap-3.5 backdrop-blur-md">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-300 shrink-0">
+            <Layers className="w-5 h-5 text-cyan-400" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-foreground font-mono">{stats.total}</div>
-            <div className="text-xs text-muted-foreground font-medium">Total Operations</div>
+            <div className="text-2xl font-bold text-zinc-100 font-mono">{stats.total}</div>
+            <div className="text-xs text-zinc-400 font-medium">Total Operations</div>
           </div>
         </div>
 
-        <div className="bg-card/40 border border-border/60 rounded-xl p-4 flex items-center gap-3.5 backdrop-blur-sm">
-          <div className="p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 flex items-center gap-3.5 backdrop-blur-md">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-950/60 border border-cyan-800/50 text-cyan-400 shrink-0">
             <Lock className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-foreground font-mono">{stats.encCount}</div>
-            <div className="text-xs text-muted-foreground font-medium">Encryptions</div>
+            <div className="text-2xl font-bold text-zinc-100 font-mono">{stats.encCount}</div>
+            <div className="text-xs text-zinc-400 font-medium">Encryptions</div>
           </div>
         </div>
 
-        <div className="bg-card/40 border border-border/60 rounded-xl p-4 flex items-center gap-3.5 backdrop-blur-sm">
-          <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 flex items-center gap-3.5 backdrop-blur-md">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-950/60 border border-emerald-800/50 text-emerald-400 shrink-0">
             <Unlock className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-foreground font-mono">{stats.decCount}</div>
-            <div className="text-xs text-muted-foreground font-medium">Decryptions</div>
+            <div className="text-2xl font-bold text-zinc-100 font-mono">{stats.decCount}</div>
+            <div className="text-xs text-zinc-400 font-medium">Decryptions</div>
           </div>
         </div>
 
-        <div className="bg-card/40 border border-border/60 rounded-xl p-4 flex items-center gap-3.5 backdrop-blur-sm">
-          <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400">
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4 flex items-center gap-3.5 backdrop-blur-md">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-950/60 border border-purple-800/50 text-purple-400 shrink-0">
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-foreground font-mono">{stats.signedCount}</div>
-            <div className="text-xs text-muted-foreground font-medium">FIPS 204 Signed</div>
+            <div className="text-2xl font-bold text-zinc-100 font-mono">{stats.signedCount}</div>
+            <div className="text-xs text-zinc-400 font-medium">FIPS 204 Signed</div>
           </div>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-card/30 border border-border/60 rounded-xl p-3">
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-3.5 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-3">
         {/* Search */}
         <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
           <input
             type="text"
             placeholder="Search filename, author, cipher..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-background/80 border border-border/60 rounded-lg pl-9 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary transition-colors"
+            className="w-full rounded-xl border border-zinc-750 bg-zinc-950 pl-9 pr-3 py-2 text-xs text-zinc-200 placeholder:text-zinc-500 focus:border-cyan-500 focus:outline-none transition-colors"
           />
         </div>
 
         {/* Filter Pills */}
-        <div className="flex items-center gap-1.5 w-full sm:w-auto">
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-zinc-950 border border-zinc-800 w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setFilterAction("all")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+            className={cn(
+              "flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
               filterAction === "all"
-                ? "bg-primary/20 text-primary border border-primary/30"
-                : "bg-secondary/50 text-muted-foreground hover:text-foreground border border-border/40"
-            }`}
+                ? "bg-zinc-800 text-zinc-100 shadow-sm border border-zinc-700"
+                : "text-zinc-400 hover:text-zinc-200 border border-transparent",
+            )}
           >
             All ({events.length})
           </button>
           <button
             type="button"
             onClick={() => setFilterAction("encrypt")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 cursor-pointer ${
+            className={cn(
+              "flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer",
               filterAction === "encrypt"
-                ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
-                : "bg-secondary/50 text-muted-foreground hover:text-foreground border border-border/40"
-            }`}
+                ? "bg-cyan-600 text-white shadow-sm border border-cyan-500/40"
+                : "text-zinc-400 hover:text-zinc-200 border border-transparent",
+            )}
           >
-            <Lock className="w-3 h-3" />
-            Encrypted ({stats.encCount})
+            <Lock className="w-3 h-3 text-cyan-300" />
+            <span>Encrypted ({stats.encCount})</span>
           </button>
           <button
             type="button"
             onClick={() => setFilterAction("decrypt")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 cursor-pointer ${
+            className={cn(
+              "flex-1 sm:flex-none px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer",
               filterAction === "decrypt"
-                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                : "bg-secondary/50 text-muted-foreground hover:text-foreground border border-border/40"
-            }`}
+                ? "bg-emerald-600 text-white shadow-sm border border-emerald-500/40"
+                : "text-zinc-400 hover:text-zinc-200 border border-transparent",
+            )}
           >
-            <Unlock className="w-3 h-3" />
-            Decrypted ({stats.decCount})
+            <Unlock className="w-3 h-3 text-emerald-300" />
+            <span>Decrypted ({stats.decCount})</span>
           </button>
         </div>
       </div>
 
       {/* Events Table / List */}
       {filteredEvents.length === 0 ? (
-        <div className="border border-border/60 border-dashed rounded-2xl p-12 text-center bg-card/20 flex flex-col items-center justify-center gap-3">
-          <div className="p-3.5 rounded-full bg-secondary/60 border border-border/60 text-muted-foreground">
+        <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/40 p-12 text-center flex flex-col items-center justify-center gap-3 backdrop-blur-md">
+          <div className="p-3.5 rounded-2xl bg-zinc-950 border border-zinc-800 text-zinc-500">
             <History className="w-8 h-8" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-foreground">No Activity Records Found</h3>
-            <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+            <h3 className="text-sm font-semibold text-zinc-200">No Activity Records Found</h3>
+            <p className="text-xs text-zinc-400 mt-1 max-w-sm">
               {searchQuery || filterAction !== "all"
                 ? "No operations match your current search and filter criteria."
                 : "Complete an encryption or decryption operation to record high-level audit events here."}
@@ -246,31 +251,31 @@ export const AuditHistoryView: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="border border-border/60 rounded-xl overflow-hidden bg-card/20 shadow-sm">
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 overflow-hidden backdrop-blur-md shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-secondary/40 border-b border-border/60 text-muted-foreground font-semibold">
-                  <th className="py-3 px-4">Action</th>
-                  <th className="py-3 px-4">File Name & Size</th>
-                  <th className="py-3 px-4">Custodians & Quorum</th>
-                  <th className="py-3 px-4">Cipher Engine</th>
-                  <th className="py-3 px-4">Author Verification</th>
-                  <th className="py-3 px-4 text-right">Timestamp</th>
+                <tr className="bg-zinc-950/80 border-b border-zinc-800 text-zinc-400 font-semibold text-[11px] uppercase tracking-wider">
+                  <th className="py-3.5 px-4">Action</th>
+                  <th className="py-3.5 px-4">File Name & Size</th>
+                  <th className="py-3.5 px-4">Custodians & Quorum</th>
+                  <th className="py-3.5 px-4">Cipher Engine</th>
+                  <th className="py-3.5 px-4">Author Verification</th>
+                  <th className="py-3.5 px-4 text-right">Timestamp</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/40 font-mono">
+              <tbody className="divide-y divide-zinc-800/80 font-mono">
                 {filteredEvents.map((evt) => (
-                  <tr key={evt.id} className="hover:bg-secondary/20 transition-colors group">
+                  <tr key={evt.id} className="hover:bg-zinc-800/40 transition-colors group">
                     {/* Action */}
-                    <td className="py-3 px-4 whitespace-nowrap">
+                    <td className="py-3.5 px-4 whitespace-nowrap">
                       {evt.action === "encrypt" ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-cyan-500/15 text-cyan-400 border border-cyan-500/25">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-cyan-950/80 text-cyan-400 border border-cyan-500/30">
                           <Lock className="w-3 h-3" />
                           ENCRYPT
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-500/30">
                           <Unlock className="w-3 h-3" />
                           DECRYPT
                         </span>
@@ -278,31 +283,31 @@ export const AuditHistoryView: React.FC = () => {
                     </td>
 
                     {/* Filename & Size & Classification */}
-                    <td className="py-3 px-4">
+                    <td className="py-3.5 px-4">
                       <div className="flex flex-col gap-1 max-w-xs md:max-w-sm">
                         <div className="flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-primary shrink-0" />
+                          <FileText className="w-4 h-4 text-cyan-400 shrink-0" />
                           <span
-                            className="font-medium text-foreground truncate font-sans"
+                            className="font-medium text-zinc-200 truncate font-sans"
                             title={evt.filename}
                           >
                             {evt.filename}
                           </span>
-                          <span className="text-[11px] text-muted-foreground shrink-0 font-mono">
+                          <span className="text-[11px] text-zinc-500 shrink-0 font-mono">
                             ({evt.fileSizeFormatted})
                           </span>
                         </div>
                         {evt.classification && (
                           <div className="flex items-center gap-1.5 pl-6">
                             <span
-                              className={`px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase border ${
+                              className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider uppercase border ${
                                 evt.classification.includes("SECRET")
-                                  ? "bg-red-500/15 text-red-400 border-red-500/30"
+                                  ? "bg-rose-950/80 text-rose-300 border-rose-800/50"
                                   : evt.classification.includes("CONFIDENTIAL")
-                                    ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
+                                    ? "bg-amber-950/80 text-amber-300 border-amber-800/50"
                                     : evt.classification.includes("RESTRICTED")
-                                      ? "bg-purple-500/15 text-purple-400 border-purple-500/30"
-                                      : "bg-blue-500/15 text-blue-400 border-blue-500/30"
+                                      ? "bg-purple-950/80 text-purple-300 border-purple-800/50"
+                                      : "bg-blue-950/80 text-blue-300 border-blue-800/50"
                               }`}
                             >
                               {evt.classification}
@@ -313,45 +318,43 @@ export const AuditHistoryView: React.FC = () => {
                     </td>
 
                     {/* Custodians & Quorum */}
-                    <td className="py-3 px-4 whitespace-nowrap">
+                    <td className="py-3.5 px-4 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
-                        <span className="px-2 py-0.5 rounded bg-secondary/80 border border-border/60 text-foreground text-[11px] font-mono">
+                        <span className="px-2 py-0.5 rounded-lg bg-zinc-950 border border-zinc-800 text-zinc-300 text-[11px] font-mono">
                           {evt.thresholdK}-of-{evt.custodianCount}
                         </span>
-                        <span className="text-muted-foreground text-[11px] font-sans">
+                        <span className="text-zinc-400 text-[11px] font-sans">
                           ({evt.custodianCount}{" "}
                           {evt.custodianCount === 1 ? "custodian" : "custodians"})
                         </span>
                       </div>
                     </td>
 
-                    {/* Cipher Suite */}
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <span className="text-xs text-muted-foreground font-mono uppercase">
+                    {/* Cipher Engine */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <span className="text-xs text-zinc-400 font-mono uppercase">
                         {evt.cipherSuite}
                       </span>
                     </td>
 
                     {/* Author Signature */}
-                    <td className="py-3 px-4 whitespace-nowrap">
+                    <td className="py-3.5 px-4 whitespace-nowrap">
                       {evt.authorSigned ? (
-                        <div className="flex items-center gap-1.5 text-purple-400 font-sans text-xs">
-                          <ShieldCheck className="w-4 h-4 text-purple-400 shrink-0" />
+                        <div className="flex items-center gap-1.5 text-purple-300 font-sans text-xs">
+                          <ShieldCheck className="w-3.5 h-3.5 text-purple-400 shrink-0" />
                           <span className="truncate max-w-[160px]" title={evt.authorLabel}>
                             {evt.authorLabel || "FIPS 204 Valid"}
                           </span>
                         </div>
                       ) : (
-                        <span className="text-muted-foreground/60 text-xs font-sans italic">
-                          Unsigned
-                        </span>
+                        <span className="text-zinc-500 text-xs font-sans italic">Unsigned</span>
                       )}
                     </td>
 
                     {/* Timestamp */}
-                    <td className="py-3 px-4 text-right whitespace-nowrap text-muted-foreground font-sans text-[11px]">
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap text-zinc-400 font-mono text-[11px]">
                       <div className="flex items-center justify-end gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-muted-foreground/70" />
+                        <Clock className="w-3.5 h-3.5 text-zinc-500" />
                         {formatDateTime(evt.timestamp)}
                       </div>
                     </td>
@@ -363,22 +366,47 @@ export const AuditHistoryView: React.FC = () => {
         </div>
       )}
 
+      {/* Theoretical & Security Guarantees */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+        <div className="bg-zinc-950/70 p-4 rounded-xl border border-zinc-800 space-y-2">
+          <h4 className="text-xs font-semibold text-zinc-200">Tamper-Resistant Local Ledger</h4>
+          <p className="text-[11px] text-zinc-400 leading-relaxed">
+            Operations are recorded with high-precision timestamps, quorum parameters, cipher
+            suites, and cryptographic author signatures.
+          </p>
+        </div>
+        <div className="bg-zinc-950/70 p-4 rounded-xl border border-zinc-800 space-y-2">
+          <h4 className="text-xs font-semibold text-zinc-200">Zero-Knowledge Logging</h4>
+          <p className="text-[11px] text-zinc-400 leading-relaxed">
+            Audit entries track container structures and compliance classifications without ever
+            storing raw keys, passphrases, or Shamir share data.
+          </p>
+        </div>
+        <div className="bg-zinc-950/70 p-4 rounded-xl border border-zinc-800 space-y-2">
+          <h4 className="text-xs font-semibold text-zinc-200">Compliance & Provenance</h4>
+          <p className="text-[11px] text-zinc-400 leading-relaxed">
+            Exportable CSV and JSON audit trails provide verifiable provenance for enterprise
+            governance, SOC 2 compliance, and dual-custody verification.
+          </p>
+        </div>
+      </div>
+
       {/* Clear Confirmation Modal */}
       {showClearConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-card border border-border rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center gap-3 text-destructive">
-              <div className="p-3 rounded-full bg-destructive/10 border border-destructive/20">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-full bg-rose-950/60 border border-rose-800/50 text-rose-400">
                 <AlertCircle className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-bold text-foreground text-base">Clear Audit Ledger</h3>
-                <p className="text-xs text-muted-foreground">
+                <h3 className="font-bold text-zinc-100 text-base">Clear Audit Ledger</h3>
+                <p className="text-xs text-zinc-400">
                   Permanent deletion of local operation records
                 </p>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-zinc-400">
               Are you sure you want to permanently clear the local activity history log? This action
               cannot be undone. You can export a CSV or JSON backup before clearing.
             </p>
@@ -386,14 +414,14 @@ export const AuditHistoryView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowClearConfirm(false)}
-                className="px-4 py-2 text-xs font-medium rounded-lg bg-secondary hover:bg-secondary/80 text-foreground transition-all cursor-pointer"
+                className="px-4 py-2 text-xs font-semibold rounded-xl border border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-750 transition-all cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleClear}
-                className="px-4 py-2 text-xs font-semibold rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground transition-all cursor-pointer"
+                className="px-4 py-2 text-xs font-semibold rounded-xl bg-rose-600 hover:bg-rose-500 text-white transition-all shadow-sm cursor-pointer"
               >
                 Yes, Clear All
               </button>
