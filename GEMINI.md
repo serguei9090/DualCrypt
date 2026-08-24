@@ -82,11 +82,25 @@ Always use the specified tools for their respective runtimes. Do not invoke lega
 
 ---
 
-## ✅ 6. Checklist Before Declaring Any Task Complete
+## 🏛️ 7. Enterprise Architecture, Target Separation & Shared Codebase
+
+* **Target Separation & UI Hygiene**:
+  * Maintain strict isolation between Desktop and Mobile targets.
+  * **NEVER** embed phone simulators, mobile mockups, or out-of-scope device previews directly into the desktop user interface. Keep desktop, web, and mobile app entry points distinct.
+* **Shared Core Maximization**:
+  * Common cryptographic primitives, binary container serialization, and optical QR protocols must reside in shared core packages (`crates/denc-core` and `packages/shared-airgap`).
+  * Never duplicate protocol parsing, checksum logic, or cryptographic schemes across targets.
+* **No Mocking / Zero Pseudo-Code**:
+  * Build real, production-ready enterprise functionality. Avoid mock placeholders or simulated flows unless explicitly requested by the user.
+
+---
+
+## ✅ 8. Checklist Before Declaring Any Task Complete
 
 1. [ ] **Rust Core**: Compiles cleanly with zero compiler warnings (`cargo check`).
-2. [ ] **Unit Tests**: All cryptographic tests pass (`cargo test`).
+2. [ ] **Unit Tests**: All cryptographic tests pass (`cargo test` & `bun test`).
 3. [ ] **Lint & Format**: Cleaned with `biome check --write .` (and `cargo fmt`).
 4. [ ] **Memory Inspection**: Sensitive key variables are properly dropped/zeroized.
 5. [ ] **Documentation**: `README.md` updated to reflect any new features, settings, or architectural additions.
 6. [ ] **Git State**: Clean commit created with conventional commit message.
+

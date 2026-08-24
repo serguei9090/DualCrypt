@@ -78,12 +78,13 @@ The `.denc` container encapsulates the metadata and chunked authenticated stream
 
 ## 🚀 Live Features
 
-* **📲 Air-Gapped Mobile Authenticator & Dynamic Animated QR Handshake**:
-  * **100% Optical Air-Gap Protocol (`DENC-AIRGAP-V1`)**: 2-way camera-to-screen communication with zero Wi-Fi, Bluetooth, or USB cable exposure.
-  * **Biometric Authentication & Master PIN**: Offline Android Authenticator requiring Fingerprint/Face Unlock or Master PIN before releasing key material in memory.
-  * **Multipart Fountain Streaming**: Encodes large cryptographic shares and ML-KEM payloads into high-speed rotating QR frames (4–12 FPS) with built-in CRC/SHA-256 error correction.
-  * **On-Device Provenance Inspection**: Mobile screen renders the container's security classification (`TOP SECRET 🔴`), purpose, and issuing organization before signing.
-  * **Split-Screen Desktop Modal**: Workstation projects the challenge stream while its webcam captures the mobile response stream in real-time, auto-filling the quorum slot.
+* **📲 Dedicated Android Authenticator & Dynamic Optical Handshake**:
+  * **Zero Code Duplication (`packages/shared-airgap`)**: Shared optical fountain protocol engine, CRC checksums, and schemas used by both Desktop and Android.
+  * **Dedicated Android App (`apps/mobile-android`)**: 100% offline mobile authenticator built with Tauri v2 Android target.
+  * **Biometric Hardware Protection & Master PIN**: First-launch setup prompt configuring Master PIN and hardware biometrics (Fingerprint / Face Unlock) to secure stored key shares.
+  * **1-Click Phone Enrollment (`[ 📲 Scan to Phone (QR) ]`)**: When encrypting, scan the QR code to save the key directly to the phone's offline vault, organized by container filename and custodian role.
+  * **1-Click Quorum Unlock (`[ 📲 QR ]`)**: In the Decrypt tab, tap `[ 📲 QR ]` on any custodian slot to launch the split-screen optical handshake and unlock via camera.
+  * **On-Device Provenance Passport**: Displays security classification (`TOP SECRET 🔴`), issuing organization, and file name before signing release.
 * **📋 Embedded Immutable Container Manifest & Governance Passport**:
   * Cryptographically signed governance metadata embedded directly inside `.denc` container headers.
   * **Security Classification Levels**: `TOP SECRET 🔴`, `CONFIDENTIAL 🟠`, `INTERNAL 🔵`, `RESTRICTED 🟣`, `GENERAL 🟢`.

@@ -12,7 +12,7 @@ import {
 import type React from "react";
 import { useState } from "react";
 import { AirGapDesktopModal } from "./components/airgap/AirGapDesktopModal";
-import { AirGapMobileApp } from "./components/airgap/AirGapMobileApp";
+import { EnrollmentQrModal } from "./components/airgap/EnrollmentQrModal";
 import { FileDropzone } from "./components/dropzone/FileDropzone";
 import { FileMetadataCard } from "./components/dropzone/FileMetadataCard";
 import { KeyEscrowView } from "./components/escrow/KeyEscrowView";
@@ -51,10 +51,11 @@ export const App: React.FC = () => {
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileSize, setFileSize] = useState<number | null>(null);
 
-  // Optical Air-Gap Handshake Modal State
+  // Optical Air-Gap Handshake & Enrollment State
   const [airGapModalCustodian, setAirGapModalCustodian] = useState<CustodianDescriptorInfo | null>(
     null,
   );
+  const [enrollmentQrShare, setEnrollmentQrShare] = useState<ExportedShare | null>(null);
 
   // Author Digital Signature State (NIST FIPS 204 ML-DSA-65)
   const [enableAuthorSignature, setEnableAuthorSignature] = useState(false);
@@ -312,13 +313,25 @@ export const App: React.FC = () => {
 
         {/* Completion Modal */}
         {completionData && (
-          <CompleteDialog
-            title={completionData.title}
-            message={completionData.message}
-            bytesProcessed={completionData.bytes}
-            exportedShares={completionData.shares}
-            onDone={handleReset}
-          />
+          <>
+            <CompleteDialog
+              title={completionData.title}
+              message={completionData.message}
+              bytesProcessed={completionData.bytes}
+              exportedShares={completionData.shares}
+              onDone={handleReset}
+              onEnrollPhone={(share) => setEnrollmentQrShare(share)}
+            />
+
+            {enrollmentQrShare && (
+              <EnrollmentQrModal
+                isOpen={!!enrollmentQrShare}
+                onClose={() => setEnrollmentQrShare(null)}
+                share={enrollmentQrShare}
+                fileName={fileName || "Vault"}
+              />
+            )}
+          </>
         )}
 
         {!job.isRunning && !completionData && (
@@ -670,13 +683,10 @@ export const App: React.FC = () => {
             {/* 3. KEY TOOLS & ESCROW TAB */}
             {activeTab === "keytools" && <KeyEscrowView />}
 
-            {/* 4. AIR-GAPPED MOBILE AUTHENTICATOR APP TAB */}
-            {activeTab === "airgap_mobile" && <AirGapMobileApp />}
-
-            {/* 5. ACTIVITY & AUDIT HISTORY TAB */}
+            {/* 4. ACTIVITY & AUDIT HISTORY TAB */}
             {activeTab === "history" && <AuditHistoryView />}
 
-            {/* 6. SETTINGS & EMAIL DISPATCH TAB */}
+            {/* 5. SETTINGS & EMAIL DISPATCH TAB */}
             {activeTab === "settings" && <SettingsTab />}
           </>
         )}

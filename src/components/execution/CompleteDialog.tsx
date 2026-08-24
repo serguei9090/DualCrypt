@@ -13,6 +13,7 @@ import {
   Mail,
   Send,
   ShieldCheck,
+  Smartphone,
   X,
 } from "lucide-react";
 import type React from "react";
@@ -34,6 +35,7 @@ interface CompleteDialogProps {
   bytesProcessed: number;
   exportedShares?: ExportedShare[];
   onDone: () => void;
+  onEnrollPhone?: (share: ExportedShare) => void;
 }
 
 export const CompleteDialog: React.FC<CompleteDialogProps> = ({
@@ -42,6 +44,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
   bytesProcessed,
   exportedShares = [],
   onDone,
+  onEnrollPhone,
 }) => {
   const [savedStatus, setSavedStatus] = useState<Record<number, string>>({});
   const [zipSavedPath, setZipSavedPath] = useState<string | null>(null);
@@ -521,6 +524,19 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                         {isSaved ? "Saved" : isPqc ? "Private Key (.pqc)" : "Key Share (.dkey)"}
                       </span>
                     </button>
+
+                    {/* Scan to Phone (Android Authenticator) Button */}
+                    {onEnrollPhone && (
+                      <button
+                        type="button"
+                        onClick={() => onEnrollPhone(s)}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold bg-cyan-950/40 hover:bg-cyan-900/60 text-cyan-300 hover:text-cyan-200 border border-cyan-500/30 hover:border-cyan-400 transition-all cursor-pointer"
+                        title="Display QR code for the Android Authenticator App to scan and store"
+                      >
+                        <Smartphone className="h-3.5 w-3.5 text-cyan-400" />
+                        <span>📲 Scan to Phone (QR)</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               );
