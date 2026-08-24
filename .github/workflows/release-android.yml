@@ -69,11 +69,12 @@ jobs:
             echo "Using production signing keystore from GitHub Secrets..."
             echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > $HOME/keystore/release.jks
             echo "KEYSTORE_PATH=$HOME/keystore/release.jks" >> $GITHUB_ENV
-            echo "KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS || 'dualcrypt-key' }}" >> $GITHUB_ENV
-            echo "KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'dualcrypt123' }}" >> $GITHUB_ENV
-            echo "KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD || 'dualcrypt123' }}" >> $GITHUB_ENV
+            echo "KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> $GITHUB_ENV
+            echo "KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> $GITHUB_ENV
           else
-            echo "Generating automated self-signed release keystore..."
+            echo "Generating automated ephemeral release keystore..."
+            RANDOM_PASS=$(openssl rand -hex 16)
             keytool -genkey -v \
               -keystore $HOME/keystore/release.jks \
               -keyalg RSA \
@@ -81,12 +82,12 @@ jobs:
               -validity 10000 \
               -alias dualcrypt-key \
               -dname "CN=DualCrypt, OU=Security, O=DualCrypt, L=San Francisco, ST=CA, C=US" \
-              -storepass dualcrypt123 \
-              -keypass dualcrypt123
+              -storepass "$RANDOM_PASS" \
+              -keypass "$RANDOM_PASS"
             echo "KEYSTORE_PATH=$HOME/keystore/release.jks" >> $GITHUB_ENV
             echo "KEY_ALIAS=dualcrypt-key" >> $GITHUB_ENV
-            echo "KEYSTORE_PASSWORD=dualcrypt123" >> $GITHUB_ENV
-            echo "KEY_PASSWORD=dualcrypt123" >> $GITHUB_ENV
+            echo "KEYSTORE_PASSWORD=$RANDOM_PASS" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=$RANDOM_PASS" >> $GITHUB_ENV
           fi
 
       - name: Initialize Tauri Android Target (if needed)

@@ -269,10 +269,10 @@ export interface PqcKeypair {
 
 export async function generatePqcKeypair(): Promise<PqcKeypair> {
   if (!isTauriEnvironment()) {
-    // Web fallback key generation
+    // Web fallback key generation placeholder
     return {
-      public_key_base64: "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzqX3q...",
-      private_key_base64: "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQ...",
+      public_key_base64: btoa("ML_KEM_768_PUBLIC_KEY_PLACEHOLDER"),
+      private_key_base64: btoa("ML_KEM_768_PRIVATE_KEY_PLACEHOLDER"),
       algorithm: "NIST-FIPS-203-ML-KEM-768",
     };
   }
@@ -281,10 +281,10 @@ export async function generatePqcKeypair(): Promise<PqcKeypair> {
 
 export async function generateMlDsaKeypair(): Promise<PqcKeypair> {
   if (!isTauriEnvironment()) {
-    // Web fallback key generation
+    // Web fallback key generation placeholder
     return {
-      public_key_base64: "MII...ML_DSA_65_PUBLIC_KEY...",
-      private_key_base64: "MII...ML_DSA_65_PRIVATE_SEED...",
+      public_key_base64: btoa("ML_DSA_65_PUBLIC_KEY_PLACEHOLDER"),
+      private_key_base64: btoa("ML_DSA_65_PRIVATE_SEED_PLACEHOLDER"),
       algorithm: "NIST-FIPS-204-ML-DSA-65",
     };
   }
