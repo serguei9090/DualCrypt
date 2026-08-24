@@ -10,6 +10,7 @@ export interface CustodianState {
   shareDataJson?: string;
   publicKeyBase64?: string;
   pqcPrivateKeyBase64?: string;
+  timelockNotBeforeUtc?: number;
 }
 
 interface CustodianGridProps {
@@ -31,6 +32,7 @@ interface CustodianGridProps {
       authType: AuthMethod;
       passphrase?: string;
       publicKeyBase64?: string;
+      timelockNotBeforeUtc?: number;
     },
   ) => void;
   onAirGapClick?: (custodianId: number) => void;
@@ -53,6 +55,7 @@ export const CustodianGrid: React.FC<CustodianGridProps> = ({
           authType={c.authType}
           isVerified={c.isVerified}
           mode={mode}
+          timelockNotBeforeUtc={c.timelockNotBeforeUtc}
           onCredentialSubmit={onCredentialSubmit}
           onUpdateSetup={(data) => onUpdateSetup?.(c.custodianId, data)}
           onAirGapClick={onAirGapClick}

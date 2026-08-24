@@ -47,6 +47,13 @@ pub enum DencError {
     #[error("Operation cancelled by user")]
     Cancelled,
 
+    #[error("Custodian share {custodian_id} is time-locked until timestamp {unlock_time} (current time: {current_time})")]
+    TimelockActive {
+        custodian_id: u8,
+        unlock_time: u64,
+        current_time: u64,
+    },
+
     #[error("General error: {0}")]
     Custom(String),
 }

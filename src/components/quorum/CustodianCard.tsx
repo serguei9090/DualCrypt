@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   Atom,
   CheckCircle2,
+  Clock,
   Cpu,
   Eye,
   EyeOff,
@@ -35,6 +36,7 @@ interface CustodianCardProps {
   authType: AuthMethod;
   isVerified: boolean;
   mode: "encrypt_setup" | "decrypt_unlock";
+  timelockNotBeforeUtc?: number;
   onCredentialSubmit: (data: {
     custodianId: number;
     passphrase?: string;
@@ -49,6 +51,7 @@ interface CustodianCardProps {
     authType: AuthMethod;
     passphrase?: string;
     publicKeyBase64?: string;
+    timelockNotBeforeUtc?: number;
   }) => void;
   onAirGapClick?: (custodianId: number) => void;
 }
@@ -59,6 +62,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
   authType,
   isVerified,
   mode,
+  timelockNotBeforeUtc,
   onCredentialSubmit,
   onUpdateSetup,
   onAirGapClick,
@@ -89,6 +93,38 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
   const [pqcPubFileName, setPqcPubFileName] = useState<string | null>(null);
   const [pqcPrivateKey, setPqcPrivateKey] = useState("");
   const [pqcError, setPqcError] = useState<string | null>(null);
+
+  // Time-Lock Recovery State
+  const [timelockChoice, setTimelockChoice] = useState<string>("none");
+
+  const handleTimelockChange = (choice: string) => {
+    setTimelockChoice(choice);
+    if (choice === "none") {
+      onUpdateSetup?.({
+        label: currentLabel,
+        authType: selectedMethod,
+        passphrase,
+        publicKeyBase64: pqcPublicKey,
+        timelockNotBeforeUtc: undefined,
+      });
+    } else {
+      const days = parseInt(choice, 10);
+      const unlockUtc = Math.floor(Date.now() / 1000) + days * 86400;
+      onUpdateSetup?.({
+        label: currentLabel,
+        authType: selectedMethod,
+        passphrase,
+        publicKeyBase64: pqcPublicKey,
+        timelockNotBeforeUtc: unlockUtc,
+      });
+    }
+  };
+
+  const nowUtc = Math.floor(Date.now() / 1000);
+  const isTimelockedNow =
+    mode === "decrypt_unlock" &&
+    timelockNotBeforeUtc !== undefined &&
+    nowUtc < timelockNotBeforeUtc;
 
   const scanForTokens = useCallback(async () => {
     setIsScanningTokens(true);
@@ -366,480 +402,570 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
             <CheckCircle2 className="h-3.5 w-3.5" /> VERIFIED
           </span>
         )}
+
+        {!isVerified && isTimelockedNow && (
+          <span className="flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/15 px-3 py-1 text-xs font-mono font-bold text-amber-300">
+            <Clock className="h-3.5 w-3.5 text-amber-400 animate-pulse" /> TIME-LOCKED
+          </span>
+        )}
+
+        {!isVerified && !isTimelockedNow && timelockNotBeforeUtc && (
+          <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-mono text-emerald-400">
+            <CheckCircle2 className="h-3 w-3" /> ESCROW ACTIVE
+          </span>
+        )}
       </div>
 
       {!isVerified ? (
         <div className="space-y-3.5">
-          {/* 4-Way Method Selector for setup mode */}
-          {mode === "encrypt_setup" && (
-            <div className="grid grid-cols-4 rounded-xl bg-zinc-950/80 p-1 border border-zinc-800 gap-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedMethod("passphrase");
-                  onUpdateSetup?.({ label: currentLabel, authType: "passphrase", passphrase });
-                }}
-                className={cn(
-                  "flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] transition-colors",
-                  selectedMethod === "passphrase"
-                    ? "bg-zinc-800 text-cyan-400 font-semibold shadow-sm"
-                    : "text-zinc-400 hover:text-zinc-200",
-                )}
-              >
-                <KeyRound className="h-3.5 w-3.5" /> Pass
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedMethod("keyfile");
-                  onUpdateSetup?.({ label: currentLabel, authType: "keyfile" });
-                }}
-                className={cn(
-                  "flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] transition-colors",
-                  selectedMethod === "keyfile"
-                    ? "bg-zinc-800 text-cyan-400 font-semibold shadow-sm"
-                    : "text-zinc-400 hover:text-zinc-200",
-                )}
-              >
-                <FileKey className="h-3.5 w-3.5" /> Key File
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedMethod("yubikey");
-                  onUpdateSetup?.({ label: currentLabel, authType: "yubikey" });
-                }}
-                className={cn(
-                  "flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] transition-colors",
-                  selectedMethod === "yubikey"
-                    ? "bg-zinc-800 text-amber-400 font-semibold shadow-sm border border-amber-500/30"
-                    : "text-zinc-400 hover:text-zinc-200",
-                )}
-              >
-                <Cpu className="h-3.5 w-3.5" /> YubiKey
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedMethod("pqc");
-                  onUpdateSetup?.({
-                    label: currentLabel,
-                    authType: "pqc",
-                  });
-                }}
-                className={cn(
-                  "flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] transition-colors",
-                  selectedMethod === "pqc"
-                    ? "bg-purple-950/80 text-purple-300 font-semibold shadow-sm border border-purple-500/40"
-                    : "text-zinc-400 hover:text-zinc-200",
-                )}
-              >
-                <Atom className="h-3.5 w-3.5" /> PQC KEM
-              </button>
-            </div>
-          )}
-
-          {/* 1. Passphrase Input */}
-          {(selectedMethod === "passphrase" ||
-            (mode === "decrypt_unlock" && authType === "passphrase")) && (
-            <div className="space-y-2">
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder={
-                    mode === "encrypt_setup"
-                      ? "Set custodian passphrase..."
-                      : "Enter custodian passphrase to unlock share..."
-                  }
-                  value={passphrase}
-                  onChange={(e) => {
-                    setPassphrase(e.target.value);
-                    if (mode === "encrypt_setup") {
-                      onUpdateSetup?.({
-                        label: currentLabel,
-                        authType: "passphrase",
-                        passphrase: e.target.value,
-                      });
-                    }
-                  }}
-                  onKeyDown={(e) => e.key === "Enter" && handlePassphraseSubmit()}
-                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2.5 pr-10 text-xs text-zinc-100 placeholder-zinc-500 focus:border-cyan-500 focus:outline-none font-mono"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-2.5 text-zinc-500 hover:text-zinc-300"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+          {isTimelockedNow ? (
+            <div className="rounded-xl border border-amber-500/40 bg-amber-950/25 p-4 text-left space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                <Clock className="h-4 w-4 text-amber-400 shrink-0" />
+                <span>Cryptographic Time-Lock Active</span>
               </div>
-
-              <button
-                type="button"
-                disabled={!passphrase}
-                onClick={handlePassphraseSubmit}
-                className="w-full rounded-xl bg-cyan-600/90 hover:bg-cyan-500 py-2.5 text-xs font-semibold text-white transition-colors disabled:opacity-40"
-              >
-                {mode === "encrypt_setup" ? "Lock & Confirm Credential" : "Submit Custodian Share"}
-              </button>
+              <p className="text-[11px] leading-relaxed text-amber-200/80">
+                This recovery share is sealed under corporate escrow rules until{" "}
+                <strong className="text-white font-mono">
+                  {new Date((timelockNotBeforeUtc || 0) * 1000).toLocaleString()}
+                </strong>
+                . It cannot be used to satisfy quorum before this release timestamp.
+              </p>
+              <div className="pt-2 border-t border-amber-500/20 flex items-center justify-between text-[10px] font-mono text-amber-400/90">
+                <span>Status: Inactive Escrow</span>
+                <span>Protected by Container Header Tag</span>
+              </div>
             </div>
-          )}
-
-          {/* 2. Key File Loader & PIN unlock */}
-          {(selectedMethod === "keyfile" ||
-            (mode === "decrypt_unlock" && authType === "keyfile")) && (
-            <div className="space-y-2">
-              {mode === "encrypt_setup" ? (
-                <div className="rounded-xl border border-dashed border-zinc-700 bg-zinc-950/50 p-4 text-center space-y-2">
-                  <FileKey className="mx-auto h-6 w-6 text-cyan-400" />
-                  <p className="text-xs font-medium text-zinc-200">Exportable Key File (.dkey)</p>
-                  <p className="text-[11px] text-zinc-500">
-                    An armored `.dkey` file will be generated for this custodian upon encryption.
-                  </p>
+          ) : (
+            <>
+              {/* 4-Way Method Selector for setup mode */}
+              {mode === "encrypt_setup" && (
+                <div className="grid grid-cols-4 rounded-xl bg-zinc-950/80 p-1 border border-zinc-800 gap-1">
                   <button
                     type="button"
                     onClick={() => {
-                      onCredentialSubmit({
-                        custodianId,
-                        authType: "keyfile",
-                        label: currentLabel,
-                      });
+                      setSelectedMethod("passphrase");
+                      onUpdateSetup?.({ label: currentLabel, authType: "passphrase", passphrase });
                     }}
-                    className="rounded-lg bg-zinc-800 hover:bg-zinc-700 px-4 py-1.5 text-xs text-cyan-300 font-medium"
+                    className={cn(
+                      "flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] transition-colors",
+                      selectedMethod === "passphrase"
+                        ? "bg-zinc-800 text-cyan-400 font-semibold shadow-sm"
+                        : "text-zinc-400 hover:text-zinc-200",
+                    )}
                   >
-                    Confirm Key File Slot
+                    <KeyRound className="h-3.5 w-3.5" /> Pass
                   </button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {!isPinProtectedKey ? (
-                    <button
-                      type="button"
-                      onClick={handlePickKeyFile}
-                      className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-700 bg-zinc-950/50 py-3 text-xs text-zinc-300 hover:border-cyan-500 hover:text-cyan-400 transition-colors"
-                    >
-                      <FileKey className="h-4 w-4" />
-                      {keyFileName ? keyFileName : "Select .dkey Share File"}
-                    </button>
-                  ) : (
-                    <div className="rounded-xl border border-amber-500/40 bg-amber-950/20 p-3.5 space-y-2">
-                      <div className="flex items-center gap-2 text-xs font-semibold text-amber-300">
-                        <Lock className="h-4 w-4" />
-                        <span>PIN-Protected Key File: {keyFileName}</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <input
-                          type="password"
-                          value={keyFilePin}
-                          onChange={(e) => setKeyFilePin(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && handleUnlockPinProtectedKey()}
-                          placeholder="Enter Key Share PIN..."
-                          className="flex-1 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs text-zinc-200 focus:border-amber-500 focus:outline-none font-mono"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleUnlockPinProtectedKey}
-                          className="rounded-xl bg-amber-600 hover:bg-amber-500 px-4 py-2 text-xs font-bold text-white transition-all"
-                        >
-                          Unlock
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {pinError && <p className="text-[11px] text-rose-400 font-mono">{pinError}</p>}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 3. YubiKey / Hardware Token Mode */}
-          {(selectedMethod === "yubikey" ||
-            (mode === "decrypt_unlock" && authType === "yubikey")) && (
-            <div className="space-y-2.5">
-              <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3.5 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
-                    <Cpu className="h-4 w-4 text-amber-400" />
-                    <span>Hardware Token Status</span>
-                  </div>
                   <button
                     type="button"
-                    onClick={scanForTokens}
-                    disabled={isScanningTokens}
-                    className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1"
+                    onClick={() => {
+                      setSelectedMethod("keyfile");
+                      onUpdateSetup?.({ label: currentLabel, authType: "keyfile" });
+                    }}
+                    className={cn(
+                      "flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] transition-colors",
+                      selectedMethod === "keyfile"
+                        ? "bg-zinc-800 text-cyan-400 font-semibold shadow-sm"
+                        : "text-zinc-400 hover:text-zinc-200",
+                    )}
                   >
-                    <RefreshCw className={`h-3 w-3 ${isScanningTokens ? "animate-spin" : ""}`} />
-                    <span>Scan USB</span>
+                    <FileKey className="h-3.5 w-3.5" /> Key File
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedMethod("yubikey");
+                      onUpdateSetup?.({ label: currentLabel, authType: "yubikey" });
+                    }}
+                    className={cn(
+                      "flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] transition-colors",
+                      selectedMethod === "yubikey"
+                        ? "bg-zinc-800 text-amber-400 font-semibold shadow-sm border border-amber-500/30"
+                        : "text-zinc-400 hover:text-zinc-200",
+                    )}
+                  >
+                    <Cpu className="h-3.5 w-3.5" /> YubiKey
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedMethod("pqc");
+                      onUpdateSetup?.({
+                        label: currentLabel,
+                        authType: "pqc",
+                      });
+                    }}
+                    className={cn(
+                      "flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] transition-colors",
+                      selectedMethod === "pqc"
+                        ? "bg-purple-950/80 text-purple-300 font-semibold shadow-sm border border-purple-500/40"
+                        : "text-zinc-400 hover:text-zinc-200",
+                    )}
+                  >
+                    <Atom className="h-3.5 w-3.5" /> PQC KEM
                   </button>
                 </div>
+              )}
 
-                {detectedTokens.length > 0 ? (
-                  <div className="space-y-2">
-                    <div className="p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-xs text-emerald-300 flex items-center justify-between">
-                      <span>🟢 {detectedTokens[0].product_name}</span>
-                      <span className="text-[10px] font-mono opacity-80">USB Ready</span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleYubikeyAuth}
-                      className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 py-2.5 text-xs font-bold text-white shadow-[0_0_20px_rgba(245,158,11,0.25)] transition-all"
-                    >
-                      <Zap className="h-4 w-4" />
-                      <span>
-                        {mode === "encrypt_setup"
-                          ? "Bind Key Share to YubiKey"
-                          : "Touch YubiKey to Authenticate"}
-                      </span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="p-3 rounded-lg bg-rose-950/20 border border-rose-500/30 text-xs text-rose-300 space-y-2">
-                    <div className="flex items-center gap-2 font-semibold">
-                      <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0" />
-                      <span>No Hardware Token Detected</span>
-                    </div>
-                    <p className="text-[11px] text-zinc-400">
-                      Please insert your physical YubiKey into a USB port, or enable Simulator Mode
-                      in the Settings tab.
-                    </p>
-                  </div>
-                )}
-
-                {hardwareError && (
-                  <p className="text-[11px] text-rose-400 font-mono">{hardwareError}</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* 4. Post-Quantum Cryptography (ML-KEM-768 / Kyber) Mode */}
-          {(selectedMethod === "pqc" ||
-            (mode === "decrypt_unlock" &&
-              (authType === "pqc" || authType === ("postquantum" as unknown)))) && (
-            <div className="space-y-3">
-              {mode === "encrypt_setup" ? (
-                <div className="space-y-3">
-                  {/* Sub-selector for Auto vs Existing */}
-                  <div className="grid grid-cols-2 rounded-lg bg-zinc-950 p-0.5 border border-purple-900/60 text-[11px]">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPqcMode("auto");
-                        setPqcError(null);
-                        onUpdateSetup?.({ label: currentLabel, authType: "pqc" });
+              {/* 1. Passphrase Input */}
+              {(selectedMethod === "passphrase" ||
+                (mode === "decrypt_unlock" && authType === "passphrase")) && (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      placeholder={
+                        mode === "encrypt_setup"
+                          ? "Set custodian passphrase..."
+                          : "Enter custodian passphrase to unlock share..."
+                      }
+                      value={passphrase}
+                      onChange={(e) => {
+                        setPassphrase(e.target.value);
+                        if (mode === "encrypt_setup") {
+                          onUpdateSetup?.({
+                            label: currentLabel,
+                            authType: "passphrase",
+                            passphrase: e.target.value,
+                          });
+                        }
                       }}
-                      className={cn(
-                        "py-1 rounded-md font-medium transition-colors text-center",
-                        pqcMode === "auto"
-                          ? "bg-purple-900/60 text-purple-200 shadow-sm"
-                          : "text-zinc-400 hover:text-zinc-200",
-                      )}
-                    >
-                      ⚡ Auto-Generate
-                    </button>
+                      onKeyDown={(e) => e.key === "Enter" && handlePassphraseSubmit()}
+                      className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2.5 pr-10 text-xs text-zinc-100 placeholder-zinc-500 focus:border-cyan-500 focus:outline-none font-mono"
+                    />
                     <button
                       type="button"
-                      onClick={() => {
-                        setPqcMode("existing");
-                        setPqcError(null);
-                      }}
-                      className={cn(
-                        "py-1 rounded-md font-medium transition-colors text-center",
-                        pqcMode === "existing"
-                          ? "bg-purple-900/60 text-purple-200 shadow-sm"
-                          : "text-zinc-400 hover:text-zinc-200",
-                      )}
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-2.5 text-zinc-500 hover:text-zinc-300"
                     >
-                      📂 Use Recipient Key
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
 
-                  {pqcMode === "auto" ? (
-                    <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-3.5 text-center space-y-2">
-                      <Atom className="mx-auto h-5 w-5 text-purple-400" />
-                      <p className="text-xs font-semibold text-purple-200">1-Click Quantum Slot</p>
-                      <p className="text-[11px] text-zinc-400">
-                        A fresh NIST FIPS 203 ML-KEM-768 keypair will be generated automatically.
-                        You will receive the `.pqc` private key on completion.
+                  <button
+                    type="button"
+                    disabled={!passphrase}
+                    onClick={handlePassphraseSubmit}
+                    className="w-full rounded-xl bg-cyan-600/90 hover:bg-cyan-500 py-2.5 text-xs font-semibold text-white transition-colors disabled:opacity-40"
+                  >
+                    {mode === "encrypt_setup"
+                      ? "Lock & Confirm Credential"
+                      : "Submit Custodian Share"}
+                  </button>
+                </div>
+              )}
+
+              {/* 2. Key File Loader & PIN unlock */}
+              {(selectedMethod === "keyfile" ||
+                (mode === "decrypt_unlock" && authType === "keyfile")) && (
+                <div className="space-y-2">
+                  {mode === "encrypt_setup" ? (
+                    <div className="rounded-xl border border-dashed border-zinc-700 bg-zinc-950/50 p-4 text-center space-y-2">
+                      <FileKey className="mx-auto h-6 w-6 text-cyan-400" />
+                      <p className="text-xs font-medium text-zinc-200">
+                        Exportable Key File (.dkey)
+                      </p>
+                      <p className="text-[11px] text-zinc-500">
+                        An armored `.dkey` file will be generated for this custodian upon
+                        encryption.
                       </p>
                       <button
                         type="button"
-                        onClick={handleConfirmPqcSetup}
-                        className="w-full rounded-xl bg-purple-700 hover:bg-purple-600 py-2.5 text-xs font-semibold text-white transition-colors shadow-lg"
+                        onClick={() => {
+                          onCredentialSubmit({
+                            custodianId,
+                            authType: "keyfile",
+                            label: currentLabel,
+                          });
+                        }}
+                        className="rounded-lg bg-zinc-800 hover:bg-zinc-700 px-4 py-1.5 text-xs text-cyan-300 font-medium"
                       >
-                        Confirm Quantum-Safe Slot
+                        Confirm Key File Slot
                       </button>
                     </div>
                   ) : (
-                    <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-3.5 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-purple-300 flex items-center gap-1">
-                          <Upload className="h-3.5 w-3.5" />
-                          <span>Upload Recipient .pqc.pub</span>
-                        </span>
+                    <div className="space-y-2">
+                      {!isPinProtectedKey ? (
                         <button
                           type="button"
-                          onClick={handlePickPqcPublicKeyFile}
-                          className="text-[11px] text-purple-300 hover:underline flex items-center gap-1 font-medium"
+                          onClick={handlePickKeyFile}
+                          className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-700 bg-zinc-950/50 py-3 text-xs text-zinc-300 hover:border-cyan-500 hover:text-cyan-400 transition-colors"
                         >
-                          <Upload className="h-3 w-3" />{" "}
-                          {pqcPubFileName ? "Change File" : "Choose File"}
+                          <FileKey className="h-4 w-4" />
+                          {keyFileName ? keyFileName : "Select .dkey Share File"}
                         </button>
-                      </div>
-
-                      {pqcPubFileName && (
-                        <div className="p-2 rounded-lg bg-purple-950/80 border border-purple-800 text-[11px] text-purple-300 flex items-center justify-between">
-                          <span>📄 {pqcPubFileName}</span>
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                      ) : (
+                        <div className="rounded-xl border border-amber-500/40 bg-amber-950/20 p-3.5 space-y-2">
+                          <div className="flex items-center gap-2 text-xs font-semibold text-amber-300">
+                            <Lock className="h-4 w-4" />
+                            <span>PIN-Protected Key File: {keyFileName}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <input
+                              type="password"
+                              value={keyFilePin}
+                              onChange={(e) => setKeyFilePin(e.target.value)}
+                              onKeyDown={(e) => e.key === "Enter" && handleUnlockPinProtectedKey()}
+                              placeholder="Enter Key Share PIN..."
+                              className="flex-1 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs text-zinc-200 focus:border-amber-500 focus:outline-none font-mono"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleUnlockPinProtectedKey}
+                              className="rounded-xl bg-amber-600 hover:bg-amber-500 px-4 py-2 text-xs font-bold text-white transition-all"
+                            >
+                              Unlock
+                            </button>
+                          </div>
                         </div>
                       )}
 
-                      <div className="space-y-1">
-                        <label
-                          htmlFor={`pqc-pub-input-${custodianId}`}
-                          className="text-[10px] text-zinc-400 uppercase tracking-wider font-mono"
-                        >
-                          Or Paste Recipient Public Key (Base64)
-                        </label>
-                        <textarea
-                          id={`pqc-pub-input-${custodianId}`}
-                          rows={2}
-                          value={pqcPublicKey}
-                          onChange={(e) => {
-                            setPqcPublicKey(e.target.value);
-                            onUpdateSetup?.({
-                              label: currentLabel,
-                              authType: "pqc",
-                              publicKeyBase64: e.target.value,
-                            });
-                          }}
-                          placeholder="Paste recipient's ML-KEM-768 public key base64..."
-                          className="w-full rounded-lg border border-purple-900/60 bg-zinc-950 px-3 py-2 text-[11px] text-zinc-200 font-mono focus:border-purple-500 focus:outline-none"
-                        />
-                      </div>
-
-                      <button
-                        type="button"
-                        disabled={!pqcPublicKey.trim()}
-                        onClick={handleConfirmPqcSetup}
-                        className="w-full rounded-xl bg-purple-600 hover:bg-purple-500 py-2 text-xs font-semibold text-white transition-colors disabled:opacity-40"
-                      >
-                        Confirm Slot with Recipient Key
-                      </button>
+                      {pinError && (
+                        <p className="text-[11px] text-rose-400 font-mono">{pinError}</p>
+                      )}
                     </div>
                   )}
-
-                  {pqcError && <p className="text-[11px] text-rose-400 font-mono">{pqcError}</p>}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {!isPinProtectedKey ? (
-                    <div className="space-y-2">
-                      <button
-                        type="button"
-                        onClick={handlePickPqcPrivateKeyFile}
-                        className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-purple-800/60 bg-purple-950/30 py-3 text-xs text-purple-200 hover:border-purple-500 hover:text-purple-100 transition-colors"
-                      >
-                        <FileKey className="h-4 w-4 text-purple-400" />
-                        {keyFileName ? keyFileName : "Select .pqc Key File"}
-                      </button>
-
-                      <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                          <span className="w-full border-t border-zinc-800" />
-                        </div>
-                        <div className="relative flex justify-center text-[10px] uppercase font-mono">
-                          <span className="bg-zinc-900 px-2 text-zinc-500">or paste base64</span>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={pqcPrivateKey}
-                          onChange={(e) => setPqcPrivateKey(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && handlePqcPrivateDecryptSubmit()}
-                          placeholder="Paste ML-KEM Private Key..."
-                          className="flex-1 rounded-xl border border-purple-900/60 bg-zinc-950 px-3 py-2 text-[11px] text-zinc-200 font-mono focus:border-purple-500 focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          disabled={!pqcPrivateKey.trim()}
-                          onClick={handlePqcPrivateDecryptSubmit}
-                          className="rounded-xl bg-purple-600 hover:bg-purple-500 px-3 py-2 text-xs font-semibold text-white transition-colors disabled:opacity-40"
-                        >
-                          Verify
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="rounded-xl border border-amber-500/40 bg-amber-950/20 p-3.5 space-y-2">
-                      <div className="flex items-center gap-2 text-xs font-semibold text-amber-300">
-                        <Lock className="h-4 w-4" />
-                        <span>PIN-Protected Post-Quantum Key: {keyFileName}</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <input
-                          type="password"
-                          value={keyFilePin}
-                          onChange={(e) => setKeyFilePin(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && handleUnlockPinProtectedPqcKey()}
-                          placeholder="Enter Key PIN..."
-                          className="flex-1 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs text-zinc-200 focus:border-amber-500 focus:outline-none font-mono"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleUnlockPinProtectedPqcKey}
-                          className="rounded-xl bg-amber-600 hover:bg-amber-500 px-4 py-2 text-xs font-bold text-white transition-all"
-                        >
-                          Unlock
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {pqcError && <p className="text-[11px] text-rose-400 font-mono">{pqcError}</p>}
                 </div>
               )}
-            </div>
-          )}
 
-          {/* 5. OTP / Challenge */}
-          {selectedMethod === "otp" && (
-            <div className="flex gap-2">
-              <input
-                type="text"
-                maxLength={6}
-                placeholder="6-digit OTP..."
-                value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value)}
-                className="w-full font-mono text-center tracking-widest rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 placeholder-zinc-600 focus:border-cyan-500 focus:outline-none"
-              />
-              <button
-                type="button"
-                disabled={otpCode.length !== 6}
-                onClick={() => onCredentialSubmit({ custodianId, authType: "otp" })}
-                className="rounded-xl bg-cyan-600 px-4 py-2 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-40"
-              >
-                Verify
-              </button>
-            </div>
-          )}
+              {/* 3. YubiKey / Hardware Token Mode */}
+              {(selectedMethod === "yubikey" ||
+                (mode === "decrypt_unlock" && authType === "yubikey")) && (
+                <div className="space-y-2.5">
+                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3.5 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
+                        <Cpu className="h-4 w-4 text-amber-400" />
+                        <span>Hardware Token Status</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={scanForTokens}
+                        disabled={isScanningTokens}
+                        className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1"
+                      >
+                        <RefreshCw
+                          className={`h-3 w-3 ${isScanningTokens ? "animate-spin" : ""}`}
+                        />
+                        <span>Scan USB</span>
+                      </button>
+                    </div>
 
-          {/* Optical Air-Gap Handshake Option */}
-          {onAirGapClick && (
-            <div className="pt-2 border-t border-zinc-800/80">
-              <button
-                type="button"
-                onClick={() => onAirGapClick(custodianId)}
-                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/30 text-cyan-300 text-xs font-semibold font-mono transition-all cursor-pointer shadow-sm hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]"
-              >
-                <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
-                <span>📲 100% Air-Gapped Optical Sign-Off</span>
-              </button>
-            </div>
+                    {detectedTokens.length > 0 ? (
+                      <div className="space-y-2">
+                        <div className="p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-xs text-emerald-300 flex items-center justify-between">
+                          <span>🟢 {detectedTokens[0].product_name}</span>
+                          <span className="text-[10px] font-mono opacity-80">USB Ready</span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handleYubikeyAuth}
+                          className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 py-2.5 text-xs font-bold text-white shadow-[0_0_20px_rgba(245,158,11,0.25)] transition-all"
+                        >
+                          <Zap className="h-4 w-4" />
+                          <span>
+                            {mode === "encrypt_setup"
+                              ? "Bind Key Share to YubiKey"
+                              : "Touch YubiKey to Authenticate"}
+                          </span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-lg bg-rose-950/20 border border-rose-500/30 text-xs text-rose-300 space-y-2">
+                        <div className="flex items-center gap-2 font-semibold">
+                          <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0" />
+                          <span>No Hardware Token Detected</span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400">
+                          Please insert your physical YubiKey into a USB port, or enable Simulator
+                          Mode in the Settings tab.
+                        </p>
+                      </div>
+                    )}
+
+                    {hardwareError && (
+                      <p className="text-[11px] text-rose-400 font-mono">{hardwareError}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 4. Post-Quantum Cryptography (ML-KEM-768 / Kyber) Mode */}
+              {(selectedMethod === "pqc" ||
+                (mode === "decrypt_unlock" &&
+                  (authType === "pqc" || authType === ("postquantum" as unknown)))) && (
+                <div className="space-y-3">
+                  {mode === "encrypt_setup" ? (
+                    <div className="space-y-3">
+                      {/* Sub-selector for Auto vs Existing */}
+                      <div className="grid grid-cols-2 rounded-lg bg-zinc-950 p-0.5 border border-purple-900/60 text-[11px]">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPqcMode("auto");
+                            setPqcError(null);
+                            onUpdateSetup?.({ label: currentLabel, authType: "pqc" });
+                          }}
+                          className={cn(
+                            "py-1 rounded-md font-medium transition-colors text-center",
+                            pqcMode === "auto"
+                              ? "bg-purple-900/60 text-purple-200 shadow-sm"
+                              : "text-zinc-400 hover:text-zinc-200",
+                          )}
+                        >
+                          ⚡ Auto-Generate
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPqcMode("existing");
+                            setPqcError(null);
+                          }}
+                          className={cn(
+                            "py-1 rounded-md font-medium transition-colors text-center",
+                            pqcMode === "existing"
+                              ? "bg-purple-900/60 text-purple-200 shadow-sm"
+                              : "text-zinc-400 hover:text-zinc-200",
+                          )}
+                        >
+                          📂 Use Recipient Key
+                        </button>
+                      </div>
+
+                      {pqcMode === "auto" ? (
+                        <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-3.5 text-center space-y-2">
+                          <Atom className="mx-auto h-5 w-5 text-purple-400" />
+                          <p className="text-xs font-semibold text-purple-200">
+                            1-Click Quantum Slot
+                          </p>
+                          <p className="text-[11px] text-zinc-400">
+                            A fresh NIST FIPS 203 ML-KEM-768 keypair will be generated
+                            automatically. You will receive the `.pqc` private key on completion.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handleConfirmPqcSetup}
+                            className="w-full rounded-xl bg-purple-700 hover:bg-purple-600 py-2.5 text-xs font-semibold text-white transition-colors shadow-lg"
+                          >
+                            Confirm Quantum-Safe Slot
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="rounded-xl border border-purple-500/30 bg-purple-950/20 p-3.5 space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-purple-300 flex items-center gap-1">
+                              <Upload className="h-3.5 w-3.5" />
+                              <span>Upload Recipient .pqc.pub</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handlePickPqcPublicKeyFile}
+                              className="text-[11px] text-purple-300 hover:underline flex items-center gap-1 font-medium"
+                            >
+                              <Upload className="h-3 w-3" />{" "}
+                              {pqcPubFileName ? "Change File" : "Choose File"}
+                            </button>
+                          </div>
+
+                          {pqcPubFileName && (
+                            <div className="p-2 rounded-lg bg-purple-950/80 border border-purple-800 text-[11px] text-purple-300 flex items-center justify-between">
+                              <span>📄 {pqcPubFileName}</span>
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                            </div>
+                          )}
+
+                          <div className="space-y-1">
+                            <label
+                              htmlFor={`pqc-pub-input-${custodianId}`}
+                              className="text-[10px] text-zinc-400 uppercase tracking-wider font-mono"
+                            >
+                              Or Paste Recipient Public Key (Base64)
+                            </label>
+                            <textarea
+                              id={`pqc-pub-input-${custodianId}`}
+                              rows={2}
+                              value={pqcPublicKey}
+                              onChange={(e) => {
+                                setPqcPublicKey(e.target.value);
+                                onUpdateSetup?.({
+                                  label: currentLabel,
+                                  authType: "pqc",
+                                  publicKeyBase64: e.target.value,
+                                });
+                              }}
+                              placeholder="Paste recipient's ML-KEM-768 public key base64..."
+                              className="w-full rounded-lg border border-purple-900/60 bg-zinc-950 px-3 py-2 text-[11px] text-zinc-200 font-mono focus:border-purple-500 focus:outline-none"
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            disabled={!pqcPublicKey.trim()}
+                            onClick={handleConfirmPqcSetup}
+                            className="w-full rounded-xl bg-purple-600 hover:bg-purple-500 py-2 text-xs font-semibold text-white transition-colors disabled:opacity-40"
+                          >
+                            Confirm Slot with Recipient Key
+                          </button>
+                        </div>
+                      )}
+
+                      {pqcError && (
+                        <p className="text-[11px] text-rose-400 font-mono">{pqcError}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {!isPinProtectedKey ? (
+                        <div className="space-y-2">
+                          <button
+                            type="button"
+                            onClick={handlePickPqcPrivateKeyFile}
+                            className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-purple-800/60 bg-purple-950/30 py-3 text-xs text-purple-200 hover:border-purple-500 hover:text-purple-100 transition-colors"
+                          >
+                            <FileKey className="h-4 w-4 text-purple-400" />
+                            {keyFileName ? keyFileName : "Select .pqc Key File"}
+                          </button>
+
+                          <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                              <span className="w-full border-t border-zinc-800" />
+                            </div>
+                            <div className="relative flex justify-center text-[10px] uppercase font-mono">
+                              <span className="bg-zinc-900 px-2 text-zinc-500">
+                                or paste base64
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={pqcPrivateKey}
+                              onChange={(e) => setPqcPrivateKey(e.target.value)}
+                              onKeyDown={(e) =>
+                                e.key === "Enter" && handlePqcPrivateDecryptSubmit()
+                              }
+                              placeholder="Paste ML-KEM Private Key..."
+                              className="flex-1 rounded-xl border border-purple-900/60 bg-zinc-950 px-3 py-2 text-[11px] text-zinc-200 font-mono focus:border-purple-500 focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              disabled={!pqcPrivateKey.trim()}
+                              onClick={handlePqcPrivateDecryptSubmit}
+                              className="rounded-xl bg-purple-600 hover:bg-purple-500 px-3 py-2 text-xs font-semibold text-white transition-colors disabled:opacity-40"
+                            >
+                              Verify
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="rounded-xl border border-amber-500/40 bg-amber-950/20 p-3.5 space-y-2">
+                          <div className="flex items-center gap-2 text-xs font-semibold text-amber-300">
+                            <Lock className="h-4 w-4" />
+                            <span>PIN-Protected Post-Quantum Key: {keyFileName}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <input
+                              type="password"
+                              value={keyFilePin}
+                              onChange={(e) => setKeyFilePin(e.target.value)}
+                              onKeyDown={(e) =>
+                                e.key === "Enter" && handleUnlockPinProtectedPqcKey()
+                              }
+                              placeholder="Enter Key PIN..."
+                              className="flex-1 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs text-zinc-200 focus:border-amber-500 focus:outline-none font-mono"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleUnlockPinProtectedPqcKey}
+                              className="rounded-xl bg-amber-600 hover:bg-amber-500 px-4 py-2 text-xs font-bold text-white transition-all"
+                            >
+                              Unlock
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {pqcError && (
+                        <p className="text-[11px] text-rose-400 font-mono">{pqcError}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 5. OTP / Challenge */}
+              {selectedMethod === "otp" && (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    maxLength={6}
+                    placeholder="6-digit OTP..."
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value)}
+                    className="w-full font-mono text-center tracking-widest rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 placeholder-zinc-600 focus:border-cyan-500 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    disabled={otpCode.length !== 6}
+                    onClick={() => onCredentialSubmit({ custodianId, authType: "otp" })}
+                    className="rounded-xl bg-cyan-600 px-4 py-2 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-40"
+                  >
+                    Verify
+                  </button>
+                </div>
+              )}
+
+              {/* Optical Air-Gap Handshake Option */}
+              {onAirGapClick && (
+                <div className="pt-2 border-t border-zinc-800/80">
+                  <button
+                    type="button"
+                    onClick={() => onAirGapClick(custodianId)}
+                    className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/30 text-cyan-300 text-xs font-semibold font-mono transition-all cursor-pointer shadow-sm hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]"
+                  >
+                    <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>📲 100% Air-Gapped Optical Sign-Off</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Time-Lock Recovery Share Option for Encrypt Setup Mode */}
+              {mode === "encrypt_setup" && (
+                <div className="pt-2 border-t border-zinc-800/60 space-y-1.5 text-left">
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor={`timelock-select-${custodianId}`}
+                      className="flex items-center gap-1.5 text-[11px] font-medium text-amber-300"
+                    >
+                      <Clock className="w-3.5 h-3.5 text-amber-400" />
+                      <span>⏳ Time-Lock Escrow</span>
+                    </label>
+                    <select
+                      id={`timelock-select-${custodianId}`}
+                      value={timelockChoice}
+                      onChange={(e) => handleTimelockChange(e.target.value)}
+                      className="rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-1 text-[10px] text-zinc-300 font-mono focus:border-amber-500 focus:outline-none"
+                    >
+                      <option value="none">Immediate (Active Now)</option>
+                      <option value="30">30 Days Timelock</option>
+                      <option value="90">90 Days Timelock</option>
+                      <option value="180">6 Months Timelock</option>
+                      <option value="365">1 Year Timelock</option>
+                    </select>
+                  </div>
+                  {timelockChoice !== "none" && (
+                    <p className="text-[10px] text-amber-400/80 font-mono">
+                      Sealed until:{" "}
+                      {new Date(
+                        Date.now() + parseInt(timelockChoice, 10) * 86400000,
+                      ).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
       ) : (

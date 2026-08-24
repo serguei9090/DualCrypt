@@ -40,6 +40,7 @@ export function useQuorumState(initialK = 2, initialN = 2) {
       authType: AuthMethod;
       passphrase?: string;
       publicKeyBase64?: string;
+      timelockNotBeforeUtc?: number;
     },
   ) => {
     setCustodians((prev) =>
@@ -51,6 +52,7 @@ export function useQuorumState(initialK = 2, initialN = 2) {
               authType: data.authType,
               passphrase: data.passphrase,
               publicKeyBase64: data.publicKeyBase64,
+              timelockNotBeforeUtc: data.timelockNotBeforeUtc,
             }
           : c,
       ),
@@ -107,7 +109,12 @@ export function useQuorumState(initialK = 2, initialN = 2) {
     k: number,
     n: number,
     cipherSuite: string,
-    items: Array<{ custodian_id: number; label: string; auth_type: AuthMethod }>,
+    items: Array<{
+      custodian_id: number;
+      label: string;
+      auth_type: AuthMethod;
+      timelock_not_before_utc?: number;
+    }>,
   ) => {
     setThresholdK(k);
     setTotalN(n);
@@ -118,6 +125,7 @@ export function useQuorumState(initialK = 2, initialN = 2) {
         label: it.label,
         authType: it.auth_type,
         isVerified: false,
+        timelockNotBeforeUtc: it.timelock_not_before_utc,
       })),
     );
   };

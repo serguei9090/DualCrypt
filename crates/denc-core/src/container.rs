@@ -50,6 +50,8 @@ pub struct DencSignatureBlock {
     pub signature_base64: String,
 }
 
+use std::collections::HashMap;
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DencManifest {
     pub classification: String,
@@ -57,6 +59,8 @@ pub struct DencManifest {
     pub organization: Option<String>,
     pub created_at_utc: u64,
     pub original_filename: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub custodian_timelocks: Option<HashMap<u8, u64>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -402,6 +406,7 @@ mod tests {
                 organization: Some("Global Treasury".to_string()),
                 created_at_utc: 1771930000,
                 original_filename: Some("reserves_vault.tar.gz".to_string()),
+                custodian_timelocks: None,
             }),
         };
 

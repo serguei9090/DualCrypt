@@ -85,6 +85,8 @@ pub struct CustodianInspection {
     pub label: String,
     pub auth_type: AuthType,
     pub has_embedded_share: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timelock_not_before_utc: Option<u64>,
 }
 
 /// Inspects a .denc container without decrypting payload
@@ -112,14 +114,23 @@ pub fn inspect_container<P: AsRef<Path>>(path: P) -> Result<HeaderInspection, De
         None
     };
 
+    let timelocks_map = header
+        .manifest
+        .as_ref()
+        .and_then(|m| m.custodian_timelocks.as_ref());
+
     let custodians = header
         .custodians
         .into_iter()
-        .map(|c| CustodianInspection {
-            custodian_id: c.custodian_id,
-            label: c.label,
-            auth_type: c.auth_type,
-            has_embedded_share: !c.encrypted_share.is_empty(),
+        .map(|c| {
+            let timelock = timelocks_map.and_then(|m| m.get(&c.custodian_id).copied());
+            CustodianInspection {
+                custodian_id: c.custodian_id,
+                label: c.label,
+                auth_type: c.auth_type,
+                has_embedded_share: !c.encrypted_share.is_empty(),
+                timelock_not_before_utc: timelock,
+            }
         })
         .collect();
 
@@ -400,6 +411,28 @@ pub fn decrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
 
     let (header, header_digest, header_bytes_len) = DencHeader::deserialize(&mut reader)?;
     let total_cipher_payload = total_file_size.saturating_sub(header_bytes_len as u64);
+
+    // Enforce Time-Locked Recovery Shares (Dead Man's Quorum)
+    let current_timestamp_utc = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    if let Some(manifest) = &header.manifest {
+        if let Some(timelocks) = &manifest.custodian_timelocks {
+            for cred in &credentials {
+                if let Some(&unlock_time) = timelocks.get(&cred.custodian_id) {
+                    if current_timestamp_utc < unlock_time {
+                        return Err(DencError::TimelockActive {
+                            custodian_id: cred.custodian_id,
+                            unlock_time,
+                            current_time: current_timestamp_utc,
+                        });
+                    }
+                }
+            }
+        }
+    }
 
     let mut recovered_shares = Vec::new();
 
@@ -810,6 +843,7 @@ mod tests {
             organization: Some("Global Corporate Legal".to_string()),
             created_at_utc: 1771935000,
             original_filename: Some("board_resolution.pdf".to_string()),
+            custodian_timelocks: None,
         };
 
         let params = EncryptionParams {
@@ -862,5 +896,135 @@ mod tests {
             insp_man.organization.as_deref(),
             Some("Global Corporate Legal")
         );
+    }
+
+    #[test]
+    fn test_timelocked_recovery_share_enforcement() {
+        use std::collections::HashMap;
+
+        let input_file = NamedTempFile::new().unwrap();
+        let encrypted_file = NamedTempFile::new().unwrap();
+        let decrypted_file = NamedTempFile::new().unwrap();
+
+        let original_data = b"CRITICAL CORPORATE DISASTER VAULT ASSETS".repeat(10);
+        std::fs::write(input_file.path(), &original_data).unwrap();
+
+        // Custodian 3 is time-locked into the year 2099
+        let future_timelock_utc = 4070908800; // Jan 1, 2099
+        let mut timelocks = HashMap::new();
+        timelocks.insert(3, future_timelock_utc);
+
+        let manifest = DencManifest {
+            classification: "TOP_SECRET".to_string(),
+            purpose: Some("Emergency Disaster Escrow".to_string()),
+            organization: Some("Corporate Treasury".to_string()),
+            created_at_utc: 1771935000,
+            original_filename: Some("disaster_recovery.bin".to_string()),
+            custodian_timelocks: Some(timelocks),
+        };
+
+        let params = EncryptionParams {
+            cipher: CipherSuite::Aes256Gcm,
+            threshold_k: 2,
+            total_n: 3,
+            chunk_size: Some(1024),
+            custodians: vec![
+                CustodianInput {
+                    custodian_id: 1,
+                    label: "CEO".to_string(),
+                    auth_type: AuthType::Passphrase,
+                    passphrase: Some("CeoSecret#1".to_string()),
+                    public_key_base64: None,
+                },
+                CustodianInput {
+                    custodian_id: 2,
+                    label: "CTO".to_string(),
+                    auth_type: AuthType::Passphrase,
+                    passphrase: Some("CtoSecret#2".to_string()),
+                    public_key_base64: None,
+                },
+                CustodianInput {
+                    custodian_id: 3,
+                    label: "Legal Escrow (Time-Locked)".to_string(),
+                    auth_type: AuthType::Passphrase,
+                    passphrase: Some("EscrowSecret#3".to_string()),
+                    public_key_base64: None,
+                },
+            ],
+            author_signing_key_base64: None,
+            author_label: None,
+            manifest: Some(manifest),
+        };
+
+        encrypt_file(
+            input_file.path(),
+            encrypted_file.path(),
+            params,
+            |_, _| {},
+            None,
+        )
+        .expect("Encryption with timelock failed");
+
+        // 1. Attempt decryption using Custodian 1 (CEO) + Custodian 3 (Time-Locked Escrow)
+        let invalid_creds = vec![
+            CustodianCredential {
+                custodian_id: 1,
+                passphrase: Some("CeoSecret#1".to_string()),
+                direct_share: None,
+                pqc_private_key_base64: None,
+            },
+            CustodianCredential {
+                custodian_id: 3,
+                passphrase: Some("EscrowSecret#3".to_string()),
+                direct_share: None,
+                pqc_private_key_base64: None,
+            },
+        ];
+
+        let err = decrypt_file(
+            encrypted_file.path(),
+            decrypted_file.path(),
+            invalid_creds,
+            |_, _| {},
+            None,
+        )
+        .expect_err("Decryption should fail because Custodian 3 is time-locked");
+
+        match err {
+            DencError::TimelockActive { custodian_id, unlock_time, .. } => {
+                assert_eq!(custodian_id, 3);
+                assert_eq!(unlock_time, future_timelock_utc);
+            }
+            other => panic!("Expected TimelockActive error, got: {:?}", other),
+        }
+
+        // 2. Decryption using active Custodians 1 & 2 succeeds
+        let valid_creds = vec![
+            CustodianCredential {
+                custodian_id: 1,
+                passphrase: Some("CeoSecret#1".to_string()),
+                direct_share: None,
+                pqc_private_key_base64: None,
+            },
+            CustodianCredential {
+                custodian_id: 2,
+                passphrase: Some("CtoSecret#2".to_string()),
+                direct_share: None,
+                pqc_private_key_base64: None,
+            },
+        ];
+
+        let bytes = decrypt_file(
+            encrypted_file.path(),
+            decrypted_file.path(),
+            valid_creds,
+            |_, _| {},
+            None,
+        )
+        .expect("Decryption with active custodians should succeed");
+
+        assert_eq!(bytes, original_data.len() as u64);
+        let decrypted_data = std::fs::read(decrypted_file.path()).unwrap();
+        assert_eq!(decrypted_data, original_data);
     }
 }

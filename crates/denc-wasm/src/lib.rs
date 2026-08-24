@@ -62,14 +62,23 @@ pub fn wasm_inspect_denc(bytes: &[u8]) -> Result<JsValue, JsValue> {
         None
     };
 
+    let timelocks_map = header
+        .manifest
+        .as_ref()
+        .and_then(|m| m.custodian_timelocks.as_ref());
+
     let custodians: Vec<CustodianInspection> = header
         .custodians
         .into_iter()
-        .map(|c| CustodianInspection {
-            custodian_id: c.custodian_id,
-            label: c.label,
-            auth_type: c.auth_type,
-            has_embedded_share: !c.encrypted_share.is_empty(),
+        .map(|c| {
+            let timelock = timelocks_map.and_then(|m| m.get(&c.custodian_id).copied());
+            CustodianInspection {
+                custodian_id: c.custodian_id,
+                label: c.label,
+                auth_type: c.auth_type,
+                has_embedded_share: !c.encrypted_share.is_empty(),
+                timelock_not_before_utc: timelock,
+            }
         })
         .collect();
 

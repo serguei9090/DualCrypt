@@ -13,6 +13,7 @@ export interface DencManifest {
   organization?: string;
   created_at_utc: number;
   original_filename?: string;
+  custodian_timelocks?: Record<number, number>;
 }
 
 export interface CustodianDescriptorInfo {
@@ -20,6 +21,7 @@ export interface CustodianDescriptorInfo {
   label: string;
   auth_type: AuthType;
   has_embedded_share: boolean;
+  timelock_not_before_utc?: number;
 }
 
 export interface ContainerHeaderInfo {

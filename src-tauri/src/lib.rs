@@ -1,6 +1,7 @@
 pub mod commands;
 pub mod state;
 
+use commands::app::get_cli_launch_file;
 use commands::decrypt::{cancel_active_job, start_decryption};
 use commands::email::{
     load_smtp_config, save_smtp_config, send_custodian_key_email, test_smtp_connection,
@@ -27,6 +28,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .manage(app_state)
         .invoke_handler(tauri::generate_handler![
+            get_cli_launch_file,
             inspect_denc_file,
             start_encryption,
             start_decryption,

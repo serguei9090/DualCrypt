@@ -184,11 +184,14 @@ denc serve --host 0.0.0.0 --port 8080
 - [x] **Immutable Container Audit Manifest**: Cryptographically signed audit manifests embedded in container headers with classification, timestamps, and custodian provenance. *(Completed)*
 - [x] **Headless CLI (`denc-cli`)**: Standalone binary for automated server backups, scripts, and CI/CD pipelines. *(Completed)*
 - [x] **Embedded Local Web Server**: Workstation & CLI HTTP server with Localhost/LAN binding. *(Completed)*
-- [ ] **Windows Explorer Context Menu**: Right-click shell extension integration ("Encrypt with DualCrypt Enterprise").
+- [x] **Native Windows File Associations & NSIS Bundle**: Branded `.denc`, `.dkey`, `.pqc` shell associations and 1-click double-click to decrypt. *(Completed)*
 
 ### 🟣 Phase 4: Client-Side Web Client
 - [x] **Zero-Knowledge WebAssembly (Wasm)**: Direct in-browser decryptor compiled from `denc-core` without server-side plaintext exposure. *(Completed)*
 - [x] **Free Static Web Hosting CI/CD**: 1-click GitHub Pages & Cloudflare Pages deployment workflows. *(Completed)*
+
+### 🟠 Phase 5: Time-Locked Recovery & Advanced Quorums
+- [x] **Time-Locked Recovery Shares (Dead Man's Quorum)**: Cryptographically sealed recovery shares (`custodian_timelocks`) that cannot be reconstructed before a specified UTC release date. *(Completed)*
 
 ---
 

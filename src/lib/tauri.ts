@@ -12,6 +12,15 @@ export const isTauriEnvironment = (): boolean => {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 };
 
+export async function getLaunchFile(): Promise<string | null> {
+  if (!isTauriEnvironment()) return null;
+  try {
+    return await invoke<string | null>("get_cli_launch_file");
+  } catch {
+    return null;
+  }
+}
+
 export async function inspectDencFile(filePath: string): Promise<ContainerHeaderInfo> {
   if (!isTauriEnvironment()) {
     // Web mock simulation

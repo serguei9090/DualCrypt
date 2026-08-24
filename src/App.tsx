@@ -10,7 +10,7 @@ import {
   Unlock,
 } from "lucide-react";
 import type React from "react";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AirGapDesktopModal } from "./components/airgap/AirGapDesktopModal";
 import { EnrollmentQrModal } from "./components/airgap/EnrollmentQrModal";
 import { FileDropzone } from "./components/dropzone/FileDropzone";
@@ -32,6 +32,7 @@ import {
   executeDecryption,
   executeEncryption,
   generateMlDsaKeypair,
+  getLaunchFile,
   inspectDencFile,
   isTauriEnvironment,
 } from "./lib/tauri";
@@ -108,30 +109,47 @@ export const App: React.FC = () => {
   };
 
   // Handle File Selection in Decrypt Mode
-  const handleDecryptFileSelected = async (path: string, name: string, size?: number) => {
-    setFilePath(path);
-    setFileName(name);
-    setFileSize(size || null);
-    setCompletionData(null);
-    job.setError(null);
+  const handleDecryptFileSelected = useCallback(
+    async (path: string, name: string, size?: number) => {
+      setFilePath(path);
+      setFileName(name);
+      setFileSize(size || null);
+      setCompletionData(null);
+      job.setError(null);
 
-    try {
-      const meta = await inspectDencFile(path);
-      setContainerMetadata(meta);
-      quorum.setFromHeaderCustodians(
-        meta.threshold_k,
-        meta.total_n,
-        meta.cipher,
-        meta.custodians.map((c) => ({
-          custodian_id: c.custodian_id,
-          label: c.label,
-          auth_type: c.auth_type as AuthType,
-        })),
-      );
-    } catch (err) {
-      job.setError(`Failed to parse .denc header: ${String(err)}`);
-    }
-  };
+      try {
+        const meta = await inspectDencFile(path);
+        setContainerMetadata(meta);
+        quorum.setFromHeaderCustodians(
+          meta.threshold_k,
+          meta.total_n,
+          meta.cipher,
+          meta.custodians.map((c) => ({
+            custodian_id: c.custodian_id,
+            label: c.label,
+            auth_type: c.auth_type as AuthType,
+            timelock_not_before_utc: c.timelock_not_before_utc,
+          })),
+        );
+      } catch (err) {
+        job.setError(`Failed to parse .denc header: ${String(err)}`);
+      }
+    },
+    [job, quorum],
+  );
+
+  // Detect CLI file double-click from Windows Explorer file associations
+  useEffect(() => {
+    const checkLaunchArgs = async () => {
+      const launchPath = await getLaunchFile();
+      if (launchPath) {
+        setActiveTab("decrypt");
+        const name = launchPath.split(/[\\/]/).pop() || launchPath;
+        handleDecryptFileSelected(launchPath, name);
+      }
+    };
+    checkLaunchArgs();
+  }, [handleDecryptFileSelected]);
 
   // Execute Encryption
   const handleStartEncryption = async () => {
@@ -149,6 +167,15 @@ export const App: React.FC = () => {
 
     try {
       job.startJob("encrypt-job");
+
+      const timelocksMap: Record<number, number> = {};
+      for (const c of quorum.custodians) {
+        if (c.timelockNotBeforeUtc && c.timelockNotBeforeUtc > Math.floor(Date.now() / 1000)) {
+          timelocksMap[c.custodianId] = c.timelockNotBeforeUtc;
+        }
+      }
+      const hasTimelocks = Object.keys(timelocksMap).length > 0;
+
       const res = await executeEncryption(
         {
           input_path: filePath,
@@ -169,15 +196,17 @@ export const App: React.FC = () => {
               : undefined,
           author_label:
             enableAuthorSignature && authorLabel.trim() ? authorLabel.trim() : undefined,
-          manifest: enableManifest
-            ? {
-                classification: manifestClassification,
-                purpose: manifestPurpose.trim() || undefined,
-                organization: manifestOrganization.trim() || undefined,
-                created_at_utc: Math.floor(Date.now() / 1000),
-                original_filename: fileName,
-              }
-            : undefined,
+          manifest:
+            enableManifest || hasTimelocks
+              ? {
+                  classification: manifestClassification,
+                  purpose: manifestPurpose.trim() || undefined,
+                  organization: manifestOrganization.trim() || undefined,
+                  created_at_utc: Math.floor(Date.now() / 1000),
+                  original_filename: fileName,
+                  custodian_timelocks: hasTimelocks ? timelocksMap : undefined,
+                }
+              : undefined,
         },
         job.updateProgress,
       );

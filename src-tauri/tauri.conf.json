@@ -26,6 +26,45 @@
       "csp": "default-src 'self'; img-src 'self' asset: data:; style-src 'self' 'unsafe-inline';"
     }
   },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "fileAssociations": [
+      {
+        "ext": ["denc"],
+        "name": "DualCrypt Encrypted Container",
+        "description": "DualCrypt Enterprise Threshold Encrypted Container",
+        "role": "Editor",
+        "mimeType": "application/x-dual-encryption-container"
+      },
+      {
+        "ext": ["dkey"],
+        "name": "DualCrypt Key Share",
+        "description": "DualCrypt Shamir Secret Key Share",
+        "role": "Viewer",
+        "mimeType": "application/x-dual-encryption-key"
+      },
+      {
+        "ext": ["pqc"],
+        "name": "DualCrypt Post-Quantum Certificate",
+        "description": "DualCrypt NIST FIPS Post-Quantum Key Armor",
+        "role": "Viewer",
+        "mimeType": "application/x-dual-encryption-pqc"
+      }
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  },
   "plugins": {
     "dialog": null,
     "fs": null,

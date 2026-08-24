@@ -21,6 +21,7 @@ pub struct CustodianMetadata {
     pub label: String,
     pub auth_type: String,
     pub has_embedded_share: bool,
+    pub timelock_not_before_utc: Option<u64>,
 }
 
 #[tauri::command]
@@ -42,6 +43,7 @@ pub fn inspect_denc_file(file_path: String) -> Result<HeaderMetadataResponse, St
                 label: c.label,
                 auth_type: auth_type_str.to_string(),
                 has_embedded_share: c.has_embedded_share,
+                timelock_not_before_utc: c.timelock_not_before_utc,
             }
         })
         .collect();

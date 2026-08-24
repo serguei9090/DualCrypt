@@ -430,11 +430,25 @@ fn handle_inspect(input: PathBuf, json: bool) -> Result<(), Box<dyn std::error::
             AuthType::OtpChallenge => "OTP Challenge".purple(),
             AuthType::PostQuantum => "Post-Quantum (ML-KEM-768)".magenta(),
         };
+        let timelock_str = if let Some(t) = c.timelock_not_before_utc {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+            if now < t {
+                format!(" | ⏳ Time-Locked (UTC {})", t).yellow().to_string()
+            } else {
+                " | ✓ Timelock Expired (Active)".green().to_string()
+            }
+        } else {
+            String::new()
+        };
         println!(
-            "   • [P{}] {:<22} | Auth: {}",
+            "   • [P{}] {:<22} | Auth: {}{}",
             c.custodian_id,
             c.label.bold(),
-            auth_str
+            auth_str,
+            timelock_str
         );
     }
     println!("{}", "═".repeat(60).cyan());
