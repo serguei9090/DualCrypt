@@ -17,6 +17,7 @@ import {
   type AirGapResponse,
   encodePayloadToFrames,
 } from "../../../../packages/shared-airgap/src/index";
+import { authenticateWithBiometrics } from "../lib/biometricAuth";
 import { loadVaultKeys, type VaultKeyItem } from "../lib/vaultStorage";
 import { AnimatedQrStream } from "./AnimatedQrStream";
 import { QrCameraScanner } from "./QrCameraScanner";
@@ -31,6 +32,8 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
   const [matchedVaultKey, setMatchedVaultKey] = useState<VaultKeyItem | null>(null);
   const [availableVaultKeys, setAvailableVaultKeys] = useState<VaultKeyItem[]>([]);
   const [custodianPinInput, setCustodianPinInput] = useState("");
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [responseFrames, setResponseFrames] = useState<string[]>([]);
   const [isFlashing, setIsFlashing] = useState(false);
 
@@ -60,8 +63,32 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
     }
   };
 
-  const handleApprove = (useBiometric = true) => {
+  const handleApprove = async (useBiometric = true) => {
     if (!activeChallenge) return;
+    setAuthError(null);
+
+    let isBiometricVerified = false;
+
+    if (useBiometric) {
+      setIsVerifying(true);
+      const authResult = await authenticateWithBiometrics(
+        `Authorize release for ${activeChallenge.fileName}`,
+      );
+      setIsVerifying(false);
+
+      if (authResult.success) {
+        isBiometricVerified = true;
+      } else {
+        // If biometric failed or unsupported, require password input
+        if (!custodianPinInput.trim() && !matchedVaultKey?.passphrase) {
+          setAuthError(
+            authResult.error ||
+              "Biometric authentication failed. Please enter your slot passphrase.",
+          );
+          return;
+        }
+      }
+    }
 
     const response: AirGapResponse = {
       protocol: "DENC-AIRGAP-V1",
@@ -75,7 +102,7 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
         "AirGapPassphraseAuthorized#2026",
       shareDataJson: matchedVaultKey?.shareDataJson,
       pqcPrivateKeyBase64: matchedVaultKey?.pqcPrivateKeyBase64,
-      biometricVerified: useBiometric,
+      biometricVerified: isBiometricVerified,
       timestamp: new Date().toISOString(),
     };
 
@@ -335,16 +362,26 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
               </div>
             )}
 
+            {authError && (
+              <div className="p-3 rounded-xl border border-rose-500/30 bg-rose-950/20 text-rose-400 text-xs flex items-start gap-2 text-left">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <p className="font-mono text-[11px]">{authError}</p>
+              </div>
+            )}
+
             <button
               type="button"
               onClick={() => handleApprove(true)}
-              className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 hover:to-emerald-300 text-black font-bold text-sm shadow-[0_0_25px_rgba(6,182,212,0.35)] transition-all cursor-pointer"
+              disabled={isVerifying}
+              className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 hover:to-emerald-300 text-black font-bold text-sm shadow-[0_0_25px_rgba(6,182,212,0.35)] transition-all cursor-pointer disabled:opacity-50"
             >
               <Fingerprint className="w-5 h-5" />
               <span>
-                {matchedVaultKey
-                  ? "Authorize & Sign-Off (Touch Biometric)"
-                  : "Sign-Off Release (Touch Biometric)"}
+                {isVerifying
+                  ? "Authenticating Biometrics..."
+                  : matchedVaultKey
+                    ? "Authorize & Sign-Off (Biometric Touch)"
+                    : "Sign-Off Release (Biometric Touch)"}
               </span>
             </button>
           </div>

@@ -1,6 +1,7 @@
-import { CheckCircle2, Fingerprint, Lock, Shield, X } from "lucide-react";
+import { AlertCircle, Fingerprint, Lock, Shield } from "lucide-react";
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { authenticateWithBiometrics, isBiometricHardwareAvailable } from "../lib/biometricAuth";
 import { type AuthConfig, saveAuthConfig } from "../lib/vaultStorage";
 
 interface BiometricGateProps {
@@ -25,10 +26,12 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
   // Unlock state
   const [unlockPin, setUnlockPin] = useState("");
   const [unlockError, setUnlockError] = useState<string | null>(null);
+  const [isPrompting, setIsPrompting] = useState(false);
+  const [hardwareAvailable, setHardwareAvailable] = useState<boolean | null>(null);
 
-  // Realistic Biometric Sensor Modal State
-  const [showBiometricModal, setShowBiometricModal] = useState(false);
-  const [sensorState, setSensorState] = useState<"idle" | "scanning" | "success" | "error">("idle");
+  useEffect(() => {
+    isBiometricHardwareAvailable().then((avail) => setHardwareAvailable(avail));
+  }, []);
 
   const handleSetupSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,22 +55,19 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
     onUnlocked();
   };
 
-  const handleTriggerBiometric = () => {
-    setShowBiometricModal(true);
-    setSensorState("idle");
-  };
+  const handleBiometricAuth = async () => {
+    setIsPrompting(true);
+    setUnlockError(null);
 
-  const handleSensorTouch = () => {
-    if (sensorState !== "idle") return;
-    setSensorState("scanning");
+    const result = await authenticateWithBiometrics("Authenticate to unlock DualCrypt Vault");
 
-    setTimeout(() => {
-      setSensorState("success");
-      setTimeout(() => {
-        setShowBiometricModal(false);
-        onUnlocked();
-      }, 700);
-    }, 600);
+    setIsPrompting(false);
+
+    if (result.success) {
+      onUnlocked();
+    } else if (result.error) {
+      setUnlockError(result.error);
+    }
   };
 
   const handlePinUnlock = (e: React.FormEvent) => {
@@ -76,7 +76,7 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
       setUnlockError(null);
       onUnlocked();
     } else {
-      setUnlockError("Incorrect Master PIN.");
+      setUnlockError("Incorrect Master PIN. Please try again.");
     }
   };
 
@@ -180,7 +180,9 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
                   theme === "dark" ? "text-zinc-400" : "text-slate-500"
                 }`}
               >
-                Unlock instantly with hardware biometrics when available.
+                {hardwareAvailable === false
+                  ? "Hardware biometrics not detected on this browser — Master PIN will be used."
+                  : "Unlock instantly with hardware biometrics when available."}
               </span>
             </div>
           </label>
@@ -229,11 +231,14 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
         {config.useBiometrics && (
           <button
             type="button"
-            onClick={handleTriggerBiometric}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all cursor-pointer"
+            onClick={handleBiometricAuth}
+            disabled={isPrompting}
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all cursor-pointer disabled:opacity-50"
           >
             <Fingerprint className="w-5 h-5" />
-            <span>Touch Fingerprint / Face Unlock</span>
+            <span>
+              {isPrompting ? "Verifying Platform Biometric..." : "Touch Fingerprint / Face Unlock"}
+            </span>
           </button>
         )}
 
@@ -282,73 +287,13 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
           </button>
         </form>
 
-        {unlockError && <p className="text-xs text-rose-500 font-mono">{unlockError}</p>}
-      </div>
-
-      {/* Realistic Android OS Biometric Sensor Overlay */}
-      {showBiometricModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-          <div
-            className={`w-full max-w-sm rounded-3xl border p-6 space-y-6 shadow-2xl relative text-center ${
-              theme === "dark"
-                ? "bg-zinc-950 border-zinc-800 text-white"
-                : "bg-white border-slate-200 text-slate-900"
-            }`}
-          >
-            <button
-              type="button"
-              onClick={() => setShowBiometricModal(false)}
-              className="absolute top-4 right-4 p-1 rounded-lg text-zinc-400 hover:text-white cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="space-y-1">
-              <div className="text-sm font-bold tracking-tight">Biometric Authentication</div>
-              <p className="text-xs text-zinc-400">
-                {sensorState === "idle" && "Touch the fingerprint sensor to unlock"}
-                {sensorState === "scanning" && "Scanning biometric signature..."}
-                {sensorState === "success" && "Biometric Verified ✓"}
-              </p>
-            </div>
-
-            {/* Pulsating Sensor Target Button */}
-            <div className="py-4">
-              <button
-                type="button"
-                onClick={handleSensorTouch}
-                disabled={sensorState !== "idle"}
-                className={`w-24 h-24 rounded-full border-2 mx-auto flex items-center justify-center transition-all cursor-pointer ${
-                  sensorState === "idle"
-                    ? "border-cyan-500/50 bg-cyan-500/10 text-cyan-400 hover:scale-105 hover:bg-cyan-500/20 shadow-[0_0_30px_rgba(6,182,212,0.25)] animate-pulse"
-                    : sensorState === "scanning"
-                      ? "border-amber-400 bg-amber-500/20 text-amber-400 scale-105 shadow-[0_0_30px_rgba(251,191,36,0.4)] animate-spin"
-                      : "border-emerald-400 bg-emerald-500/20 text-emerald-400 scale-110 shadow-[0_0_30px_rgba(52,211,153,0.5)]"
-                }`}
-              >
-                {sensorState === "success" ? (
-                  <CheckCircle2 className="w-12 h-12 text-emerald-400" />
-                ) : (
-                  <Fingerprint className="w-12 h-12" />
-                )}
-              </button>
-              <span className="block text-[11px] font-mono text-zinc-500 mt-3">
-                {sensorState === "idle"
-                  ? "Tap sensor icon to simulate touch"
-                  : "Hardware sensor active"}
-              </span>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowBiometricModal(false)}
-              className="w-full py-2.5 text-xs font-semibold text-zinc-400 hover:text-zinc-200 cursor-pointer"
-            >
-              Use Master PIN instead
-            </button>
+        {unlockError && (
+          <div className="p-3 rounded-xl border border-rose-500/30 bg-rose-950/20 text-rose-400 text-xs flex items-start gap-2 text-left">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <p className="font-mono text-[11px]">{unlockError}</p>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

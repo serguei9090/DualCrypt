@@ -1,4 +1,4 @@
-import { Lock, Moon, Shield, Smartphone, Sun, X } from "lucide-react";
+import { HelpCircle, Lock, Moon, Shield, Smartphone, Sun, X } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { BiometricGate } from "./components/BiometricGate";
@@ -92,17 +92,18 @@ export const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Help / Air-Gap Isolation Info */}
             <button
               type="button"
               onClick={() => setShowAirGapInfo(true)}
-              className={`px-2 py-0.5 rounded-full text-[10px] font-mono border font-semibold cursor-pointer transition-all hover:scale-105 ${
+              className={`p-1.5 rounded-xl border transition-colors cursor-pointer ${
                 theme === "dark"
-                  ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25"
-                  : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                  ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700"
+                  : "bg-slate-200 border-slate-300 text-slate-600 hover:text-slate-900"
               }`}
-              title="Click to view Air-Gap & Isolation guarantees"
+              title="Air-Gap Security & Architecture Info"
             >
-              ✈️ OFFLINE
+              <HelpCircle className="w-3.5 h-3.5" />
             </button>
 
             {/* Theme Switcher */}
