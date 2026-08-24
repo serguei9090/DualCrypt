@@ -2,24 +2,30 @@ import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import type { AirGapEnrollmentKey } from "../../../../packages/shared-airgap/src/index";
-import { saveVaultKey } from "../lib/vaultStorage";
+import { saveEncryptedVaultKey } from "../lib/vaultStorage";
 import { QrCameraScanner } from "./QrCameraScanner";
 
 interface EnrollScannerProps {
+  sessionKey: CryptoKey | null;
+  salt: Uint8Array | null;
   theme: "dark" | "light";
   onBack: () => void;
   onEnrolledSuccess: () => void;
 }
 
 export const EnrollScanner: React.FC<EnrollScannerProps> = ({
+  sessionKey,
+  salt,
   theme,
   onBack,
   onEnrolledSuccess,
 }) => {
   const [enrolledKey, setEnrolledKey] = useState<AirGapEnrollmentKey | null>(null);
 
-  const handleKeyScanned = (key: AirGapEnrollmentKey) => {
-    saveVaultKey(key);
+  const handleKeyScanned = async (key: AirGapEnrollmentKey) => {
+    if (sessionKey && salt) {
+      await saveEncryptedVaultKey(key, sessionKey, salt);
+    }
     setEnrolledKey(key);
     setTimeout(() => {
       onEnrolledSuccess();

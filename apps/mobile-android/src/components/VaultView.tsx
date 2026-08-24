@@ -12,10 +12,12 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
-import { deleteVaultKey, type VaultKeyItem } from "../lib/vaultStorage";
+import { deleteEncryptedVaultKey, type VaultKeyItem } from "../lib/vaultStorage";
 
 interface VaultViewProps {
   keys: VaultKeyItem[];
+  sessionKey: CryptoKey | null;
+  salt: Uint8Array | null;
   theme: "dark" | "light";
   onKeysChanged: () => void;
   onOpenEnrollScanner: () => void;
@@ -24,6 +26,8 @@ interface VaultViewProps {
 
 export const VaultView: React.FC<VaultViewProps> = ({
   keys,
+  sessionKey,
+  salt,
   theme,
   onKeysChanged,
   onOpenEnrollScanner,
@@ -32,10 +36,11 @@ export const VaultView: React.FC<VaultViewProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedKey, setSelectedKey] = useState<VaultKeyItem | null>(null);
 
-  const handleDelete = (id: string, fileName: string, e?: React.MouseEvent) => {
+  const handleDelete = async (id: string, fileName: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
+    if (!sessionKey || !salt) return;
     if (window.confirm(`Delete key for "${fileName}" from your offline authenticator?`)) {
-      deleteVaultKey(id);
+      await deleteEncryptedVaultKey(id, sessionKey, salt);
       if (selectedKey?.id === id) {
         setSelectedKey(null);
       }

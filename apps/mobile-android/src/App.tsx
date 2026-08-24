@@ -1,6 +1,6 @@
 import { HelpCircle, Lock, Moon, Shield, Smartphone, Sun, X } from "lucide-react";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { BiometricGate } from "./components/BiometricGate";
 import { DecryptScanner } from "./components/DecryptScanner";
 import { EnrollScanner } from "./components/EnrollScanner";
@@ -8,7 +8,7 @@ import { VaultView } from "./components/VaultView";
 import {
   type AuthConfig,
   loadAuthConfig,
-  loadVaultKeys,
+  loadEncryptedVaultKeys,
   type VaultKeyItem,
 } from "./lib/vaultStorage";
 
@@ -21,6 +21,8 @@ export const App: React.FC = () => {
   });
   const [authConfig, setAuthConfig] = useState<AuthConfig>(loadAuthConfig());
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [sessionKey, setSessionKey] = useState<CryptoKey | null>(null);
+  const [salt, setSalt] = useState<Uint8Array | null>(null);
   const [showAirGapInfo, setShowAirGapInfo] = useState(false);
   const [activeScreen, setActiveScreen] = useState<MobileScreen>("vault");
   const [keys, setKeys] = useState<VaultKeyItem[]>([]);
@@ -34,15 +36,36 @@ export const App: React.FC = () => {
     }
   }, [theme]);
 
-  useEffect(() => {
-    if (isUnlocked) {
-      setKeys(loadVaultKeys());
+  const handleUnlocked = async (vaultKey: CryptoKey, saltBytes: Uint8Array) => {
+    setSessionKey(vaultKey);
+    setSalt(saltBytes);
+    setIsUnlocked(true);
+    try {
+      const decryptedKeys = await loadEncryptedVaultKeys(vaultKey);
+      setKeys(decryptedKeys);
+    } catch (err) {
+      console.error("Failed to load encrypted keys:", err);
     }
-  }, [isUnlocked]);
-
-  const refreshKeys = () => {
-    setKeys(loadVaultKeys());
   };
+
+  const handleLock = () => {
+    setSessionKey(null);
+    setSalt(null);
+    setKeys([]);
+    setIsUnlocked(false);
+    setActiveScreen("vault");
+  };
+
+  const refreshKeys = useCallback(async () => {
+    if (sessionKey) {
+      try {
+        const updated = await loadEncryptedVaultKeys(sessionKey);
+        setKeys(updated);
+      } catch (err) {
+        console.error("Failed to refresh keys:", err);
+      }
+    }
+  }, [sessionKey]);
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
@@ -127,7 +150,7 @@ export const App: React.FC = () => {
             {isUnlocked && (
               <button
                 type="button"
-                onClick={() => setIsUnlocked(false)}
+                onClick={handleLock}
                 className={`p-1.5 rounded-xl border transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none ${
                   theme === "dark"
                     ? "bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
@@ -193,11 +216,11 @@ export const App: React.FC = () => {
 
                 <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
                   <div className="font-bold text-purple-400 flex items-center gap-1.5">
-                    <span>🔐 Isolated Hardware Keystore</span>
+                    <span>🔐 Zero-Knowledge Encrypted Storage</span>
                   </div>
                   <p className="text-[11px] text-slate-400">
-                    Keys are locked in local device storage and protected by your Master PIN &
-                    Biometric sensor.
+                    Keys are encrypted at rest with AES-256-GCM derived via PBKDF2 (100,000 rounds)
+                    from your Master PIN.
                   </p>
                 </div>
               </div>
@@ -220,13 +243,15 @@ export const App: React.FC = () => {
               config={authConfig}
               theme={theme}
               onConfigured={(newCfg) => setAuthConfig(newCfg)}
-              onUnlocked={() => setIsUnlocked(true)}
+              onUnlocked={handleUnlocked}
             />
           ) : (
             <>
               {activeScreen === "vault" && (
                 <VaultView
                   keys={keys}
+                  sessionKey={sessionKey}
+                  salt={salt}
                   theme={theme}
                   onKeysChanged={refreshKeys}
                   onOpenEnrollScanner={() => setActiveScreen("enroll_scanner")}
@@ -236,6 +261,8 @@ export const App: React.FC = () => {
 
               {activeScreen === "enroll_scanner" && (
                 <EnrollScanner
+                  sessionKey={sessionKey}
+                  salt={salt}
                   theme={theme}
                   onBack={() => setActiveScreen("vault")}
                   onEnrolledSuccess={() => {
@@ -246,7 +273,7 @@ export const App: React.FC = () => {
               )}
 
               {activeScreen === "decrypt_scanner" && (
-                <DecryptScanner theme={theme} onBack={() => setActiveScreen("vault")} />
+                <DecryptScanner keys={keys} theme={theme} onBack={() => setActiveScreen("vault")} />
               )}
             </>
           )}

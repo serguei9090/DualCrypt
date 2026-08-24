@@ -18,19 +18,20 @@ import {
   encodePayloadToFrames,
 } from "../../../../packages/shared-airgap/src/index";
 import { authenticateWithBiometrics } from "../lib/biometricAuth";
-import { loadVaultKeys, type VaultKeyItem } from "../lib/vaultStorage";
+import type { VaultKeyItem } from "../lib/vaultStorage";
 import { AnimatedQrStream } from "./AnimatedQrStream";
 import { QrCameraScanner } from "./QrCameraScanner";
 
 interface DecryptScannerProps {
+  keys: VaultKeyItem[];
   theme: "dark" | "light";
   onBack: () => void;
 }
 
-export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack }) => {
+export const DecryptScanner: React.FC<DecryptScannerProps> = ({ keys, theme, onBack }) => {
   const [activeChallenge, setActiveChallenge] = useState<AirGapChallenge | null>(null);
   const [matchedVaultKey, setMatchedVaultKey] = useState<VaultKeyItem | null>(null);
-  const [availableVaultKeys, setAvailableVaultKeys] = useState<VaultKeyItem[]>([]);
+  const [availableVaultKeys, setAvailableVaultKeys] = useState<VaultKeyItem[]>(keys);
   const [custodianPinInput, setCustodianPinInput] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -41,10 +42,9 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
     setActiveChallenge(challenge);
 
     // Automatic Matching against Offline Enclave Keys
-    const vaultKeys = loadVaultKeys();
-    setAvailableVaultKeys(vaultKeys);
+    setAvailableVaultKeys(keys);
 
-    const exactMatch = vaultKeys.find(
+    const exactMatch = keys.find(
       (k) =>
         k.fileName.toLowerCase() === challenge.fileName.toLowerCase() &&
         k.custodianId === challenge.custodianId,
@@ -54,7 +54,7 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
       setMatchedVaultKey(exactMatch);
     } else {
       // Check if there is any key matching the filename
-      const fileMatch = vaultKeys.find(
+      const fileMatch = keys.find(
         (k) => k.fileName.toLowerCase() === challenge.fileName.toLowerCase(),
       );
       if (fileMatch) {

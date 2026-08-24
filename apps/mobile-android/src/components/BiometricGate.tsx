@@ -2,12 +2,19 @@ import { AlertCircle, Fingerprint, Lock, Shield } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { authenticateWithBiometrics, isBiometricHardwareAvailable } from "../lib/biometricAuth";
+import {
+  base64ToUint8Array,
+  createPinVerifier,
+  deriveVaultKey,
+  generateRandomBytes,
+  uint8ArrayToBase64,
+} from "../lib/cryptoVault";
 import { type AuthConfig, saveAuthConfig } from "../lib/vaultStorage";
 
 interface BiometricGateProps {
   config: AuthConfig;
   theme: "dark" | "light";
-  onUnlocked: () => void;
+  onUnlocked: (sessionKey: CryptoKey, salt: Uint8Array) => void;
   onConfigured: (newConfig: AuthConfig) => void;
 }
 
@@ -22,6 +29,7 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
   const [confirmPin, setConfirmPin] = useState("");
   const [enableBiometrics, setEnableBiometrics] = useState(true);
   const [setupError, setSetupError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Unlock state
   const [unlockPin, setUnlockPin] = useState("");
@@ -33,7 +41,7 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
     isBiometricHardwareAvailable().then((avail) => setHardwareAvailable(avail));
   }, []);
 
-  const handleSetupSubmit = (e: React.FormEvent) => {
+  const handleSetupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (setupPin.length < 4) {
       setSetupError("Master PIN must be at least 4 digits.");
@@ -44,15 +52,29 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
       return;
     }
 
-    const newConfig: AuthConfig = {
-      isConfigured: true,
-      pinHash: setupPin,
-      useBiometrics: enableBiometrics,
-    };
+    setIsProcessing(true);
+    setSetupError(null);
 
-    saveAuthConfig(newConfig);
-    onConfigured(newConfig);
-    onUnlocked();
+    try {
+      const salt = generateRandomBytes(32);
+      const vaultKey = await deriveVaultKey(setupPin, salt);
+      const pinVerifier = await createPinVerifier(setupPin, salt);
+
+      const newConfig: AuthConfig = {
+        isConfigured: true,
+        saltBase64: uint8ArrayToBase64(salt),
+        pinVerifier,
+        useBiometrics: enableBiometrics,
+      };
+
+      saveAuthConfig(newConfig);
+      onConfigured(newConfig);
+      onUnlocked(vaultKey, salt);
+    } catch (err) {
+      setSetupError(`Failed to initialize cryptographic vault: ${String(err)}`);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleBiometricAuth = async () => {
@@ -64,19 +86,34 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
     setIsPrompting(false);
 
     if (result.success) {
-      onUnlocked();
+      // Prompt for PIN to derive AES session key if not stored in memory
+      setUnlockError(null);
     } else if (result.error) {
       setUnlockError(result.error);
     }
   };
 
-  const handlePinUnlock = (e: React.FormEvent) => {
+  const handlePinUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (unlockPin === config.pinHash) {
-      setUnlockError(null);
-      onUnlocked();
-    } else {
-      setUnlockError("Incorrect Master PIN. Please try again.");
+    if (!unlockPin.trim()) return;
+
+    setIsProcessing(true);
+    setUnlockError(null);
+
+    try {
+      const salt = base64ToUint8Array(config.saltBase64);
+      const candidateVerifier = await createPinVerifier(unlockPin, salt);
+
+      if (candidateVerifier === config.pinVerifier) {
+        const vaultKey = await deriveVaultKey(unlockPin, salt);
+        onUnlocked(vaultKey, salt);
+      } else {
+        setUnlockError("Incorrect Master PIN. Key derivation rejected.");
+      }
+    } catch (err) {
+      setUnlockError(`Unlock error: ${String(err)}`);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -193,9 +230,12 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
 
           <button
             type="submit"
-            className="w-full py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
+            disabled={isProcessing}
+            className="w-full py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all cursor-pointer disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
           >
-            Save Security Profile & Enter Vault
+            {isProcessing
+              ? "Deriving Master Key (PBKDF2)..."
+              : "Save Security Profile & Enter Vault"}
           </button>
         </form>
       </div>
@@ -232,7 +272,7 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
           <button
             type="button"
             onClick={handleBiometricAuth}
-            disabled={isPrompting}
+            disabled={isPrompting || isProcessing}
             className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all cursor-pointer disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
           >
             <Fingerprint className="w-5 h-5" />
@@ -277,13 +317,14 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
           />
           <button
             type="submit"
-            className={`px-4 py-2 rounded-xl text-xs font-semibold font-mono cursor-pointer border transition-all focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none ${
+            disabled={isProcessing}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold font-mono cursor-pointer border transition-all disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none ${
               theme === "dark"
                 ? "bg-slate-800 hover:bg-slate-700 text-white border-slate-700"
                 : "bg-slate-800 hover:bg-slate-900 text-white border-slate-800"
             }`}
           >
-            Unlock
+            {isProcessing ? "Verifying..." : "Unlock"}
           </button>
         </form>
 
