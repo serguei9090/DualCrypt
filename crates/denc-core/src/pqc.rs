@@ -2,6 +2,10 @@ use crate::error::DencError;
 use crate::sss::SecretShare;
 use aes_gcm::aead::{Aead, KeyInit, Payload};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
+use ml_dsa::{
+    EncodedSignature, EncodedVerifyingKey, Keypair, MlDsa65, Signature, Signer, SigningKey,
+    Verifier, VerifyingKey,
+};
 use ml_kem::kem::{Decapsulate, DecapsulationKey, Encapsulate, EncapsulationKey};
 use ml_kem::{Encoded, EncodedSizeUser, KemCore, MlKem768, MlKem768Params};
 use rand_core::{OsRng, RngCore};
@@ -283,7 +287,214 @@ pub fn decapsulate_share_ml_kem(
     Ok(share)
 }
 
-/// Generates a Post-Quantum Container Signature & Origin Authentication
+/// Armored NIST FIPS 204 ML-DSA-65 Digital Signing Keypair
+#[derive(Clone, Serialize, Deserialize, Zeroize, ZeroizeOnDrop)]
+pub struct MlDsaKeypair {
+    pub public_key_base64: String,
+    pub private_key_base64: String,
+    #[zeroize(skip)]
+    pub algorithm: String,
+}
+
+/// Plain ML-DSA Key File
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
+pub struct PlainMlDsaKeyFile {
+    pub algorithm: String,
+    pub author_label: String,
+    pub public_key_base64: String,
+    pub private_key_base64: String,
+}
+
+/// Encrypted ML-DSA Key File (PIN-protected)
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
+pub struct EncryptedMlDsaKeyFile {
+    pub algorithm: String,
+    pub author_label: String,
+    pub public_key_base64: String,
+    pub is_pin_protected: bool,
+    pub salt: [u8; 32],
+    pub nonce: [u8; 12],
+    pub encrypted_private_key: Vec<u8>,
+}
+
+/// Universal wrapper for ML-DSA Key Files
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum MlDsaKeyFilePayload {
+    Encrypted(EncryptedMlDsaKeyFile),
+    Plain(PlainMlDsaKeyFile),
+}
+
+impl MlDsaKeyFilePayload {
+    pub fn author_label(&self) -> &str {
+        match self {
+            MlDsaKeyFilePayload::Plain(p) => &p.author_label,
+            MlDsaKeyFilePayload::Encrypted(e) => &e.author_label,
+        }
+    }
+
+    pub fn public_key_base64(&self) -> &str {
+        match self {
+            MlDsaKeyFilePayload::Plain(p) => &p.public_key_base64,
+            MlDsaKeyFilePayload::Encrypted(e) => &e.public_key_base64,
+        }
+    }
+
+    pub fn is_pin_protected(&self) -> bool {
+        matches!(self, MlDsaKeyFilePayload::Encrypted(_))
+    }
+}
+
+/// Generates a new NIST FIPS 204 ML-DSA-65 signing keypair
+pub fn generate_ml_dsa_keypair() -> Result<MlDsaKeypair, DencError> {
+    use base64::prelude::*;
+    let mut seed = [0u8; 32];
+    OsRng.fill_bytes(&mut seed);
+
+    let signing_key = SigningKey::<MlDsa65>::from_seed(&seed.into());
+    let verifying_key = signing_key.verifying_key();
+
+    let pub_b64 = BASE64_STANDARD.encode(verifying_key.encode());
+    let priv_b64 = BASE64_STANDARD.encode(seed);
+
+    Ok(MlDsaKeypair {
+        public_key_base64: pub_b64,
+        private_key_base64: priv_b64,
+        algorithm: "NIST-FIPS-204-ML-DSA-65".to_string(),
+    })
+}
+
+/// Encrypts an ML-DSA private key with a PIN/passphrase
+pub fn encrypt_dsa_keyfile_with_pin(
+    keypair: &MlDsaKeypair,
+    author_label: &str,
+    pin: &str,
+) -> Result<EncryptedMlDsaKeyFile, DencError> {
+    let salt = crate::kdf::generate_salt();
+    let mut key = crate::kdf::derive_key_argon2id(pin.as_bytes(), &salt)?;
+    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
+    key.zeroize();
+
+    let mut nonce = [0u8; 12];
+    OsRng.fill_bytes(&mut nonce);
+
+    let encrypted_private_key = cipher
+        .encrypt(
+            Nonce::from_slice(&nonce),
+            Payload {
+                msg: keypair.private_key_base64.as_bytes(),
+                aad: &salt,
+            },
+        )
+        .map_err(|_| DencError::Custom("Failed to encrypt ML-DSA private key with PIN".to_string()))?;
+
+    Ok(EncryptedMlDsaKeyFile {
+        algorithm: keypair.algorithm.clone(),
+        author_label: author_label.to_string(),
+        public_key_base64: keypair.public_key_base64.clone(),
+        is_pin_protected: true,
+        salt,
+        nonce,
+        encrypted_private_key,
+    })
+}
+
+/// Decrypts a PIN-protected ML-DSA private key
+pub fn decrypt_dsa_keyfile_with_pin(
+    enc_file: &EncryptedMlDsaKeyFile,
+    pin: &str,
+) -> Result<String, DencError> {
+    let mut key = crate::kdf::derive_key_argon2id(pin.as_bytes(), &enc_file.salt)?;
+    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
+    key.zeroize();
+
+    let decrypted = cipher
+        .decrypt(
+            Nonce::from_slice(&enc_file.nonce),
+            Payload {
+                msg: &enc_file.encrypted_private_key,
+                aad: &enc_file.salt,
+            },
+        )
+        .map_err(|_| DencError::Custom("Invalid PIN for ML-DSA key file or corrupted data".to_string()))?;
+
+    let priv_key_str = String::from_utf8(decrypted)
+        .map_err(|_| DencError::Custom("Invalid UTF-8 in decrypted ML-DSA private key".to_string()))?;
+
+    Ok(priv_key_str)
+}
+
+/// Derives the public key from an ML-DSA-65 private seed
+pub fn derive_author_public_key_ml_dsa(private_key_base64: &str) -> Result<String, DencError> {
+    use base64::prelude::*;
+    let priv_bytes = BASE64_STANDARD
+        .decode(private_key_base64.trim())
+        .map_err(|e| DencError::Custom(format!("Invalid ML-DSA private key: {e}")))?;
+    if priv_bytes.len() != 32 {
+        return Err(DencError::Custom(format!(
+            "Invalid ML-DSA seed length: expected 32 bytes, got {}",
+            priv_bytes.len()
+        )));
+    }
+    let seed: [u8; 32] = priv_bytes.as_slice().try_into().unwrap();
+    let signing_key = SigningKey::<MlDsa65>::from_seed(&seed.into());
+    Ok(BASE64_STANDARD.encode(signing_key.verifying_key().encode()))
+}
+
+/// Signs a message (e.g. 32-byte header digest) using an ML-DSA-65 private seed
+pub fn sign_digest_ml_dsa(private_key_base64: &str, message: &[u8]) -> Result<String, DencError> {
+    use base64::prelude::*;
+    let priv_bytes = BASE64_STANDARD
+        .decode(private_key_base64.trim())
+        .map_err(|e| DencError::Custom(format!("Invalid ML-DSA private key base64: {e}")))?;
+
+    if priv_bytes.len() != 32 {
+        return Err(DencError::Custom(format!(
+            "Invalid ML-DSA seed length: expected 32 bytes, got {}",
+            priv_bytes.len()
+        )));
+    }
+
+    let seed: [u8; 32] = priv_bytes.as_slice().try_into().unwrap();
+    let signing_key = SigningKey::<MlDsa65>::from_seed(&seed.into());
+
+    let signature = signing_key.sign(message);
+    Ok(BASE64_STANDARD.encode(signature.encode()))
+}
+
+/// Verifies an ML-DSA-65 signature against a message (e.g. 32-byte header digest) and public key
+pub fn verify_signature_ml_dsa(
+    public_key_base64: &str,
+    message: &[u8],
+    signature_base64: &str,
+) -> Result<bool, DencError> {
+    use base64::prelude::*;
+    let pub_bytes = BASE64_STANDARD
+        .decode(public_key_base64.trim())
+        .map_err(|e| DencError::Custom(format!("Invalid ML-DSA public key base64: {e}")))?;
+
+    let verifying_key_enc = EncodedVerifyingKey::<MlDsa65>::try_from(pub_bytes.as_slice())
+        .map_err(|_| DencError::Custom("Invalid ML-DSA public key length".to_string()))?;
+
+    let verifying_key = VerifyingKey::<MlDsa65>::decode(&verifying_key_enc);
+
+    let sig_bytes = BASE64_STANDARD
+        .decode(signature_base64.trim())
+        .map_err(|e| DencError::Custom(format!("Invalid ML-DSA signature base64: {e}")))?;
+
+    let signature_enc = EncodedSignature::<MlDsa65>::try_from(sig_bytes.as_slice())
+        .map_err(|_| DencError::Custom("Invalid ML-DSA signature length".to_string()))?;
+
+    let signature = Signature::<MlDsa65>::decode(&signature_enc)
+        .ok_or_else(|| DencError::Custom("Failed to decode ML-DSA-65 signature".to_string()))?;
+
+    match verifying_key.verify(message, &signature) {
+        Ok(_) => Ok(true),
+        Err(_) => Ok(false),
+    }
+}
+
+/// Generates a Post-Quantum Container Signature & Origin Authentication (Legacy helper)
 pub fn sign_container_digest(
     private_key_material: &[u8],
     header_digest: &[u8; 32],
@@ -295,7 +506,7 @@ pub fn sign_container_digest(
     hasher.finalize().to_vec()
 }
 
-/// Verifies a Post-Quantum Container Signature
+/// Verifies a Post-Quantum Container Signature (Legacy helper)
 pub fn verify_container_digest(
     private_key_material: &[u8],
     header_digest: &[u8; 32],
@@ -345,6 +556,45 @@ mod tests {
 
         // Correct PIN
         let priv_key = decrypt_pqc_keyfile_with_pin(&enc, "MyPin#2026").expect("PIN decryption failed");
+        assert_eq!(priv_key, keypair.private_key_base64);
+    }
+
+    #[test]
+    fn test_ml_dsa_65_keypair_and_signature_roundtrip() {
+        let keypair = generate_ml_dsa_keypair().expect("ML-DSA Keypair gen failed");
+        assert_eq!(keypair.algorithm, "NIST-FIPS-204-ML-DSA-65");
+        assert!(!keypair.public_key_base64.is_empty());
+        assert!(!keypair.private_key_base64.is_empty());
+
+        let test_message = b"Canonical DENC Container Header Digest v2";
+
+        // Sign
+        let signature = sign_digest_ml_dsa(&keypair.private_key_base64, test_message)
+            .expect("Signing failed");
+
+        // Verify valid
+        let is_valid = verify_signature_ml_dsa(&keypair.public_key_base64, test_message, &signature)
+            .expect("Verification check failed");
+        assert!(is_valid);
+
+        // Verify invalid message
+        let is_invalid = verify_signature_ml_dsa(&keypair.public_key_base64, b"Tampered Message", &signature)
+            .expect("Verification check failed");
+        assert!(!is_invalid);
+    }
+
+    #[test]
+    fn test_dsa_keyfile_pin_protection() {
+        let keypair = generate_ml_dsa_keypair().expect("ML-DSA Keypair gen failed");
+        let enc = encrypt_dsa_keyfile_with_pin(&keypair, "Alice - CSO", "DsaPin#2026")
+            .expect("PIN encryption failed");
+        assert!(enc.is_pin_protected);
+
+        // Wrong PIN
+        assert!(decrypt_dsa_keyfile_with_pin(&enc, "WrongPin").is_err());
+
+        // Correct PIN
+        let priv_key = decrypt_dsa_keyfile_with_pin(&enc, "DsaPin#2026").expect("PIN decryption failed");
         assert_eq!(priv_key, keypair.private_key_base64);
     }
 }

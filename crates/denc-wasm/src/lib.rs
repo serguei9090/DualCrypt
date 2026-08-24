@@ -1,10 +1,14 @@
 use denc_core::cipher::{
     decrypt_stream_chunks, encrypt_stream_chunks, generate_base_nonce, DEFAULT_CHUNK_SIZE,
 };
-use denc_core::container::{AuthType, CustodianDescriptor, DencHeader, FORMAT_VERSION_1};
+use denc_core::container::{
+    AuthType, CustodianDescriptor, DencHeader, DencSignatureBlock, FORMAT_VERSION_1,
+    FORMAT_VERSION_2,
+};
 use denc_core::kdf::{derive_key_argon2id, generate_salt};
 use denc_core::pqc::{
-    decapsulate_share_ml_kem, encapsulate_share_ml_kem, generate_ml_kem_keypair, PqcEncryptedShare,
+    decapsulate_share_ml_kem, encapsulate_share_ml_kem, generate_ml_dsa_keypair,
+    generate_ml_kem_keypair, sign_digest_ml_dsa, verify_signature_ml_dsa, PqcEncryptedShare,
 };
 use denc_core::sss::{combine_shares, split_secret, SecretShare};
 use denc_core::{
@@ -26,10 +30,37 @@ pub fn wasm_generate_pqc_keypair() -> Result<JsValue, JsValue> {
 }
 
 #[wasm_bindgen]
+pub fn wasm_generate_ml_dsa_keypair() -> Result<JsValue, JsValue> {
+    let keypair = generate_ml_dsa_keypair()
+        .map_err(|e| JsValue::from_str(&format!("ML-DSA Keygen failed: {}", e)))?;
+    serde_wasm_bindgen::to_value(&keypair)
+        .map_err(|e| JsValue::from_str(&format!("Serialization failed: {}", e)))
+}
+
+#[wasm_bindgen]
 pub fn wasm_inspect_denc(bytes: &[u8]) -> Result<JsValue, JsValue> {
     let mut reader = BufReader::new(bytes);
     let (header, _, _) = DencHeader::deserialize(&mut reader)
         .map_err(|e| JsValue::from_str(&format!("Failed to parse DENC header: {}", e)))?;
+
+    let is_signature_valid = if let Some(sig) = &header.signature_block {
+        let mut unsigned_header = header.clone();
+        unsigned_header.signature_block = None;
+        if let Ok((_, draft_digest)) = unsigned_header.serialize() {
+            Some(
+                verify_signature_ml_dsa(
+                    &sig.author_public_key_base64,
+                    &draft_digest,
+                    &sig.signature_base64,
+                )
+                .unwrap_or(false),
+            )
+        } else {
+            Some(false)
+        }
+    } else {
+        None
+    };
 
     let custodians: Vec<CustodianInspection> = header
         .custodians
@@ -49,6 +80,8 @@ pub fn wasm_inspect_denc(bytes: &[u8]) -> Result<JsValue, JsValue> {
         total_n: header.total_n,
         chunk_size: header.chunk_size,
         custodians,
+        signature_block: header.signature_block,
+        is_signature_valid,
     };
 
     serde_wasm_bindgen::to_value(&inspection)
@@ -174,8 +207,46 @@ pub fn wasm_encrypt_payload(
         }
     }
 
+    let signature_block = if let Some(author_key) = &params.author_signing_key_base64 {
+        let author_label = params
+            .author_label
+            .clone()
+            .unwrap_or_else(|| "Authorized Author".to_string());
+        let draft_header = DencHeader {
+            version: FORMAT_VERSION_2,
+            cipher_suite: params.cipher,
+            kdf_id: 1,
+            threshold_k: params.threshold_k,
+            total_n: params.total_n,
+            chunk_size: chunk_size as u32,
+            master_salt,
+            base_nonce,
+            custodians: descriptors.clone(),
+            signature_block: None,
+        };
+        let (_, draft_digest) = draft_header.serialize()
+            .map_err(|e| JsValue::from_str(&format!("Draft header error: {}", e)))?;
+        let signature_base64 = sign_digest_ml_dsa(author_key, &draft_digest)
+            .map_err(|e| JsValue::from_str(&format!("Signing failed: {}", e)))?;
+        let author_pub = denc_core::pqc::derive_author_public_key_ml_dsa(author_key)
+            .map_err(|e| JsValue::from_str(&format!("Derive public key failed: {}", e)))?;
+
+        Some(DencSignatureBlock {
+            algorithm: "NIST-FIPS-204-ML-DSA-65".to_string(),
+            author_label,
+            author_public_key_base64: author_pub,
+            signature_base64,
+        })
+    } else {
+        None
+    };
+
     let header = DencHeader {
-        version: FORMAT_VERSION_1,
+        version: if signature_block.is_some() {
+            FORMAT_VERSION_2
+        } else {
+            FORMAT_VERSION_1
+        },
         cipher_suite: params.cipher,
         kdf_id: 1,
         threshold_k: params.threshold_k,
@@ -184,6 +255,7 @@ pub fn wasm_encrypt_payload(
         master_salt,
         base_nonce,
         custodians: descriptors,
+        signature_block: signature_block.clone(),
     };
 
     let (header_bytes, header_digest) = header.serialize()
@@ -216,11 +288,13 @@ pub fn wasm_encrypt_payload(
     struct WasmEncResult {
         encrypted_bytes: Vec<u8>,
         exported_shares: Vec<ExportedKeyShare>,
+        author_signature_block: Option<DencSignatureBlock>,
     }
 
     let out = WasmEncResult {
         encrypted_bytes: output_bytes,
         exported_shares,
+        author_signature_block: signature_block,
     };
 
     serde_wasm_bindgen::to_value(&out)

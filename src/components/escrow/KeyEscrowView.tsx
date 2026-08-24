@@ -20,6 +20,7 @@ import {
 import type React from "react";
 import { useEffect, useState } from "react";
 import {
+  generateMlDsaKeypair,
   generatePqcKeypair,
   isTauriEnvironment,
   loadSmtpConfig,
@@ -33,6 +34,7 @@ import { cn } from "../../lib/utils";
 
 export const KeyEscrowView: React.FC = () => {
   // 1. Keypair Generator State
+  const [keyAlgo, setKeyAlgo] = useState<"ml-kem" | "ml-dsa">("ml-kem");
   const [label, setLabel] = useState("Custodian 1 - Primary");
   const [enablePin, setEnablePin] = useState(false);
   const [pinCode, setPinCode] = useState("");
@@ -46,7 +48,7 @@ export const KeyEscrowView: React.FC = () => {
   const [inspectedFilePath, setInspectedFilePath] = useState<string | null>(null);
   const [isInspecting, setIsInspecting] = useState(false);
   const [inspectorResult, setInspectorResult] = useState<{
-    fileType: "dkey" | "pqc" | "pqc_pub" | "unknown";
+    fileType: "dkey" | "pqc" | "pqc_pub" | "dsa" | "dsa_pub" | "unknown";
     custodianId?: number;
     label?: string;
     algorithm?: string;
@@ -78,11 +80,11 @@ export const KeyEscrowView: React.FC = () => {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  // Generate Standalone ML-KEM Keypair
+  // Generate Standalone Keypair (ML-KEM or ML-DSA)
   const handleGenerateKeypair = async () => {
     setIsGenerating(true);
     try {
-      const kp = await generatePqcKeypair();
+      const kp = keyAlgo === "ml-dsa" ? await generateMlDsaKeypair() : await generatePqcKeypair();
       setGeneratedKeypair(kp);
       setActivePinForGenerated(enablePin && pinCode.trim() ? pinCode.trim() : null);
     } catch (err) {
@@ -92,16 +94,17 @@ export const KeyEscrowView: React.FC = () => {
     }
   };
 
-  // Save Public Key (.pqc.pub)
+  // Save Public Key (.pqc.pub or .dsa.pub)
   const handleSavePublicKey = async () => {
     if (!generatedKeypair) return;
     const sanitized = label.trim().replace(/\s+/g, "_") || "custodian";
-    const defaultFilename = `${sanitized}.pqc.pub`;
+    const ext = keyAlgo === "ml-dsa" ? "dsa.pub" : "pqc.pub";
+    const defaultFilename = `${sanitized}.${ext}`;
 
     if (isTauriEnvironment()) {
       const path = await save({
         defaultPath: defaultFilename,
-        filters: [{ name: "Post-Quantum Public Key", extensions: ["pqc.pub", "pub", "json"] }],
+        filters: [{ name: "Public Key Certificate", extensions: [ext, "pub", "json"] }],
       });
       if (path) {
         await saveKeyFile(
@@ -116,7 +119,7 @@ export const KeyEscrowView: React.FC = () => {
       }
     } else {
       const payload = {
-        algorithm: "NIST-FIPS-203-ML-KEM-768",
+        algorithm: keyAlgo === "ml-dsa" ? "NIST-FIPS-204-ML-DSA-65" : "NIST-FIPS-203-ML-KEM-768",
         type: "public_key",
         label,
         public_key_base64: generatedKeypair.public_key_base64,
@@ -133,16 +136,17 @@ export const KeyEscrowView: React.FC = () => {
     }
   };
 
-  // Save Private Key (.pqc)
+  // Save Private Key (.pqc or .dsa)
   const handleSavePrivateKey = async () => {
     if (!generatedKeypair) return;
     const sanitized = label.trim().replace(/\s+/g, "_") || "custodian";
-    const defaultFilename = `${sanitized}.pqc`;
+    const ext = keyAlgo === "ml-dsa" ? "dsa" : "pqc";
+    const defaultFilename = `${sanitized}.${ext}`;
 
     if (isTauriEnvironment()) {
       const path = await save({
         defaultPath: defaultFilename,
-        filters: [{ name: "Post-Quantum Private Key", extensions: ["pqc", "key", "json"] }],
+        filters: [{ name: "Private Secret Key", extensions: [ext, "key", "json"] }],
       });
       if (path) {
         await saveKeyFile(
@@ -157,7 +161,7 @@ export const KeyEscrowView: React.FC = () => {
       }
     } else {
       const payload = {
-        algorithm: "NIST-FIPS-203-ML-KEM-768",
+        algorithm: keyAlgo === "ml-dsa" ? "NIST-FIPS-204-ML-DSA-65" : "NIST-FIPS-203-ML-KEM-768",
         type: "private_key",
         label,
         public_key_base64: generatedKeypair.public_key_base64,
@@ -345,23 +349,66 @@ export const KeyEscrowView: React.FC = () => {
           <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-purple-400" />
-              <h4 className="text-sm font-bold text-zinc-100">1. Post-Quantum Keypair Generator</h4>
+              <h4 className="text-sm font-bold text-zinc-100">
+                1.{" "}
+                {keyAlgo === "ml-dsa"
+                  ? "Post-Quantum Digital Signing Keypair"
+                  : "Post-Quantum Keypair Generator"}
+              </h4>
             </div>
             <span className="text-[10px] font-mono text-purple-400 bg-purple-950/60 border border-purple-800/40 px-2 py-0.5 rounded-md">
-              ML-KEM-768
+              {keyAlgo === "ml-dsa" ? "NIST FIPS 204 ML-DSA-65" : "NIST FIPS 203 ML-KEM-768"}
             </span>
           </div>
 
+          {/* Algorithm Mode Switcher */}
+          <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-zinc-950 border border-zinc-800">
+            <button
+              type="button"
+              onClick={() => {
+                setKeyAlgo("ml-kem");
+                setGeneratedKeypair(null);
+              }}
+              className={cn(
+                "py-1.5 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                keyAlgo === "ml-kem"
+                  ? "bg-purple-600 text-white shadow-sm"
+                  : "text-zinc-400 hover:text-zinc-200",
+              )}
+            >
+              <Atom className="h-3.5 w-3.5" />
+              <span>ML-KEM-768 (Encryption)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setKeyAlgo("ml-dsa");
+                setGeneratedKeypair(null);
+              }}
+              className={cn(
+                "py-1.5 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                keyAlgo === "ml-dsa"
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : "text-zinc-400 hover:text-zinc-200",
+              )}
+            >
+              <ShieldCheck className="h-3.5 w-3.5" />
+              <span>ML-DSA-65 (Signing)</span>
+            </button>
+          </div>
+
           <p className="text-xs text-zinc-400">
-            Generate an asymmetric keypair in advance. Keep your <strong>Private Key</strong> secret
-            and distribute your <strong>Public Key</strong> to anyone who needs to encrypt files for
-            you.
+            {keyAlgo === "ml-dsa"
+              ? "Generate an authorized NIST FIPS 204 digital signature keypair. Keep your Private Signing Key secret and distribute the Public Certificate (.dsa.pub) for anti-tamper container verification."
+              : "Generate an asymmetric keypair in advance. Keep your Private Key secret and distribute your Public Key (.pqc.pub) to anyone who needs to encrypt files for you."}
           </p>
 
           <div className="space-y-3">
             <div className="space-y-1">
               <label htmlFor="pqc-custodian-label" className="text-xs font-semibold text-zinc-300">
-                Custodian Identity / Label
+                {keyAlgo === "ml-dsa"
+                  ? "Author / Officer Identity Label"
+                  : "Custodian Identity / Label"}
               </label>
               <input
                 id="pqc-custodian-label"
@@ -398,7 +445,7 @@ export const KeyEscrowView: React.FC = () => {
                     className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200 font-mono focus:border-amber-500 focus:outline-none"
                   />
                   <p className="text-[10px] text-zinc-500 mt-1">
-                    Protects the `.pqc` private key file with Argon2id + AES-256-GCM.
+                    Protects the private key file with Argon2id + AES-256-GCM.
                   </p>
                 </div>
               )}
@@ -409,11 +456,15 @@ export const KeyEscrowView: React.FC = () => {
               type="button"
               disabled={isGenerating || !label.trim()}
               onClick={handleGenerateKeypair}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 py-3 text-xs font-bold text-white shadow-[0_0_20px_rgba(147,51,234,0.25)] transition-all disabled:opacity-40"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 py-3 text-xs font-bold text-white shadow-[0_0_20px_rgba(147,51,234,0.25)] transition-all disabled:opacity-40 cursor-pointer"
             >
               <RefreshCw className={cn("h-3.5 w-3.5", isGenerating && "animate-spin")} />
               <span>
-                {isGenerating ? "Generating FIPS 203 Keypair..." : "Generate New ML-KEM Keypair"}
+                {isGenerating
+                  ? "Generating Keypair..."
+                  : keyAlgo === "ml-dsa"
+                    ? "Generate New ML-DSA-65 Signing Keypair"
+                    : "Generate New ML-KEM-768 Keypair"}
               </span>
             </button>
           </div>
@@ -446,26 +497,30 @@ export const KeyEscrowView: React.FC = () => {
 
               {/* Download & Copy Action Buttons */}
               <div className="grid grid-cols-2 gap-2 pt-1">
-                {/* Public Key (.pqc.pub) */}
+                {/* Public Key (.pqc.pub or .dsa.pub) */}
                 <button
                   type="button"
                   onClick={handleSavePublicKey}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-purple-500/50 bg-purple-900/40 hover:bg-purple-800/60 py-2 text-xs font-semibold text-purple-200 hover:text-white transition-colors"
-                  title="Save NIST FIPS 203 ML-KEM-768 shareable public key"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-purple-500/50 bg-purple-900/40 hover:bg-purple-800/60 py-2 text-xs font-semibold text-purple-200 hover:text-white transition-colors cursor-pointer"
+                  title={
+                    keyAlgo === "ml-dsa"
+                      ? "Save NIST FIPS 204 ML-DSA-65 public certificate"
+                      : "Save NIST FIPS 203 ML-KEM-768 shareable public key"
+                  }
                 >
                   <Download className="h-3.5 w-3.5 text-purple-400" />
-                  <span>Public Key (.pqc.pub)</span>
+                  <span>Public Key ({keyAlgo === "ml-dsa" ? ".dsa.pub" : ".pqc.pub"})</span>
                 </button>
 
-                {/* Private Key (.pqc) */}
+                {/* Private Key (.pqc or .dsa) */}
                 <button
                   type="button"
                   onClick={handleSavePrivateKey}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 py-2 text-xs font-bold text-white transition-colors shadow-sm"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 py-2 text-xs font-bold text-white transition-colors shadow-sm cursor-pointer"
                   title="Save secret private key (keep confidential)"
                 >
                   <Download className="h-3.5 w-3.5" />
-                  <span>Private Key (.pqc)</span>
+                  <span>Private Key ({keyAlgo === "ml-dsa" ? ".dsa" : ".pqc"})</span>
                 </button>
 
                 {/* Copy Public Key */}

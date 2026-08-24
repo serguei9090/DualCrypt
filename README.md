@@ -78,6 +78,14 @@ The `.denc` container encapsulates the metadata and chunked authenticated stream
 
 ## 🚀 Live Features
 
+* **🔏 NIST FIPS 204 Digital Container Signatures (ML-DSA-65 / Dilithium)**:
+  * Authors can digitally sign `.denc` containers using post-quantum ML-DSA-65 keys.
+  * Mathematical origin authentication & anti-tampering verification over the canonical header digest before custodian unlocking.
+  * Verified Author badge displayed in container inspection and unlock workflows.
+* **📜 Operational Activity & Audit History Ledger**:
+  * Persistent local ledger recording file operations, custodian counts, quorum configurations, and signature verification status.
+  * Real-time search, filter pills (`All`, `Encrypted`, `Decrypted`), summary statistics, and one-click **CSV / JSON exports**.
+  * Configurable environment switch (`VITE_ENABLE_AUDIT_HISTORY=true/false`) to disable persistence for public web or demo environments.
 * **⚛️ NIST FIPS 203 Post-Quantum Cryptography (ML-KEM-768)**:
   * Armored public/private key generation for quantum-resistant share exchange.
   * Recipient custodians can encapsulate shares with their public key without pre-sharing passwords.
@@ -85,15 +93,14 @@ The `.denc` container encapsulates the metadata and chunked authenticated stream
   * Direct in-browser cryptographic engine compiling pure Rust core to WebAssembly.
   * Zero server-side plaintext exposure: 100% of cryptography executes within browser memory.
 * **💻 Headless CLI (`denc-cli`)**: Standalone command-line binary `denc` for server backups, automation scripts, and CI/CD pipelines.
-* **⚛️ NIST FIPS 203 ML-KEM-768 Post-Quantum Key Encapsulation**: Quantum-safe asymmetric share encapsulation protecting against "Harvest Now, Decrypt Later" quantum adversary attacks.
 * **🔑 Actionable Key Escrow & Post-Quantum Vault**:
-  * **⚡ Standalone ML-KEM-768 Generator**: Create standalone quantum-resistant keypairs with optional Argon2id PIN encryption.
-  * **🌐 Shareable `.pqc.pub` Public Keys**: Export public keys to colleagues for future encryption jobs without sharing private secrets.
-  * **🔍 Key Token & PIN Inspector**: Inspect `.dkey`, `.pqc`, and `.pqc.pub` files offline and verify PIN unlocking directly in memory.
+  * **⚡ ML-KEM-768 & ML-DSA-65 Generators**: Create standalone quantum-resistant keypairs (`.pqc.pub` / `.pqc` and `.dsa.pub` / `.dsa`) with optional Argon2id PIN encryption.
+  * **🌐 Shareable Public Keys & Certificates**: Export public keys to colleagues for future encryption jobs without sharing private secrets.
+  * **🔍 Key Token & PIN Inspector**: Inspect `.dkey`, `.pqc`, and `.dsa` files offline and verify PIN unlocking directly in memory.
 * **⚡ 1-Click Streamlined Slot Setup & Recipient Key Reuse**:
   * **`⚡ Auto-Generate` (1-Click)**: Instant auto-keypair generation for quick workflows.
   * **`📂 Use Recipient Key`**: Upload `.pqc.pub` or paste a colleague's public key to encrypt on their behalf.
-* **🔐 Optional PIN / Passphrase Protection for Key Files**: Exported `.dkey` (SSS) and `.pqc` (ML-KEM-768) files can be PIN-protected via Argon2id key derivation and authenticated AES-256-GCM encryption.
+* **🔐 Optional PIN / Passphrase Protection for Key Files**: Exported `.dkey` (SSS) and `.pqc` / `.dsa` files can be PIN-protected via Argon2id key derivation and authenticated AES-256-GCM encryption.
 * **📦 Bulk Key Packaging & Direct Dispatch**: Export all custodian keys in a single ZIP archive (`.zip`) with `README_CUSTODIAN_KEYS.txt`, copy Base64 public/private keys directly to the clipboard, or dispatch via SMTP email with custom instructions.
 * **🌐 Embedded Zero-Knowledge Web Server**: Self-host locally from the desktop app or run headlessly via CLI (`denc serve`) with flexible interface binding:
   * `🔒 Localhost Only (127.0.0.1)` for local-machine security.

@@ -1,5 +1,12 @@
 export type AuthType = "passphrase" | "keyfile" | "otp" | "pqc" | "postquantum" | "yubikey";
 
+export interface DencSignatureBlock {
+  algorithm: string;
+  author_label: string;
+  author_public_key_base64: string;
+  signature_base64: string;
+}
+
 export interface CustodianDescriptorInfo {
   custodian_id: number;
   label: string;
@@ -14,6 +21,8 @@ export interface ContainerHeaderInfo {
   total_n: number;
   chunk_size: number;
   custodians: CustodianDescriptorInfo[];
+  signature_block?: DencSignatureBlock;
+  is_signature_valid?: boolean;
 }
 
 export interface SecretShareData {

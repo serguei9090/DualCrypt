@@ -10,7 +10,10 @@ use aes_gcm::{Aes256Gcm, Key, Nonce};
 use cipher::{
     encrypt_stream_chunks, generate_base_nonce, CipherSuite, DEFAULT_CHUNK_SIZE,
 };
-use container::{AuthType, CustodianDescriptor, DencHeader, FORMAT_VERSION_1};
+use container::{
+    AuthType, CustodianDescriptor, DencHeader, DencSignatureBlock, FORMAT_VERSION_1,
+    FORMAT_VERSION_2,
+};
 use error::DencError;
 use kdf::{derive_key_argon2id, generate_salt};
 use pqc::{decapsulate_share_ml_kem, encapsulate_share_ml_kem, PqcEncryptedShare};
@@ -41,6 +44,8 @@ pub struct EncryptionParams {
     pub total_n: u8,
     pub chunk_size: Option<usize>,
     pub custodians: Vec<CustodianInput>,
+    pub author_signing_key_base64: Option<String>,
+    pub author_label: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -57,6 +62,7 @@ pub struct ExportedKeyShare {
 pub struct EncryptionResult {
     pub bytes_encrypted: u64,
     pub exported_shares: Vec<ExportedKeyShare>,
+    pub author_signature_block: Option<DencSignatureBlock>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -67,6 +73,8 @@ pub struct HeaderInspection {
     pub total_n: u8,
     pub chunk_size: u32,
     pub custodians: Vec<CustodianInspection>,
+    pub signature_block: Option<DencSignatureBlock>,
+    pub is_signature_valid: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -82,6 +90,25 @@ pub fn inspect_container<P: AsRef<Path>>(path: P) -> Result<HeaderInspection, De
     let file = File::open(path)?;
     let mut reader = BufReader::new(file);
     let (header, _, _) = DencHeader::deserialize(&mut reader)?;
+
+    let is_signature_valid = if let Some(sig) = &header.signature_block {
+        let mut unsigned_header = header.clone();
+        unsigned_header.signature_block = None;
+        if let Ok((_, draft_digest)) = unsigned_header.serialize() {
+            Some(
+                pqc::verify_signature_ml_dsa(
+                    &sig.author_public_key_base64,
+                    &draft_digest,
+                    &sig.signature_base64,
+                )
+                .unwrap_or(false),
+            )
+        } else {
+            Some(false)
+        }
+    } else {
+        None
+    };
 
     let custodians = header
         .custodians
@@ -101,6 +128,8 @@ pub fn inspect_container<P: AsRef<Path>>(path: P) -> Result<HeaderInspection, De
         total_n: header.total_n,
         chunk_size: header.chunk_size,
         custodians,
+        signature_block: header.signature_block,
+        is_signature_valid,
     })
 }
 
@@ -267,8 +296,43 @@ pub fn encrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
         }
     }
 
+    let signature_block = if let Some(author_key) = &params.author_signing_key_base64 {
+        let author_label = params
+            .author_label
+            .clone()
+            .unwrap_or_else(|| "Authorized Author".to_string());
+        let draft_header = DencHeader {
+            version: FORMAT_VERSION_2,
+            cipher_suite: params.cipher,
+            kdf_id: 1,
+            threshold_k: params.threshold_k,
+            total_n: params.total_n,
+            chunk_size: chunk_size as u32,
+            master_salt,
+            base_nonce,
+            custodians: descriptors.clone(),
+            signature_block: None,
+        };
+        let (_, draft_digest) = draft_header.serialize()?;
+        let signature_base64 = pqc::sign_digest_ml_dsa(author_key, &draft_digest)?;
+        let author_pub = pqc::derive_author_public_key_ml_dsa(author_key)?;
+
+        Some(DencSignatureBlock {
+            algorithm: "NIST-FIPS-204-ML-DSA-65".to_string(),
+            author_label,
+            author_public_key_base64: author_pub,
+            signature_base64,
+        })
+    } else {
+        None
+    };
+
     let header = DencHeader {
-        version: FORMAT_VERSION_1,
+        version: if signature_block.is_some() {
+            FORMAT_VERSION_2
+        } else {
+            FORMAT_VERSION_1
+        },
         cipher_suite: params.cipher,
         kdf_id: 1,
         threshold_k: params.threshold_k,
@@ -277,6 +341,7 @@ pub fn encrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
         master_salt,
         base_nonce,
         custodians: descriptors,
+        signature_block: signature_block.clone(),
     };
 
     // Serialize header & compute AAD digest
@@ -304,6 +369,7 @@ pub fn encrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
     Ok(EncryptionResult {
         bytes_encrypted,
         exported_shares,
+        author_signature_block: signature_block,
     })
 }
 
@@ -445,6 +511,8 @@ mod tests {
                     public_key_base64: None,
                 },
             ],
+            author_signing_key_base64: None,
+            author_label: None,
         };
 
         // Encrypt
@@ -528,6 +596,8 @@ mod tests {
                     public_key_base64: None,
                 },
             ],
+            author_signing_key_base64: None,
+            author_label: None,
         };
 
         let enc_res = encrypt_file(
@@ -609,6 +679,8 @@ mod tests {
                     public_key_base64: Some(pqc_keypair.public_key_base64.clone()),
                 },
             ],
+            author_signing_key_base64: None,
+            author_label: None,
         };
 
         encrypt_file(
@@ -648,5 +720,64 @@ mod tests {
         assert_eq!(dec_bytes, original_data.len() as u64);
         let decrypted_data = std::fs::read(decrypted_file.path()).unwrap();
         assert_eq!(decrypted_data, original_data);
+    }
+
+    #[test]
+    fn test_ml_dsa_signed_container_roundtrip_and_tamper_detection() {
+        use crate::pqc::generate_ml_dsa_keypair;
+
+        let input_file = NamedTempFile::new().unwrap();
+        let encrypted_file = NamedTempFile::new().unwrap();
+
+        let original_data = b"ENTERPRISE HIGH-SECURITY FINANCIAL LEDGER".repeat(50);
+        std::fs::write(input_file.path(), &original_data).unwrap();
+
+        let signing_keypair = generate_ml_dsa_keypair().expect("ML-DSA keygen failed");
+
+        let params = EncryptionParams {
+            cipher: CipherSuite::Aes256Gcm,
+            threshold_k: 2,
+            total_n: 2,
+            chunk_size: Some(1024),
+            custodians: vec![
+                CustodianInput {
+                    custodian_id: 1,
+                    label: "Alice - CFO".to_string(),
+                    auth_type: AuthType::Passphrase,
+                    passphrase: Some("AliceSecret#2026".to_string()),
+                    public_key_base64: None,
+                },
+                CustodianInput {
+                    custodian_id: 2,
+                    label: "Bob - Auditor".to_string(),
+                    auth_type: AuthType::KeyFile,
+                    passphrase: None,
+                    public_key_base64: None,
+                },
+            ],
+            author_signing_key_base64: Some(signing_keypair.private_key_base64.clone()),
+            author_label: Some("Alice - Chief Financial Officer".to_string()),
+        };
+
+        let enc_res = encrypt_file(
+            input_file.path(),
+            encrypted_file.path(),
+            params,
+            |_, _| {},
+            None,
+        )
+        .expect("Signed encryption failed");
+
+        assert!(enc_res.author_signature_block.is_some());
+
+        // Inspect container and verify signature is mathematically valid
+        let inspection = inspect_container(encrypted_file.path()).expect("Inspection failed");
+        assert_eq!(inspection.version, 2);
+        assert!(inspection.signature_block.is_some());
+        assert_eq!(inspection.is_signature_valid, Some(true));
+        assert_eq!(
+            inspection.signature_block.as_ref().unwrap().author_label,
+            "Alice - Chief Financial Officer"
+        );
     }
 }

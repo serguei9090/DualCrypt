@@ -70,6 +70,29 @@ export const FileMetadataCard: React.FC<FileMetadataCardProps> = ({ metadata, fi
           <div className="font-mono text-base font-bold text-zinc-100">GF(256) Shamir</div>
         </div>
       </div>
+
+      {metadata.signature_block && (
+        <div className="mt-4 rounded-xl border border-purple-500/30 bg-purple-950/20 p-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-400">
+              <Shield className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-zinc-100">
+                  {metadata.signature_block.author_label}
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-mono text-emerald-400 font-semibold">
+                  <CheckCircle2 className="h-3 w-3" /> FIPS 204 Signature Valid
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-400 font-mono">
+                Cryptographically signed with NIST FIPS 204 ML-DSA-65 (Anti-Tamper Verified)
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -25,12 +25,15 @@ export interface StartEncryptRequest {
   threshold_k: number;
   total_n: number;
   custodians: EncryptCustodianRequest[];
+  author_signing_key_base64?: string;
+  author_label?: string;
 }
 
 export interface EncryptResponse {
   job_id: string;
   bytes_encrypted: number;
   exported_shares: ExportedShare[];
+  author_signature_block?: import("./container").DencSignatureBlock;
 }
 
 export interface DecryptCredentialRequest {

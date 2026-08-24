@@ -270,6 +270,18 @@ export async function generatePqcKeypair(): Promise<PqcKeypair> {
   return await invoke<PqcKeypair>("generate_pqc_keypair");
 }
 
+export async function generateMlDsaKeypair(): Promise<PqcKeypair> {
+  if (!isTauriEnvironment()) {
+    // Web fallback key generation
+    return {
+      public_key_base64: "MII...ML_DSA_65_PUBLIC_KEY...",
+      private_key_base64: "MII...ML_DSA_65_PRIVATE_SEED...",
+      algorithm: "NIST-FIPS-204-ML-DSA-65",
+    };
+  }
+  return await invoke<PqcKeypair>("generate_ml_dsa_keypair");
+}
+
 export async function parseKeyFile(filePath: string, pin?: string): Promise<KeyFileParseResult> {
   if (!isTauriEnvironment()) {
     return {

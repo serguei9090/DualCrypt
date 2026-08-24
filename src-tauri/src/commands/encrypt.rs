@@ -36,6 +36,8 @@ pub struct StartEncryptRequest {
     pub threshold_k: u8,
     pub total_n: u8,
     pub custodians: Vec<EncryptCustodianPayload>,
+    pub author_signing_key_base64: Option<String>,
+    pub author_label: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -43,6 +45,7 @@ pub struct EncryptResponse {
     pub job_id: String,
     pub bytes_encrypted: u64,
     pub exported_shares: Vec<ExportedKeyShare>,
+    pub author_signature_block: Option<denc_core::container::DencSignatureBlock>,
 }
 
 #[tauri::command]
@@ -83,6 +86,8 @@ pub async fn start_encryption(
         total_n: request.total_n,
         chunk_size: None,
         custodians,
+        author_signing_key_base64: request.author_signing_key_base64,
+        author_label: request.author_label,
     };
 
     let input_path = request.input_path.clone();
@@ -152,5 +157,6 @@ pub async fn start_encryption(
         job_id,
         bytes_encrypted: result.bytes_encrypted,
         exported_shares: result.exported_shares,
+        author_signature_block: result.author_signature_block,
     })
 }

@@ -1,5 +1,5 @@
 import { save } from "@tauri-apps/plugin-dialog";
-import { AlertTriangle, Lock, Unlock } from "lucide-react";
+import { AlertTriangle, Lock, RefreshCw, ShieldCheck, Unlock } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { FileDropzone } from "./components/dropzone/FileDropzone";
@@ -7,6 +7,7 @@ import { FileMetadataCard } from "./components/dropzone/FileMetadataCard";
 import { KeyEscrowView } from "./components/escrow/KeyEscrowView";
 import { CompleteDialog } from "./components/execution/CompleteDialog";
 import { LiveCryptoProgress } from "./components/execution/LiveCryptoProgress";
+import { AuditHistoryView } from "./components/history/AuditHistoryView";
 import { Header } from "./components/layout/Header";
 import { type ActiveTab, TabNav } from "./components/layout/TabNav";
 import { CustodianGrid } from "./components/quorum/CustodianGrid";
@@ -15,12 +16,15 @@ import { ThresholdMeter } from "./components/quorum/ThresholdMeter";
 import { SettingsTab } from "./components/settings/SettingsTab";
 import { useCryptoJob } from "./hooks/useCryptoJob";
 import { useQuorumState } from "./hooks/useQuorumState";
+import { logAuditEvent } from "./lib/historyStore";
 import {
   executeDecryption,
   executeEncryption,
+  generateMlDsaKeypair,
   inspectDencFile,
   isTauriEnvironment,
 } from "./lib/tauri";
+import { cn, formatBytes } from "./lib/utils";
 import type { AuthType, ContainerHeaderInfo, ExportedShare } from "./types/container";
 
 export const App: React.FC = () => {
@@ -30,6 +34,24 @@ export const App: React.FC = () => {
   const [filePath, setFilePath] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileSize, setFileSize] = useState<number | null>(null);
+
+  // Author Digital Signature State (NIST FIPS 204 ML-DSA-65)
+  const [enableAuthorSignature, setEnableAuthorSignature] = useState(false);
+  const [authorLabel, setAuthorLabel] = useState("Chief Security Officer (CSO)");
+  const [authorSigningKeyBase64, setAuthorSigningKeyBase64] = useState("");
+  const [isGeneratingAuthorKey, setIsGeneratingAuthorKey] = useState(false);
+
+  const handleGenerateAuthorKey = async () => {
+    setIsGeneratingAuthorKey(true);
+    try {
+      const kp = await generateMlDsaKeypair();
+      setAuthorSigningKeyBase64(kp.private_key_base64);
+    } catch (err) {
+      console.error("Failed to generate author signing key:", err);
+    } finally {
+      setIsGeneratingAuthorKey(false);
+    }
+  };
 
   // Inspected Header State (Decrypt mode)
   const [containerMetadata, setContainerMetadata] = useState<ContainerHeaderInfo | null>(null);
@@ -113,6 +135,12 @@ export const App: React.FC = () => {
             passphrase: c.passphrase,
             public_key_base64: c.publicKeyBase64,
           })),
+          author_signing_key_base64:
+            enableAuthorSignature && authorSigningKeyBase64.trim()
+              ? authorSigningKeyBase64.trim()
+              : undefined,
+          author_label:
+            enableAuthorSignature && authorLabel.trim() ? authorLabel.trim() : undefined,
         },
         job.updateProgress,
       );
@@ -123,6 +151,19 @@ export const App: React.FC = () => {
         message: `Successfully encrypted to ${outputPath.split(/[\\/]/).pop()}`,
         bytes: res.bytes_encrypted,
         shares: res.exported_shares,
+      });
+
+      logAuditEvent({
+        action: "encrypt",
+        filename: fileName,
+        fileSizeFormatted: formatBytes(fileSize || res.bytes_encrypted),
+        rawSizeBytes: res.bytes_encrypted,
+        custodianCount: quorum.totalN,
+        thresholdK: quorum.thresholdK,
+        cipherSuite: quorum.cipher,
+        authorSigned: enableAuthorSignature && !!authorSigningKeyBase64.trim(),
+        authorLabel: enableAuthorSignature ? authorLabel : undefined,
+        status: "completed",
       });
     } catch (err) {
       job.failJob(String(err));
@@ -167,6 +208,19 @@ export const App: React.FC = () => {
         message: `Plaintext file restored safely to ${outputPath.split(/[\\/]/).pop()}`,
         bytes: res.bytes_decrypted,
       });
+
+      logAuditEvent({
+        action: "decrypt",
+        filename: fileName,
+        fileSizeFormatted: formatBytes(res.bytes_decrypted),
+        rawSizeBytes: res.bytes_decrypted,
+        custodianCount: quorum.totalN,
+        thresholdK: quorum.thresholdK,
+        cipherSuite: quorum.cipher,
+        authorSigned: !!containerMetadata?.signature_block,
+        authorLabel: containerMetadata?.signature_block?.author_label,
+        status: "completed",
+      });
     } catch (err) {
       job.failJob(String(err));
     }
@@ -202,7 +256,7 @@ export const App: React.FC = () => {
             <button
               type="button"
               onClick={() => job.setError(null)}
-              className="text-rose-400 hover:text-rose-200 underline font-semibold"
+              className="text-rose-400 hover:text-rose-200 underline font-semibold cursor-pointer"
             >
               Dismiss
             </button>
@@ -276,11 +330,94 @@ export const App: React.FC = () => {
                       />
                     </div>
 
+                    {/* Author Digital Signature (NIST FIPS 204 ML-DSA-65) */}
+                    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-3 backdrop-blur-md">
+                      <div className="flex items-center justify-between">
+                        <label className="flex items-center gap-2.5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={enableAuthorSignature}
+                            onChange={(e) => setEnableAuthorSignature(e.target.checked)}
+                            className="h-4 w-4 rounded accent-indigo-600 cursor-pointer"
+                          />
+                          <span className="text-xs font-bold text-zinc-100 flex items-center gap-1.5">
+                            <ShieldCheck className="h-4 w-4 text-indigo-400" />
+                            <span>Digitally Sign Container (NIST FIPS 204 ML-DSA-65)</span>
+                          </span>
+                        </label>
+                        <span className="text-[10px] font-mono text-indigo-300 bg-indigo-950/60 border border-indigo-800/40 px-2 py-0.5 rounded-md">
+                          Anti-Tamper & Origin Proof
+                        </span>
+                      </div>
+
+                      {enableAuthorSignature && (
+                        <div className="space-y-3 pt-1 border-t border-zinc-800 animate-in fade-in">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <label
+                                htmlFor="author-label-input"
+                                className="text-[11px] font-medium text-zinc-300"
+                              >
+                                Author / Officer Identity
+                              </label>
+                              <input
+                                id="author-label-input"
+                                type="text"
+                                value={authorLabel}
+                                onChange={(e) => setAuthorLabel(e.target.value)}
+                                placeholder="e.g. Alice - Chief Security Officer"
+                                className="w-full rounded-xl border border-zinc-750 bg-zinc-950 px-3 py-1.5 text-xs text-zinc-200 focus:border-indigo-500 focus:outline-none"
+                              />
+                            </div>
+
+                            <div className="space-y-1 flex flex-col justify-end">
+                              <button
+                                type="button"
+                                onClick={handleGenerateAuthorKey}
+                                disabled={isGeneratingAuthorKey}
+                                className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-indigo-500/40 bg-indigo-950/40 hover:bg-indigo-900/60 py-2 text-xs font-semibold text-indigo-300 transition-colors cursor-pointer disabled:opacity-40"
+                              >
+                                <RefreshCw
+                                  className={cn(
+                                    "h-3.5 w-3.5",
+                                    isGeneratingAuthorKey && "animate-spin",
+                                  )}
+                                />
+                                <span>
+                                  {isGeneratingAuthorKey
+                                    ? "Generating Key..."
+                                    : "⚡ Generate 1-Click Signing Key"}
+                                </span>
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-[10px] text-zinc-400 font-mono">
+                              <span>ML-DSA-65 Private Signing Key (Base64 Seed)</span>
+                              {authorSigningKeyBase64 && (
+                                <span className="text-emerald-400 flex items-center gap-1">
+                                  <ShieldCheck className="h-3 w-3" /> Key Loaded
+                                </span>
+                              )}
+                            </div>
+                            <input
+                              type="password"
+                              value={authorSigningKeyBase64}
+                              onChange={(e) => setAuthorSigningKeyBase64(e.target.value)}
+                              placeholder="Paste 32-byte Base64 ML-DSA Seed or click generate above..."
+                              className="w-full rounded-xl border border-zinc-750 bg-zinc-950 px-3 py-1.5 text-xs text-zinc-200 font-mono focus:border-indigo-500 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="pt-2">
                       <button
                         type="button"
                         onClick={handleStartEncryption}
-                        className="w-full inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-teal-500 hover:from-cyan-500 hover:to-teal-400 py-4 text-sm font-bold text-white shadow-[0_0_30px_rgba(6,182,212,0.25)] transition-all"
+                        className="w-full inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-teal-500 hover:from-cyan-500 hover:to-teal-400 py-4 text-sm font-bold text-white shadow-[0_0_30px_rgba(6,182,212,0.25)] transition-all cursor-pointer"
                       >
                         <Lock className="h-4 w-4" />
                         <span>Start Zero-Trust Dual-Control Encryption</span>
@@ -337,7 +474,7 @@ export const App: React.FC = () => {
                         type="button"
                         disabled={!quorum.isQuorumMet}
                         onClick={handleStartDecryption}
-                        className="w-full inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 py-4 text-sm font-bold text-white shadow-[0_0_30px_rgba(16,185,129,0.25)] transition-all disabled:opacity-40 disabled:pointer-events-none"
+                        className="w-full inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 py-4 text-sm font-bold text-white shadow-[0_0_30px_rgba(16,185,129,0.25)] transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
                       >
                         <Unlock className="h-4 w-4" />
                         <span>Reconstruct Key & Decrypt File</span>
@@ -351,7 +488,10 @@ export const App: React.FC = () => {
             {/* 3. KEY TOOLS & ESCROW TAB */}
             {activeTab === "keytools" && <KeyEscrowView />}
 
-            {/* 4. SETTINGS & EMAIL DISPATCH TAB */}
+            {/* 4. ACTIVITY & AUDIT HISTORY TAB */}
+            {activeTab === "history" && <AuditHistoryView />}
+
+            {/* 5. SETTINGS & EMAIL DISPATCH TAB */}
             {activeTab === "settings" && <SettingsTab />}
           </>
         )}

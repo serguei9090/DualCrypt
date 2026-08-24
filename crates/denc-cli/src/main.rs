@@ -224,6 +224,8 @@ async fn handle_encrypt(
         total_n,
         chunk_size: None,
         custodians,
+        author_signing_key_base64: None,
+        author_label: None,
     };
 
     let pb = ProgressBar::new(100);

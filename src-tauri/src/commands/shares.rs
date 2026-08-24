@@ -294,3 +294,9 @@ pub fn generate_pqc_keypair() -> Result<denc_core::pqc::PqcKeypair, String> {
     denc_core::pqc::generate_ml_kem_keypair()
         .map_err(|e| format!("ML-KEM keypair generation failed: {e}"))
 }
+
+#[tauri::command]
+pub fn generate_ml_dsa_keypair() -> Result<denc_core::pqc::MlDsaKeypair, String> {
+    denc_core::pqc::generate_ml_dsa_keypair()
+        .map_err(|e| format!("ML-DSA keypair generation failed: {e}"))
+}

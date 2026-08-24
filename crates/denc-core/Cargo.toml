@@ -22,6 +22,7 @@ tar = "0.4"
 base64 = "0.22"
 tempfile = "3.17"
 ml-kem = "0.2"
+ml-dsa = "0.1"
 sha3 = "0.10"
 
 
