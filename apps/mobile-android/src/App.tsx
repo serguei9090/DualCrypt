@@ -1,4 +1,4 @@
-import { Lock, Moon, Smartphone, Sun } from "lucide-react";
+import { Lock, Moon, Shield, Smartphone, Sun, X } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { BiometricGate } from "./components/BiometricGate";
@@ -21,6 +21,7 @@ export const App: React.FC = () => {
   });
   const [authConfig, setAuthConfig] = useState<AuthConfig>(loadAuthConfig());
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [showAirGapInfo, setShowAirGapInfo] = useState(false);
   const [activeScreen, setActiveScreen] = useState<MobileScreen>("vault");
   const [keys, setKeys] = useState<VaultKeyItem[]>([]);
 
@@ -91,15 +92,18 @@ export const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <span
-              className={`px-2 py-0.5 rounded-full text-[10px] font-mono border font-semibold ${
+            <button
+              type="button"
+              onClick={() => setShowAirGapInfo(true)}
+              className={`px-2 py-0.5 rounded-full text-[10px] font-mono border font-semibold cursor-pointer transition-all hover:scale-105 ${
                 theme === "dark"
-                  ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-                  : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25"
+                  : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
               }`}
+              title="Click to view Air-Gap & Isolation guarantees"
             >
               ✈️ OFFLINE
-            </span>
+            </button>
 
             {/* Theme Switcher */}
             <button
@@ -135,6 +139,78 @@ export const App: React.FC = () => {
             )}
           </div>
         </header>
+
+        {/* Air-Gap Security Assurance Modal */}
+        {showAirGapInfo && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+            <div
+              className={`w-full max-w-sm rounded-3xl border p-5 space-y-4 shadow-2xl relative ${
+                theme === "dark"
+                  ? "bg-zinc-950 border-zinc-800 text-white"
+                  : "bg-white border-slate-200 text-slate-900"
+              }`}
+            >
+              <div className="flex items-center justify-between border-b pb-3 border-zinc-800">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                    <Shield className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold font-mono">100% Air-Gapped Security</div>
+                    <div className="text-[10px] text-zinc-400">Zero Network Attack Surface</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAirGapInfo(false)}
+                  className="p-1 rounded-lg text-zinc-400 hover:text-white cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-1">
+                  <div className="font-bold text-emerald-400 flex items-center gap-1.5">
+                    <span>📡 Zero Network Permissions</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-400">
+                    This mobile authenticator requires no Wi-Fi, Bluetooth, or cellular connection.
+                    No telemetry or network sockets exist.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-1">
+                  <div className="font-bold text-cyan-400 flex items-center gap-1.5">
+                    <span>📷 Optical Camera-to-Screen Handshake</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-400">
+                    All cryptographic challenges and signed authorizations pass exclusively via
+                    high-speed animated QR code streams.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-1">
+                  <div className="font-bold text-purple-400 flex items-center gap-1.5">
+                    <span>🔐 Isolated Hardware Keystore</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-400">
+                    Keys are locked in local device storage and protected by your Master PIN &
+                    Biometric sensor.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowAirGapInfo(false)}
+                className="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs cursor-pointer shadow-lg transition-all"
+              >
+                Close Security Passport
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Content Container */}
         <main className="w-full py-1">
