@@ -10,6 +10,8 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
+    "mobile:dev": "bun --cwd apps/mobile-android dev",
+    "mobile:build": "bun --cwd apps/mobile-android build",
     "format": "biome format --write .",
     "lint": "biome check --write ."
   },
