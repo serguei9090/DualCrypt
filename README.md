@@ -4,7 +4,7 @@
 > Engineered with **Rust (`denc-core`, `denc-cli`, `denc-wasm`)**, **Tauri v2**, **React 19**, and **Tailwind CSS**.
 
 > [!NOTE]
-> **Academic & Independent Research Notice**: This project is developed and maintained as an independent open-technology research, portfolio, and educational study initiative. It is not offered for commercial sale.
+> **Research & Open Engineering Initiative**: DualCrypt Enterprise is an open-technology cryptographic research and engineering project.
 
 ---
 

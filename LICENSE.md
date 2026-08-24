@@ -29,12 +29,10 @@ Commercial Restriction:
     the Free Use thresholds) requires express written permission or a commercial
     license agreement from the Licensor.
 
-Notice of Legal & Educational Status:
-    The Licensor is currently developing and maintaining this project as an independent
-    educational, scientific research, and open-technology portfolio endeavor. This
-    software is not currently offered for commercial sale. Organizations requiring
-    extended usage permissions or custom enterprise agreements may contact the Licensor
-    directly.
+Notice of Non-Commercial Distribution:
+    The Licensor develops and maintains this project as an independent open-technology
+    research and educational study endeavor. Organizations requiring extended usage
+    permissions or custom licensing agreements may contact the Licensor directly.
 
 --------------------------------------------------------------------------------
 
