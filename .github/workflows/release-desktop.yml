@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: "Release Tag (e.g. v2.0.0)"
+        description: "Release Tag (e.g. v0.5.0)"
         required: true
-        default: "v2.0.0"
+        default: "v0.5.0"
 
 permissions:
   contents: write
@@ -75,6 +75,6 @@ jobs:
           tagName: ${{ github.ref_name || inputs.release_tag }}
           releaseName: "DualCrypt Enterprise Desktop ${{ github.ref_name || inputs.release_tag }}"
           releaseBody: "Automated multi-platform production release for DualCrypt Threshold & Dual-Control Encryption Platform."
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
