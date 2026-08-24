@@ -1,6 +1,4 @@
-Business Source License 1.1
-
-Parameters
+DualCrypt Source-Available License 1.0
 
 Licensor:
     Serguei (serguei246@gmail.com) / DualCrypt Enterprise
@@ -8,49 +6,44 @@ Licensor:
 Software:
     DualCrypt Enterprise (including denc-core, denc-cli, denc-wasm, desktop and mobile applications).
 
-Change Date:
-    2030-08-24 (4 years from initial release)
-
-Change License:
-    Apache License, Version 2.0 (or at Licensor's option, MIT License)
-
-Additional Use Grant (Free Use):
-    You may make use of the Software, free of charge:
-    1. For personal, educational, research, academic, and non-commercial purposes.
-    2. For commercial internal use by any organization, startup, or non-profit entity
-       that has both:
-       (a) Less than $1,000,000 (USD) in annual gross revenue; AND
-       (b) Fewer than twenty-five (25) employees.
-
-Commercial Restriction:
-    Any use of the Licensed Work that exceeds the Additional Use Grant (such as
-    offering the Software as a hosted service, embedding the Software in a commercial
-    product for resale, or internal commercial deployment by organizations exceeding
-    the Free Use thresholds) requires express written permission or a commercial
-    license agreement from the Licensor.
-
-Notice of Non-Commercial Distribution:
-    The Licensor develops and maintains this project as an independent open-technology
-    research and educational study endeavor. Organizations requiring extended usage
-    permissions or custom licensing agreements may contact the Licensor directly.
-
 --------------------------------------------------------------------------------
 
-Terms
+1. Grant of License
 
-The Licensor hereby grants you the right to copy, modify, create derivative works,
-redistribute, and make non-production and production use of the Licensed Work,
-subject to the terms of this License and the Additional Use Grant above.
+Subject to the terms and conditions of this License, the Licensor hereby grants
+you a worldwide, non-exclusive, non-transferable right to view, copy, modify,
+compile, and run the Software under the Free Use Grant below.
 
-On the Change Date, or the fourth anniversary of the first public release of the
-applicable version of the Software (whichever is earlier), the licensing of the
-Software shall automatically convert to the Change License without requiring any
-further action by the Licensor.
+2. Free Use Grant
 
-All copies of the Licensed Work must retain all copyright and other proprietary
-notices included by the Licensor.
+You may use and run the Software free of charge for:
+    (a) Personal, study, educational, academic, and non-commercial research purposes; AND
+    (b) Internal business operations by any company, startup, or non-profit organization
+        that has BOTH:
+        - Less than $1,000,000 (USD) in annual gross revenue; AND
+        - Fewer than twenty-five (25) employees.
 
-DISCLAIMER OF WARRANTY:
+3. Restrictions
+
+The following uses are strictly prohibited without express prior written permission
+from the Licensor:
+    (a) Reselling, sublicensing, distributing for a fee, or bundling the Software
+        into a commercial product.
+    (b) Operating or offering the Software as a hosted cloud service, managed service,
+        or software-as-a-service (SaaS).
+    (c) Internal use or deployment by any enterprise or organization that exceeds
+        the thresholds in Section 2 (revenue of $1,000,000 USD or more, or 25 or more employees).
+
+Organizations or individuals seeking permission for uses exceeding the Free Use Grant
+may contact the Licensor directly at: serguei246@gmail.com.
+
+4. Research & Open Engineering Notice
+
+The Licensor develops and maintains this project as an independent open-technology
+research and engineering study initiative.
+
+5. Disclaimer of Warranty
+
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE

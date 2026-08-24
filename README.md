@@ -292,16 +292,16 @@ bun run mobile:build
 
 ## 📜 Licensing & Contributor Governance
 
-### 1. Primary License: Business Source License 1.1 (BSL 1.1)
-DualCrypt Enterprise is licensed under the **[Business Source License 1.1 (BSL 1.1)](file:///LICENSE.md)**:
+### 1. Primary License: DualCrypt Source-Available License ([LICENSE.md](file:///LICENSE.md))
+DualCrypt Enterprise is licensed under the **[DualCrypt Source-Available License](file:///LICENSE.md)**:
 
 * **🆓 Free Use Grant**: Use of the software is granted **100% free of charge** for:
-  - Personal, educational, research, academic, and non-commercial purposes.
-  - Commercial internal use by any startup, small business, or organization with **less than \$1,000,000 in annual revenue** AND **fewer than 25 employees**.
-* **🏢 Enterprise & Commercial Inquiry**:
-  - Running a hosted paid service or commercial distribution beyond the Free Use Grant requires permission.
-  - Large organizations seeking evaluation or deployment permissions can contact: [`serguei246@gmail.com`](mailto:serguei246@gmail.com).
-* **⏳ Open Source Change Date**: After **4 years** (`2030-08-24`), each release automatically converts to standard open-source (**Apache License 2.0 / MIT**).
+  - Personal, study, educational, academic, and non-commercial research purposes.
+  - Internal business use by any company, startup, or non-profit organization with **less than \$1,000,000 in annual revenue** AND **fewer than 25 employees**.
+* **🏢 Organizations & Permissions**:
+  - Reselling, redistributing for a fee, or offering the software as a paid hosted cloud/SaaS service requires prior written permission.
+  - Organizations exceeding the Free Use thresholds (revenue $\ge$ \$1M or $\ge$ 25 employees) seeking permission can contact: [`serguei246@gmail.com`](mailto:serguei246@gmail.com).
 
 ### 2. Contributor License Agreement (CLA)
 To ensure long-term architectural integrity and licensing rights, all contributors submitting pull requests must agree to the automated **[Contributor License Agreement (CLA)](file:///CLA.md)** via the repository's CLA bot.
+
