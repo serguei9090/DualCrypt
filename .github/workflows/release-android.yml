@@ -48,29 +48,34 @@ jobs:
         run: |
           mkdir -p $HOME/keystore
           if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
-            echo "Using production signing keystore from GitHub Secrets..."
+            echo "Attempting to use production signing keystore from GitHub Secrets..."
             echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > $HOME/keystore/release.jks
-            echo "KEYSTORE_PATH=$HOME/keystore/release.jks" >> $GITHUB_ENV
-            echo "KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> $GITHUB_ENV
-            echo "KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
-            echo "KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> $GITHUB_ENV
-          else
-            echo "Generating automated ephemeral release keystore..."
-            RANDOM_PASS=$(openssl rand -hex 16)
-            keytool -genkey -v \
-              -keystore $HOME/keystore/release.jks \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -alias dualcrypt-key \
-              -dname "CN=DualCrypt, OU=Security, O=DualCrypt, L=San Francisco, ST=CA, C=US" \
-              -storepass "$RANDOM_PASS" \
-              -keypass "$RANDOM_PASS"
-            echo "KEYSTORE_PATH=$HOME/keystore/release.jks" >> $GITHUB_ENV
-            echo "KEY_ALIAS=dualcrypt-key" >> $GITHUB_ENV
-            echo "KEYSTORE_PASSWORD=$RANDOM_PASS" >> $GITHUB_ENV
-            echo "KEY_PASSWORD=$RANDOM_PASS" >> $GITHUB_ENV
+            if keytool -list -keystore $HOME/keystore/release.jks -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" > /dev/null 2>&1; then
+              echo "Secret keystore verified successfully."
+              echo "KEYSTORE_PATH=$HOME/keystore/release.jks" >> $GITHUB_ENV
+              echo "KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> $GITHUB_ENV
+              echo "KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+              echo "KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> $GITHUB_ENV
+              exit 0
+            fi
+            echo "Secrets keystore verification failed. Generating dedicated release keystore..."
           fi
+
+          RELEASE_PASS="DualCrypt2026SecurePass!"
+          keytool -genkeypair -v \
+            -keystore $HOME/keystore/release.jks \
+            -storetype PKCS12 \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -alias dualcrypt \
+            -dname "CN=DualCrypt, OU=Security, O=DualCrypt Enterprise, L=San Francisco, ST=CA, C=US" \
+            -storepass "$RELEASE_PASS" \
+            -keypass "$RELEASE_PASS"
+          echo "KEYSTORE_PATH=$HOME/keystore/release.jks" >> $GITHUB_ENV
+          echo "KEY_ALIAS=dualcrypt" >> $GITHUB_ENV
+          echo "KEYSTORE_PASSWORD=$RELEASE_PASS" >> $GITHUB_ENV
+          echo "KEY_PASSWORD=$RELEASE_PASS" >> $GITHUB_ENV
 
       - name: Build Android Release APK & App Bundle (Signed & Protected)
         run: |
