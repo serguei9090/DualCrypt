@@ -28,6 +28,8 @@ export const AirGapDesktopModal: React.FC<AirGapDesktopModalProps> = ({
   onResponseReceived,
 }) => {
   const [completedResponse, setCompletedResponse] = useState<AirGapResponse | null>(null);
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [manualInput, setManualInput] = useState("");
 
   // Generate Challenge Frames
   const challengeFrames = useMemo(() => {
@@ -59,6 +61,42 @@ export const AirGapDesktopModal: React.FC<AirGapDesktopModalProps> = ({
       onResponseReceived(resp);
       onClose();
     }, 1200);
+  };
+
+  const handleManualSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualInput.trim()) return;
+
+    let resp: AirGapResponse;
+    try {
+      const parsed = JSON.parse(manualInput);
+      if (parsed.type === "RESPONSE") {
+        resp = parsed;
+      } else {
+        resp = {
+          protocol: "DENC-AIRGAP-V1",
+          type: "RESPONSE",
+          sessionId: `ses_manual_${Date.now()}`,
+          custodianId: custodian.custodian_id,
+          custodianLabel: custodian.label,
+          passphrase: manualInput.trim(),
+          biometricVerified: false,
+          timestamp: new Date().toISOString(),
+        };
+      }
+    } catch {
+      resp = {
+        protocol: "DENC-AIRGAP-V1",
+        type: "RESPONSE",
+        sessionId: `ses_manual_${Date.now()}`,
+        custodianId: custodian.custodian_id,
+        custodianLabel: custodian.label,
+        passphrase: manualInput.trim(),
+        biometricVerified: false,
+        timestamp: new Date().toISOString(),
+      };
+    }
+    handleScanCompleted(resp);
   };
 
   if (!isOpen) return null;
@@ -128,14 +166,53 @@ export const AirGapDesktopModal: React.FC<AirGapDesktopModalProps> = ({
                 <div>
                   <div className="text-sm font-bold text-white">Quorum Share Received!</div>
                   <div className="text-xs text-emerald-300 font-mono mt-1">
-                    Biometric authorization verified
+                    Authorization verified
                   </div>
                 </div>
               </div>
+            ) : showManualInput ? (
+              <form
+                onSubmit={handleManualSubmit}
+                className="w-full max-w-[320px] aspect-square rounded-2xl border border-slate-800 bg-slate-950/80 p-5 flex flex-col justify-between"
+              >
+                <div className="space-y-2">
+                  <span className="text-xs font-bold text-slate-200 block">
+                    Enter Custodian Passphrase or JSON
+                  </span>
+                  <p className="text-[11px] text-slate-400">
+                    If no webcam is connected, enter this slot's passphrase or paste the exported
+                    response payload.
+                  </p>
+                  <textarea
+                    rows={4}
+                    value={manualInput}
+                    onChange={(e) => setManualInput(e.target.value)}
+                    placeholder="Enter slot passphrase or paste response..."
+                    className="w-full text-xs font-mono rounded-xl border border-slate-700 bg-slate-900 p-2.5 text-white placeholder-slate-500 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowManualInput(false)}
+                    className="flex-1 py-2 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 cursor-pointer focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:outline-none"
+                  >
+                    Back to Camera
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold shadow-md cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
+                  >
+                    Submit Share
+                  </button>
+                </div>
+              </form>
             ) : (
               <QrCameraScanner<AirGapResponse>
                 onCompleted={handleScanCompleted}
                 targetDescription="Align phone screen inside crosshairs"
+                onManualInput={() => setShowManualInput(true)}
               />
             )}
 
