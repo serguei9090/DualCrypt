@@ -63,12 +63,12 @@ export const SmtpPanel: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="border-b border-zinc-800 pb-4">
-        <h3 className="text-base font-bold text-zinc-100 flex items-center gap-2">
+      <div className="border-b border-slate-800 pb-4">
+        <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
           <Mail className="h-5 w-5 text-cyan-400" />
           <span>Email & SMTP Relay Service</span>
         </h3>
-        <p className="text-xs text-zinc-400 mt-1">
+        <p className="text-xs text-slate-400 mt-1">
           Configure an enterprise mail server to directly dispatch encrypted .dkey shares and
           custodian credentials.
         </p>
@@ -77,7 +77,7 @@ export const SmtpPanel: React.FC = () => {
       <form onSubmit={handleSaveSmtp} className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="sm:col-span-2 space-y-1.5">
-            <label htmlFor="smtp-host-input" className="text-xs font-semibold text-zinc-300">
+            <label htmlFor="smtp-host-input" className="text-xs font-semibold text-slate-300">
               SMTP Relay Host
             </label>
             <input
@@ -87,12 +87,12 @@ export const SmtpPanel: React.FC = () => {
               value={smtp.host}
               onChange={(e) => setSmtp({ ...smtp, host: e.target.value })}
               placeholder="e.g. smtp.office365.com or mail.org.com"
-              className="w-full rounded-xl border border-zinc-700/80 bg-zinc-950/80 px-3.5 py-2.5 text-xs text-zinc-200 focus:border-cyan-500 focus:outline-none font-mono"
+              className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 px-3.5 py-2.5 text-xs text-slate-200 focus:border-cyan-500 focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none font-mono"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="smtp-port-input" className="text-xs font-semibold text-zinc-300">
+            <label htmlFor="smtp-port-input" className="text-xs font-semibold text-slate-300">
               Port
             </label>
             <input
@@ -104,14 +104,14 @@ export const SmtpPanel: React.FC = () => {
                 setSmtp({ ...smtp, port: Number.parseInt(e.target.value, 10) || 587 })
               }
               placeholder="587"
-              className="w-full rounded-xl border border-zinc-700/80 bg-zinc-950/80 px-3.5 py-2.5 text-xs text-zinc-200 focus:border-cyan-500 focus:outline-none font-mono"
+              className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 px-3.5 py-2.5 text-xs text-slate-200 focus:border-cyan-500 focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none font-mono"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label htmlFor="smtp-security-select" className="text-xs font-semibold text-zinc-300">
+            <label htmlFor="smtp-security-select" className="text-xs font-semibold text-slate-300">
               Security Protocol
             </label>
             <select
@@ -123,7 +123,7 @@ export const SmtpPanel: React.FC = () => {
                   security: e.target.value as "tls" | "starttls" | "none",
                 })
               }
-              className="w-full rounded-xl border border-zinc-700/80 bg-zinc-950/80 px-3.5 py-2.5 text-xs text-zinc-200 focus:border-cyan-500 focus:outline-none"
+              className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 px-3.5 py-2.5 text-xs text-slate-200 focus:border-cyan-500 focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none"
             >
               <option value="starttls">STARTTLS (Recommended / Port 587)</option>
               <option value="tls">Direct TLS / SSL (Port 465)</option>
@@ -132,7 +132,7 @@ export const SmtpPanel: React.FC = () => {
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="smtp-fromname-input" className="text-xs font-semibold text-zinc-300">
+            <label htmlFor="smtp-fromname-input" className="text-xs font-semibold text-slate-300">
               Sender Name
             </label>
             <input
@@ -142,14 +142,14 @@ export const SmtpPanel: React.FC = () => {
               value={smtp.from_name}
               onChange={(e) => setSmtp({ ...smtp, from_name: e.target.value })}
               placeholder="DualCrypt Enterprise Security"
-              className="w-full rounded-xl border border-zinc-700/80 bg-zinc-950/80 px-3.5 py-2.5 text-xs text-zinc-200 focus:border-cyan-500 focus:outline-none"
+              className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 px-3.5 py-2.5 text-xs text-slate-200 focus:border-cyan-500 focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label htmlFor="smtp-fromemail-input" className="text-xs font-semibold text-zinc-300">
+            <label htmlFor="smtp-fromemail-input" className="text-xs font-semibold text-slate-300">
               From Email Address
             </label>
             <input
@@ -159,12 +159,12 @@ export const SmtpPanel: React.FC = () => {
               value={smtp.from_email}
               onChange={(e) => setSmtp({ ...smtp, from_email: e.target.value })}
               placeholder="security-keys@company.com"
-              className="w-full rounded-xl border border-zinc-700/80 bg-zinc-950/80 px-3.5 py-2.5 text-xs text-zinc-200 focus:border-cyan-500 focus:outline-none font-mono"
+              className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 px-3.5 py-2.5 text-xs text-slate-200 focus:border-cyan-500 focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none font-mono"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="smtp-username-input" className="text-xs font-semibold text-zinc-300">
+            <label htmlFor="smtp-username-input" className="text-xs font-semibold text-slate-300">
               SMTP Username / Login
             </label>
             <input
@@ -173,13 +173,13 @@ export const SmtpPanel: React.FC = () => {
               value={smtp.username}
               onChange={(e) => setSmtp({ ...smtp, username: e.target.value })}
               placeholder="relay-user or API key"
-              className="w-full rounded-xl border border-zinc-700/80 bg-zinc-950/80 px-3.5 py-2.5 text-xs text-zinc-200 focus:border-cyan-500 focus:outline-none font-mono"
+              className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 px-3.5 py-2.5 text-xs text-slate-200 focus:border-cyan-500 focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none font-mono"
             />
           </div>
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="smtp-password-input" className="text-xs font-semibold text-zinc-300">
+          <label htmlFor="smtp-password-input" className="text-xs font-semibold text-slate-300">
             SMTP Password / API Token
           </label>
           <input
@@ -188,19 +188,19 @@ export const SmtpPanel: React.FC = () => {
             value={smtp.password || ""}
             onChange={(e) => setSmtp({ ...smtp, password: e.target.value })}
             placeholder="••••••••••••••••••••••••"
-            className="w-full rounded-xl border border-zinc-700/80 bg-zinc-950/80 px-3.5 py-2.5 text-xs text-zinc-200 focus:border-cyan-500 focus:outline-none font-mono"
+            className="w-full rounded-xl border border-slate-700/80 bg-slate-950/80 px-3.5 py-2.5 text-xs text-slate-200 focus:border-cyan-500 focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none font-mono"
           />
         </div>
 
         <div className="flex items-center justify-between pt-2">
-          <div className="flex items-center gap-2 text-xs text-zinc-400">
+          <div className="flex items-center gap-2 text-xs text-slate-400">
             <Lock className="h-3.5 w-3.5 text-cyan-400" />
             <span>Credentials stored locally in workstation configuration vault</span>
           </div>
 
           <button
             type="submit"
-            className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-cyan-600/20 transition-all"
+            className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-cyan-600/20 transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
           >
             <Server className="h-4 w-4" />
             <span>Save SMTP Settings</span>
@@ -216,8 +216,8 @@ export const SmtpPanel: React.FC = () => {
       </form>
 
       {/* Test Connection Box */}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 space-y-3">
-        <div className="flex items-center gap-2 text-xs font-semibold text-zinc-300">
+      <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 space-y-3">
+        <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
           <Mail className="h-4 w-4 text-teal-400" />
           <span>Verify SMTP Dispatch Pipeline</span>
         </div>
@@ -227,13 +227,13 @@ export const SmtpPanel: React.FC = () => {
             value={testRecipient}
             onChange={(e) => setTestRecipient(e.target.value)}
             placeholder="recipient@enterprise.com"
-            className="flex-1 rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-xs text-zinc-200 focus:border-teal-500 focus:outline-none font-mono"
+            className="flex-1 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs text-slate-200 focus:border-teal-500 focus-visible:ring-1 focus-visible:ring-teal-500 focus-visible:outline-none font-mono"
           />
           <button
             type="button"
             onClick={handleTestConnection}
             disabled={isTesting}
-            className="inline-flex items-center gap-2 rounded-xl bg-teal-600 hover:bg-teal-500 px-4 py-2 text-xs font-bold text-white transition-all disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl bg-teal-600 hover:bg-teal-500 px-4 py-2 text-xs font-bold text-white transition-all disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:outline-none"
           >
             <Send className="h-3.5 w-3.5" />
             <span>{isTesting ? "Sending..." : "Test Send"}</span>

@@ -1,4 +1,4 @@
-import { Lock, ShieldAlert, ShieldCheck, Unlock } from "lucide-react";
+import { Lock, Unlock } from "lucide-react";
 import type React from "react";
 import { cn } from "../../lib/utils";
 
@@ -16,7 +16,10 @@ export const ThresholdMeter: React.FC<ThresholdMeterProps> = ({
   isUnlocked,
 }) => {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/80 p-5 backdrop-blur-md">
+    <section
+      aria-label="Cryptographic Quorum Status"
+      className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 p-5 backdrop-blur-md"
+    >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div
@@ -34,55 +37,63 @@ export const ThresholdMeter: React.FC<ThresholdMeterProps> = ({
             )}
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-zinc-100 uppercase tracking-wider">
-              Cryptographic Quorum Status
-            </h3>
-            <p className="text-xs text-zinc-400">
-              {providedCount} of {requiredK} required custodian shares verified ({totalN} total
-              issued)
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-slate-100">
+                {isUnlocked ? "Quorum Threshold Satisfied" : "Quorum Threshold Required"}
+              </h3>
+              <span
+                className={cn(
+                  "font-mono text-xs px-2 py-0.5 rounded-full border font-semibold",
+                  isUnlocked
+                    ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                    : "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
+                )}
+              >
+                {providedCount} / {requiredK} Verified
+              </span>
+            </div>
+            <p className="text-xs text-slate-400">
+              Shamir Secret Sharing over \(GF(256)\) polynomial degree \(t = {requiredK - 1}\)
             </p>
           </div>
         </div>
 
-        <div>
-          {isUnlocked ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1.5 text-xs font-mono font-bold text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
-              <ShieldCheck className="h-4 w-4" /> QUORUM ATTAINED
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1.5 text-xs font-mono font-medium text-amber-400">
-              <ShieldAlert className="h-4 w-4" /> AWAITING SHARES ({requiredK - providedCount}{" "}
-              needed)
-            </span>
-          )}
+        <div className="text-right">
+          <span className="font-mono text-xs text-slate-500">Total Custodians: {totalN}</span>
         </div>
       </div>
 
-      {/* Segmented Quorum Progress Track */}
+      {/* Progress Bar Container with ARIA semantics */}
       <div
-        className="grid gap-2 my-3"
-        style={{ gridTemplateColumns: `repeat(${totalN}, minmax(0, 1fr))` }}
+        role="progressbar"
+        aria-valuenow={providedCount}
+        aria-valuemin={0}
+        aria-valuemax={requiredK}
+        aria-label="Quorum unlock verification progress"
+        className="relative h-3 w-full overflow-hidden rounded-full bg-slate-950 border border-slate-800 p-0.5"
       >
-        {Array.from({ length: totalN }).map((_, idx) => {
-          const isVerified = idx < providedCount;
-          const isRequiredSlot = idx < requiredK;
-          const slotKey = `quorum-slot-${idx + 1}`;
-
-          return (
-            <div
-              key={slotKey}
-              className={cn(
-                "h-3 rounded-full transition-all duration-500 border",
-                isVerified
-                  ? "bg-emerald-500 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.6)]"
-                  : isRequiredSlot
-                    ? "bg-zinc-800/80 border-zinc-700 border-dashed"
-                    : "bg-zinc-900 border-zinc-800",
-              )}
-            />
-          );
-        })}
+        <div
+          className={cn(
+            "h-full rounded-full transition-all duration-500 ease-out",
+            isUnlocked
+              ? "bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_15px_rgba(16,185,129,0.5)]"
+              : "bg-gradient-to-r from-cyan-600 to-teal-500 shadow-[0_0_15px_rgba(6,182,212,0.5)]",
+          )}
+          style={{ width: `${Math.min(100, (providedCount / requiredK) * 100)}%` }}
+        />
       </div>
-    </div>
+
+      {/* Threshold Pin Markers */}
+      <div
+        className="mt-2 flex justify-between text-[11px] font-mono text-slate-500"
+        aria-live="polite"
+      >
+        <span>0 Custodians</span>
+        <span className={cn("font-semibold", isUnlocked ? "text-emerald-400" : "text-cyan-400")}>
+          {isUnlocked ? "✔ Master Key Reconstructible" : `Requires ${requiredK} Keys to Unlock`}
+        </span>
+        <span>{totalN} Custodians</span>
+      </div>
+    </section>
   );
 };

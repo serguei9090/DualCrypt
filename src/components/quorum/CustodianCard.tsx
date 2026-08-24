@@ -401,13 +401,13 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
       className={cn(
         "relative rounded-2xl border p-5 transition-all duration-300 backdrop-blur-md",
         isVerified
-          ? "border-emerald-500/50 bg-zinc-900/90 shadow-[0_0_25px_rgba(16,185,129,0.15)]"
-          : "border-zinc-800 bg-zinc-900/60 hover:border-zinc-750",
+          ? "border-emerald-500/50 bg-slate-900/90 shadow-[0_0_25px_rgba(16,185,129,0.15)]"
+          : "border-slate-800 bg-slate-900/60 hover:border-slate-700",
       )}
     >
-      <div className="flex items-center justify-between mb-4 border-b border-zinc-800/80 pb-3">
+      <div className="flex items-center justify-between mb-4 border-b border-slate-800/80 pb-3">
         <div className="flex items-center gap-3">
-          <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-zinc-800 font-mono text-xs font-bold text-cyan-400 border border-zinc-700">
+          <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-slate-800 font-mono text-xs font-bold text-cyan-400 border border-slate-700">
             P{custodianId}
           </span>
           <div>
@@ -423,12 +423,12 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                     passphrase,
                   });
                 }}
-                className="bg-transparent font-semibold text-sm text-zinc-100 focus:outline-none focus:underline"
+                className="bg-transparent font-semibold text-sm text-slate-100 focus:outline-none focus:underline"
               />
             ) : (
-              <h4 className="text-sm font-semibold text-zinc-100">{label}</h4>
+              <h4 className="text-sm font-semibold text-slate-100">{label}</h4>
             )}
-            <span className="text-[11px] text-zinc-400 font-mono">
+            <span className="text-[11px] text-slate-400 font-mono">
               Custodian Quadrant #{custodianId}
             </span>
           </div>
@@ -477,7 +477,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
             <>
               {/* 4-Way Method Selector for setup mode */}
               {mode === "encrypt_setup" && (
-                <div className="grid grid-cols-4 rounded-xl bg-zinc-950/80 p-1 border border-zinc-800 gap-1">
+                <div className="grid grid-cols-4 rounded-xl bg-slate-950/80 p-1 border border-slate-800 gap-1">
                   <button
                     type="button"
                     onClick={() => {
@@ -485,10 +485,10 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                       onUpdateSetup?.({ label: currentLabel, authType: "passphrase", passphrase });
                     }}
                     className={cn(
-                      "flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] transition-colors",
+                      "flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] transition-colors cursor-pointer focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none",
                       selectedMethod === "passphrase"
-                        ? "bg-zinc-800 text-cyan-400 font-semibold shadow-sm"
-                        : "text-zinc-400 hover:text-zinc-200",
+                        ? "bg-slate-800 text-cyan-400 font-semibold shadow-sm"
+                        : "text-slate-400 hover:text-slate-200",
                     )}
                   >
                     <KeyRound className="h-3.5 w-3.5" /> Pass
@@ -500,10 +500,10 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                       onUpdateSetup?.({ label: currentLabel, authType: "keyfile" });
                     }}
                     className={cn(
-                      "flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] transition-colors",
+                      "flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] transition-colors cursor-pointer focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none",
                       selectedMethod === "keyfile"
-                        ? "bg-zinc-800 text-cyan-400 font-semibold shadow-sm"
-                        : "text-zinc-400 hover:text-zinc-200",
+                        ? "bg-slate-800 text-cyan-400 font-semibold shadow-sm"
+                        : "text-slate-400 hover:text-slate-200",
                     )}
                   >
                     <FileKey className="h-3.5 w-3.5" /> Key File
@@ -515,10 +515,10 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                       onUpdateSetup?.({ label: currentLabel, authType: "yubikey" });
                     }}
                     className={cn(
-                      "flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] transition-colors",
+                      "flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] transition-colors cursor-pointer focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none",
                       selectedMethod === "yubikey"
-                        ? "bg-zinc-800 text-amber-400 font-semibold shadow-sm border border-amber-500/30"
-                        : "text-zinc-400 hover:text-zinc-200",
+                        ? "bg-slate-800 text-amber-400 font-semibold shadow-sm border border-amber-500/30"
+                        : "text-slate-400 hover:text-slate-200",
                     )}
                   >
                     <Cpu className="h-3.5 w-3.5" /> YubiKey
@@ -533,10 +533,10 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                       });
                     }}
                     className={cn(
-                      "flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] transition-colors",
+                      "flex items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] transition-colors cursor-pointer focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none",
                       selectedMethod === "pqc"
                         ? "bg-purple-950/80 text-purple-300 font-semibold shadow-sm border border-purple-500/40"
-                        : "text-zinc-400 hover:text-zinc-200",
+                        : "text-slate-400 hover:text-slate-200",
                     )}
                   >
                     <Atom className="h-3.5 w-3.5" /> PQC KEM
@@ -568,12 +568,12 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                         }
                       }}
                       onKeyDown={(e) => e.key === "Enter" && handlePassphraseSubmit()}
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2.5 pr-10 text-xs text-zinc-100 placeholder-zinc-500 focus:border-cyan-500 focus:outline-none font-mono"
+                      className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 pr-10 text-xs text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none font-mono"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-2.5 text-zinc-500 hover:text-zinc-300"
+                      className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300 cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -583,7 +583,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                     type="button"
                     disabled={!passphrase}
                     onClick={handlePassphraseSubmit}
-                    className="w-full rounded-xl bg-cyan-600/90 hover:bg-cyan-500 py-2.5 text-xs font-semibold text-white transition-colors disabled:opacity-40"
+                    className="w-full rounded-xl bg-cyan-600/90 hover:bg-cyan-500 py-2.5 text-xs font-semibold text-white transition-colors disabled:opacity-40 cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
                   >
                     {mode === "encrypt_setup"
                       ? "Lock & Confirm Credential"
@@ -597,12 +597,12 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                 (mode === "decrypt_unlock" && authType === "keyfile")) && (
                 <div className="space-y-2">
                   {mode === "encrypt_setup" ? (
-                    <div className="rounded-xl border border-dashed border-zinc-700 bg-zinc-950/50 p-4 text-center space-y-2">
+                    <div className="rounded-xl border border-dashed border-slate-700 bg-slate-950/50 p-4 text-center space-y-2">
                       <FileKey className="mx-auto h-6 w-6 text-cyan-400" />
-                      <p className="text-xs font-medium text-zinc-200">
+                      <p className="text-xs font-medium text-slate-200">
                         Exportable Key File (.dkey)
                       </p>
-                      <p className="text-[11px] text-zinc-500">
+                      <p className="text-[11px] text-slate-500">
                         An armored `.dkey` file will be generated for this custodian upon
                         encryption.
                       </p>
@@ -615,7 +615,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                             label: currentLabel,
                           });
                         }}
-                        className="rounded-lg bg-zinc-800 hover:bg-zinc-700 px-4 py-1.5 text-xs text-cyan-300 font-medium"
+                        className="rounded-lg bg-slate-800 hover:bg-slate-700 px-4 py-1.5 text-xs text-cyan-300 font-medium cursor-pointer focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none"
                       >
                         Confirm Key File Slot
                       </button>
@@ -626,7 +626,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                         <button
                           type="button"
                           onClick={handlePickKeyFile}
-                          className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-700 bg-zinc-950/50 py-3 text-xs text-zinc-300 hover:border-cyan-500 hover:text-cyan-400 transition-colors"
+                          className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-slate-700 bg-slate-950/50 py-3 text-xs text-slate-300 hover:border-cyan-500 hover:text-cyan-400 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
                         >
                           <FileKey className="h-4 w-4" />
                           {keyFileName ? keyFileName : "Select .dkey Share File"}
@@ -644,12 +644,12 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                               onChange={(e) => setKeyFilePin(e.target.value)}
                               onKeyDown={(e) => e.key === "Enter" && handleUnlockPinProtectedKey()}
                               placeholder="Enter Key Share PIN..."
-                              className="flex-1 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs text-zinc-200 focus:border-amber-500 focus:outline-none font-mono"
+                              className="flex-1 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 focus:border-amber-500 focus-visible:ring-1 focus-visible:ring-amber-500 focus-visible:outline-none font-mono"
                             />
                             <button
                               type="button"
                               onClick={handleUnlockPinProtectedKey}
-                              className="rounded-xl bg-amber-600 hover:bg-amber-500 px-4 py-2 text-xs font-bold text-white transition-all"
+                              className="rounded-xl bg-amber-600 hover:bg-amber-500 px-4 py-2 text-xs font-bold text-white transition-all cursor-pointer"
                             >
                               Unlock
                             </button>
@@ -669,9 +669,9 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
               {(selectedMethod === "yubikey" ||
                 (mode === "decrypt_unlock" && authType === "yubikey")) && (
                 <div className="space-y-2.5">
-                  <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3.5 space-y-2.5">
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3.5 space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
                         <Cpu className="h-4 w-4 text-amber-400" />
                         <span>Hardware Token Status</span>
                       </div>
@@ -679,7 +679,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                         type="button"
                         onClick={scanForTokens}
                         disabled={isScanningTokens}
-                        className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1"
+                        className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer"
                       >
                         <RefreshCw
                           className={`h-3 w-3 ${isScanningTokens ? "animate-spin" : ""}`}
@@ -698,7 +698,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                         <button
                           type="button"
                           onClick={handleYubikeyAuth}
-                          className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 py-2.5 text-xs font-bold text-white shadow-[0_0_20px_rgba(245,158,11,0.25)] transition-all"
+                          className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 py-2.5 text-xs font-bold text-white shadow-[0_0_20px_rgba(245,158,11,0.25)] transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
                         >
                           <Zap className="h-4 w-4" />
                           <span>
@@ -714,7 +714,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                           <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0" />
                           <span>No Hardware Token Detected</span>
                         </div>
-                        <p className="text-[11px] text-zinc-400">
+                        <p className="text-[11px] text-slate-400">
                           Please insert your physical YubiKey into a USB port, or enable Simulator
                           Mode in the Settings tab.
                         </p>
@@ -736,7 +736,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                   {mode === "encrypt_setup" ? (
                     <div className="space-y-3">
                       {/* Sub-selector for Auto vs Existing */}
-                      <div className="grid grid-cols-2 rounded-lg bg-zinc-950 p-0.5 border border-purple-900/60 text-[11px]">
+                      <div className="grid grid-cols-2 rounded-lg bg-slate-950 p-0.5 border border-purple-900/60 text-[11px]">
                         <button
                           type="button"
                           onClick={() => {
@@ -745,10 +745,10 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                             onUpdateSetup?.({ label: currentLabel, authType: "pqc" });
                           }}
                           className={cn(
-                            "py-1 rounded-md font-medium transition-colors text-center",
+                            "py-1 rounded-md font-medium transition-colors text-center cursor-pointer",
                             pqcMode === "auto"
                               ? "bg-purple-900/60 text-purple-200 shadow-sm"
-                              : "text-zinc-400 hover:text-zinc-200",
+                              : "text-slate-400 hover:text-slate-200",
                           )}
                         >
                           ⚡ Auto-Generate
@@ -760,10 +760,10 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                             setPqcError(null);
                           }}
                           className={cn(
-                            "py-1 rounded-md font-medium transition-colors text-center",
+                            "py-1 rounded-md font-medium transition-colors text-center cursor-pointer",
                             pqcMode === "existing"
                               ? "bg-purple-900/60 text-purple-200 shadow-sm"
-                              : "text-zinc-400 hover:text-zinc-200",
+                              : "text-slate-400 hover:text-slate-200",
                           )}
                         >
                           📂 Use Recipient Key
@@ -776,14 +776,14 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                           <p className="text-xs font-semibold text-purple-200">
                             1-Click Quantum Slot
                           </p>
-                          <p className="text-[11px] text-zinc-400">
+                          <p className="text-[11px] text-slate-400">
                             A fresh NIST FIPS 203 ML-KEM-768 keypair will be generated
                             automatically. You will receive the `.pqc` private key on completion.
                           </p>
                           <button
                             type="button"
                             onClick={handleConfirmPqcSetup}
-                            className="w-full rounded-xl bg-purple-700 hover:bg-purple-600 py-2.5 text-xs font-semibold text-white transition-colors shadow-lg"
+                            className="w-full rounded-xl bg-purple-700 hover:bg-purple-600 py-2.5 text-xs font-semibold text-white transition-colors shadow-lg cursor-pointer focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
                           >
                             Confirm Quantum-Safe Slot
                           </button>
@@ -798,7 +798,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                             <button
                               type="button"
                               onClick={handlePickPqcPublicKeyFile}
-                              className="text-[11px] text-purple-300 hover:underline flex items-center gap-1 font-medium"
+                              className="text-[11px] text-purple-300 hover:underline flex items-center gap-1 font-medium cursor-pointer"
                             >
                               <Upload className="h-3 w-3" />{" "}
                               {pqcPubFileName ? "Change File" : "Choose File"}
@@ -815,7 +815,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                           <div className="space-y-1">
                             <label
                               htmlFor={`pqc-pub-input-${custodianId}`}
-                              className="text-[10px] text-zinc-400 uppercase tracking-wider font-mono"
+                              className="text-[10px] text-slate-400 uppercase tracking-wider font-mono"
                             >
                               Or Paste Recipient Public Key (Base64)
                             </label>
@@ -832,7 +832,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                                 });
                               }}
                               placeholder="Paste recipient's ML-KEM-768 public key base64..."
-                              className="w-full rounded-lg border border-purple-900/60 bg-zinc-950 px-3 py-2 text-[11px] text-zinc-200 font-mono focus:border-purple-500 focus:outline-none"
+                              className="w-full rounded-lg border border-purple-900/60 bg-slate-950 px-3 py-2 text-[11px] text-slate-200 font-mono focus:border-purple-500 focus-visible:ring-1 focus-visible:ring-purple-500 focus-visible:outline-none"
                             />
                           </div>
 
@@ -840,7 +840,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                             type="button"
                             disabled={!pqcPublicKey.trim()}
                             onClick={handleConfirmPqcSetup}
-                            className="w-full rounded-xl bg-purple-600 hover:bg-purple-500 py-2 text-xs font-semibold text-white transition-colors disabled:opacity-40"
+                            className="w-full rounded-xl bg-purple-600 hover:bg-purple-500 py-2 text-xs font-semibold text-white transition-colors disabled:opacity-40 cursor-pointer focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
                           >
                             Confirm Slot with Recipient Key
                           </button>
@@ -858,7 +858,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                           <button
                             type="button"
                             onClick={handlePickPqcPrivateKeyFile}
-                            className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-purple-800/60 bg-purple-950/30 py-3 text-xs text-purple-200 hover:border-purple-500 hover:text-purple-100 transition-colors"
+                            className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-purple-800/60 bg-purple-950/30 py-3 text-xs text-purple-200 hover:border-purple-500 hover:text-purple-100 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
                           >
                             <FileKey className="h-4 w-4 text-purple-400" />
                             {keyFileName ? keyFileName : "Select .pqc Key File"}
@@ -866,10 +866,10 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
 
                           <div className="relative">
                             <div className="absolute inset-0 flex items-center">
-                              <span className="w-full border-t border-zinc-800" />
+                              <span className="w-full border-t border-slate-800" />
                             </div>
                             <div className="relative flex justify-center text-[10px] uppercase font-mono">
-                              <span className="bg-zinc-900 px-2 text-zinc-500">
+                              <span className="bg-slate-900 px-2 text-slate-500">
                                 or paste base64
                               </span>
                             </div>
@@ -884,13 +884,13 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                                 e.key === "Enter" && handlePqcPrivateDecryptSubmit()
                               }
                               placeholder="Paste ML-KEM Private Key..."
-                              className="flex-1 rounded-xl border border-purple-900/60 bg-zinc-950 px-3 py-2 text-[11px] text-zinc-200 font-mono focus:border-purple-500 focus:outline-none"
+                              className="flex-1 rounded-xl border border-purple-900/60 bg-slate-950 px-3 py-2 text-[11px] text-slate-200 font-mono focus:border-purple-500 focus-visible:ring-1 focus-visible:ring-purple-500 focus-visible:outline-none"
                             />
                             <button
                               type="button"
                               disabled={!pqcPrivateKey.trim()}
                               onClick={handlePqcPrivateDecryptSubmit}
-                              className="rounded-xl bg-purple-600 hover:bg-purple-500 px-3 py-2 text-xs font-semibold text-white transition-colors disabled:opacity-40"
+                              className="rounded-xl bg-purple-600 hover:bg-purple-500 px-3 py-2 text-xs font-semibold text-white transition-colors disabled:opacity-40 cursor-pointer focus-visible:ring-1 focus-visible:ring-purple-500 focus-visible:outline-none"
                             >
                               Verify
                             </button>
@@ -911,12 +911,12 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                                 e.key === "Enter" && handleUnlockPinProtectedPqcKey()
                               }
                               placeholder="Enter Key PIN..."
-                              className="flex-1 rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs text-zinc-200 focus:border-amber-500 focus:outline-none font-mono"
+                              className="flex-1 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 focus:border-amber-500 focus-visible:ring-1 focus-visible:ring-amber-500 focus-visible:outline-none font-mono"
                             />
                             <button
                               type="button"
                               onClick={handleUnlockPinProtectedPqcKey}
-                              className="rounded-xl bg-amber-600 hover:bg-amber-500 px-4 py-2 text-xs font-bold text-white transition-all"
+                              className="rounded-xl bg-amber-600 hover:bg-amber-500 px-4 py-2 text-xs font-bold text-white transition-all cursor-pointer"
                             >
                               Unlock
                             </button>
@@ -941,26 +941,25 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                     placeholder="6-digit OTP..."
                     value={otpCode}
                     onChange={(e) => setOtpCode(e.target.value)}
-                    className="w-full font-mono text-center tracking-widest rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-100 placeholder-zinc-600 focus:border-cyan-500 focus:outline-none"
+                    className="w-full font-mono text-center tracking-widest rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-100 placeholder-slate-600 focus:border-cyan-500 focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none"
                   />
                   <button
                     type="button"
                     disabled={otpCode.length !== 6}
                     onClick={() => onCredentialSubmit({ custodianId, authType: "otp" })}
-                    className="rounded-xl bg-cyan-600 px-4 py-2 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-40"
+                    className="rounded-xl bg-cyan-600 px-4 py-2 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-40 cursor-pointer focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none"
                   >
                     Verify
                   </button>
                 </div>
               )}
 
-              {/* Optical Air-Gap Handshake Option */}
               {onAirGapClick && (
-                <div className="pt-2 border-t border-zinc-800/80">
+                <div className="pt-2 border-t border-slate-800/80">
                   <button
                     type="button"
                     onClick={() => onAirGapClick(custodianId)}
-                    className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/30 text-cyan-300 text-xs font-semibold font-mono transition-all cursor-pointer shadow-sm hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]"
+                    className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/30 text-cyan-300 text-xs font-semibold font-mono transition-all cursor-pointer shadow-sm hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
                   >
                     <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
                     <span>📲 100% Air-Gapped Optical Sign-Off</span>
@@ -970,7 +969,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
 
               {/* Time-Lock Recovery Share Option with Interactive Calendar */}
               {mode === "encrypt_setup" && (
-                <div className="pt-2.5 border-t border-zinc-800/80 space-y-2 text-left">
+                <div className="pt-2.5 border-t border-slate-800/80 space-y-2 text-left">
                   <div className="flex items-center justify-between">
                     <label
                       htmlFor={`timelock-toggle-${custodianId}`}
@@ -981,7 +980,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                         id={`timelock-toggle-${custodianId}`}
                         checked={isTimelockEnabled}
                         onChange={(e) => handleToggleTimelock(e.target.checked)}
-                        className="w-3.5 h-3.5 rounded bg-zinc-950 border-zinc-700 text-amber-500 focus:ring-0 focus:ring-offset-0 cursor-pointer accent-amber-500"
+                        className="w-3.5 h-3.5 rounded bg-slate-950 border-slate-700 text-amber-500 focus:ring-0 focus:ring-offset-0 cursor-pointer accent-amber-500"
                       />
                       <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-300">
                         <Clock className="w-3.5 h-3.5 text-amber-400" />
@@ -1000,7 +999,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                       <div className="space-y-1">
                         <label
                           htmlFor={`timelock-date-${custodianId}`}
-                          className="text-[10px] text-zinc-400 font-mono flex items-center gap-1"
+                          className="text-[10px] text-slate-400 font-mono flex items-center gap-1"
                         >
                           <Calendar className="w-3 h-3 text-amber-400" />
                           <span>Release Date & Time (UTC):</span>
@@ -1011,13 +1010,13 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                           min={minDateTime}
                           value={timelockDate}
                           onChange={(e) => handleDateChange(e.target.value)}
-                          className="w-full rounded-lg border border-amber-500/40 bg-zinc-950 px-3 py-1.5 text-xs text-amber-200 font-mono focus:border-amber-400 focus:outline-none"
+                          className="w-full rounded-lg border border-amber-500/40 bg-slate-950 px-3 py-1.5 text-xs text-amber-200 font-mono focus:border-amber-400 focus-visible:ring-1 focus-visible:ring-amber-400 focus-visible:outline-none"
                         />
                       </div>
 
                       {/* Quick Preset Buttons */}
                       <div className="flex items-center gap-1.5 pt-0.5">
-                        <span className="text-[10px] text-zinc-500 font-mono mr-1">Quick:</span>
+                        <span className="text-[10px] text-slate-500 font-mono mr-1">Quick:</span>
                         {[
                           { label: "+30D", days: 30 },
                           { label: "+90D", days: 90 },
@@ -1028,7 +1027,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                             key={preset.days}
                             type="button"
                             onClick={() => handleQuickAddDays(preset.days)}
-                            className="px-2 py-0.5 rounded-md bg-zinc-900 hover:bg-amber-500/20 border border-zinc-800 hover:border-amber-500/40 text-[10px] font-mono text-zinc-300 hover:text-amber-300 transition-colors cursor-pointer"
+                            className="px-2 py-0.5 rounded-md bg-slate-900 hover:bg-amber-500/20 border border-slate-800 hover:border-amber-500/40 text-[10px] font-mono text-slate-300 hover:text-amber-300 transition-colors cursor-pointer"
                           >
                             {preset.label}
                           </button>

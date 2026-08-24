@@ -7,16 +7,24 @@ export default {
     extend: {
       colors: {
         cyber: {
-          bg: "#090d16",
+          bg: "#080b13",
           card: "#0f172a",
           border: "#1e293b",
           cyan: "#06b6d4",
           emerald: "#10b981",
           amber: "#f59e0b",
-          rose: "#f43f5e",
+          rose: "#ef4444",
         },
       },
       fontFamily: {
+        sans: [
+          "Inter",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          '"Segoe UI"',
+          "Roboto",
+          "sans-serif",
+        ],
         mono: ["JetBrains Mono", "Fira Code", "ui-monospace", "monospace"],
       },
     },

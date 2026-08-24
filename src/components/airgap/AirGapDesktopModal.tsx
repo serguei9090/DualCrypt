@@ -65,9 +65,9 @@ export const AirGapDesktopModal: React.FC<AirGapDesktopModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
-      <div className="relative w-full max-w-4xl bg-zinc-950 border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl space-y-4 p-6">
+      <div className="relative w-full max-w-4xl bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl space-y-4 p-6">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
+        <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
               <Smartphone className="w-5 h-5" />
@@ -79,7 +79,7 @@ export const AirGapDesktopModal: React.FC<AirGapDesktopModalProps> = ({
                   Zero Network
                 </span>
               </h2>
-              <p className="text-xs text-zinc-400 font-mono">
+              <p className="text-xs text-slate-400 font-mono">
                 Custodian {custodian.custodian_id}: {custodian.label}
               </p>
             </div>
@@ -88,7 +88,7 @@ export const AirGapDesktopModal: React.FC<AirGapDesktopModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white cursor-pointer transition-colors"
+            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white cursor-pointer transition-colors focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
           >
             <X className="w-4 h-4" />
           </button>
@@ -97,8 +97,8 @@ export const AirGapDesktopModal: React.FC<AirGapDesktopModalProps> = ({
         {/* 2-Way Optical Handshake View */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
           {/* Step 1: Challenge Stream (Desktop -> Phone) */}
-          <div className="flex flex-col items-center bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-4 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
+          <div className="flex flex-col items-center bg-slate-900/50 border border-slate-800/80 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
               <span className="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-[10px] font-mono">
                 1
               </span>
@@ -107,15 +107,15 @@ export const AirGapDesktopModal: React.FC<AirGapDesktopModalProps> = ({
 
             <AnimatedQrStream frames={challengeFrames} size={240} />
 
-            <p className="text-[11px] text-zinc-400 text-center max-w-xs font-sans">
+            <p className="text-[11px] text-slate-400 text-center max-w-xs font-sans">
               Point your offline smartphone camera at this rotating QR loop to read the unlock
               request.
             </p>
           </div>
 
           {/* Step 2: Response Scanner (Phone -> Desktop) */}
-          <div className="flex flex-col items-center bg-zinc-900/50 border border-zinc-800/80 rounded-2xl p-4 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
+          <div className="flex flex-col items-center bg-slate-900/50 border border-slate-800/80 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
               <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px] font-mono">
                 2
               </span>
@@ -139,7 +139,7 @@ export const AirGapDesktopModal: React.FC<AirGapDesktopModalProps> = ({
               />
             )}
 
-            <p className="text-[11px] text-zinc-400 text-center max-w-xs font-sans">
+            <p className="text-[11px] text-slate-400 text-center max-w-xs font-sans">
               Once you approve on your air-gapped phone, hold its flashing response QR screen up to
               your webcam.
             </p>
@@ -147,7 +147,7 @@ export const AirGapDesktopModal: React.FC<AirGapDesktopModalProps> = ({
         </div>
 
         {/* Footer Info */}
-        <div className="flex items-center justify-between border-t border-zinc-800/80 pt-3 text-[11px] text-zinc-500 font-mono">
+        <div className="flex items-center justify-between border-t border-slate-800/80 pt-3 text-[11px] text-slate-500 font-mono">
           <span className="flex items-center gap-1.5">
             <Shield className="w-3.5 h-3.5 text-cyan-400" />
             Physical Air-Gap: No Wi-Fi, Bluetooth, or USB connection required.

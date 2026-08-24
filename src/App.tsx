@@ -305,7 +305,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#070a12] text-slate-100 cyber-grid flex flex-col">
+    <div className="min-h-screen bg-[#080b13] text-slate-100 cyber-grid flex flex-col font-sans">
       <Header
         activeTab={activeTab}
         onTabChange={(tab) => {
@@ -330,7 +330,7 @@ export const App: React.FC = () => {
             <button
               type="button"
               onClick={() => job.setError(null)}
-              className="text-rose-400 hover:text-rose-200 underline font-semibold cursor-pointer"
+              className="text-rose-400 hover:text-rose-200 underline font-semibold cursor-pointer focus-visible:ring-1 focus-visible:ring-rose-500 focus-visible:outline-none rounded"
             >
               Dismiss
             </button>
@@ -400,10 +400,10 @@ export const App: React.FC = () => {
 
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+                        <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
                           Custodian Credentials Configuration ({quorum.totalN} Quadrants)
                         </h3>
-                        <span className="text-xs text-zinc-500 font-mono">
+                        <span className="text-xs text-slate-500 font-mono">
                           Assign passphrases or key files per party
                         </span>
                       </div>
@@ -417,17 +417,17 @@ export const App: React.FC = () => {
                     </div>
 
                     {/* Container Governance & Compliance Manifest */}
-                    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-3 backdrop-blur-md">
+                    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 space-y-3 backdrop-blur-md">
                       <div className="flex items-center justify-between">
                         <label className="flex items-center gap-2.5 cursor-pointer">
                           <input
                             type="checkbox"
                             checked={enableManifest}
                             onChange={(e) => setEnableManifest(e.target.checked)}
-                            className="h-4 w-4 rounded accent-primary cursor-pointer"
+                            className="h-4 w-4 rounded accent-cyan-500 cursor-pointer"
                           />
-                          <span className="text-xs font-bold text-zinc-100 flex items-center gap-1.5">
-                            <Tag className="h-4 w-4 text-primary" />
+                          <span className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
+                            <Tag className="h-4 w-4 text-cyan-400" />
                             <span>Embed Governance & Compliance Manifest (Optional)</span>
                           </span>
                         </label>
@@ -437,10 +437,10 @@ export const App: React.FC = () => {
                       </div>
 
                       {enableManifest && (
-                        <div className="space-y-3 pt-2 border-t border-zinc-800 animate-in fade-in">
+                        <div className="space-y-3 pt-2 border-t border-slate-800 animate-in fade-in">
                           {/* Classification Selector */}
                           <div className="space-y-1.5">
-                            <span className="block text-[11px] font-medium text-zinc-300">
+                            <span className="block text-[11px] font-medium text-slate-300">
                               Security Classification Level
                             </span>
                             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
@@ -448,8 +448,8 @@ export const App: React.FC = () => {
                                 {
                                   id: "TOP_SECRET",
                                   label: "Top Secret 🔴",
-                                  border: "hover:border-red-500",
-                                  active: "bg-red-500/20 text-red-400 border-red-500/50",
+                                  border: "hover:border-rose-500",
+                                  active: "bg-rose-500/20 text-rose-400 border-rose-500/50",
                                 },
                                 {
                                   id: "CONFIDENTIAL",
@@ -481,10 +481,10 @@ export const App: React.FC = () => {
                                   key={lvl.id}
                                   type="button"
                                   onClick={() => setManifestClassification(lvl.id)}
-                                  className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold font-mono border transition-all cursor-pointer ${
+                                  className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold font-mono border transition-all cursor-pointer focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none ${
                                     manifestClassification === lvl.id
                                       ? lvl.active
-                                      : `bg-zinc-950 text-zinc-400 border-zinc-800 ${lvl.border}`
+                                      : `bg-slate-950 text-slate-400 border-slate-800 ${lvl.border}`
                                   }`}
                                 >
                                   {lvl.label}
@@ -497,9 +497,9 @@ export const App: React.FC = () => {
                             <div className="space-y-1">
                               <label
                                 htmlFor="manifest-purpose-input"
-                                className="text-[11px] font-medium text-zinc-300 flex items-center gap-1"
+                                className="text-[11px] font-medium text-slate-300 flex items-center gap-1"
                               >
-                                <FileText className="w-3 h-3 text-zinc-400" />
+                                <FileText className="w-3 h-3 text-slate-400" />
                                 <span>Purpose / Scope Summary</span>
                               </label>
                               <input
@@ -508,16 +508,16 @@ export const App: React.FC = () => {
                                 value={manifestPurpose}
                                 onChange={(e) => setManifestPurpose(e.target.value)}
                                 placeholder="e.g. Q3 Financial Audit & Disaster Recovery Archive"
-                                className="w-full rounded-xl border border-zinc-750 bg-zinc-950 px-3 py-1.5 text-xs text-zinc-200 focus:border-primary focus:outline-none"
+                                className="w-full rounded-xl border border-slate-700/80 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 focus:border-cyan-500 focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none"
                               />
                             </div>
 
                             <div className="space-y-1">
                               <label
                                 htmlFor="manifest-org-input"
-                                className="text-[11px] font-medium text-zinc-300 flex items-center gap-1"
+                                className="text-[11px] font-medium text-slate-300 flex items-center gap-1"
                               >
-                                <Building2 className="w-3 h-3 text-zinc-400" />
+                                <Building2 className="w-3 h-3 text-slate-400" />
                                 <span>Issuing Organization / Dept</span>
                               </label>
                               <input
@@ -526,7 +526,7 @@ export const App: React.FC = () => {
                                 value={manifestOrganization}
                                 onChange={(e) => setManifestOrganization(e.target.value)}
                                 placeholder="e.g. Tokyo Treasury & Corporate Legal"
-                                className="w-full rounded-xl border border-zinc-750 bg-zinc-950 px-3 py-1.5 text-xs text-zinc-200 focus:border-primary focus:outline-none"
+                                className="w-full rounded-xl border border-slate-700/80 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 focus:border-cyan-500 focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none"
                               />
                             </div>
                           </div>
@@ -535,7 +535,7 @@ export const App: React.FC = () => {
                     </div>
 
                     {/* Author Digital Signature (NIST FIPS 204 ML-DSA-65) */}
-                    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-3 backdrop-blur-md">
+                    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 space-y-3 backdrop-blur-md">
                       <div className="flex items-center justify-between">
                         <label className="flex items-center gap-2.5 cursor-pointer">
                           <input
@@ -544,7 +544,7 @@ export const App: React.FC = () => {
                             onChange={(e) => setEnableAuthorSignature(e.target.checked)}
                             className="h-4 w-4 rounded accent-indigo-600 cursor-pointer"
                           />
-                          <span className="text-xs font-bold text-zinc-100 flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-slate-100 flex items-center gap-1.5">
                             <ShieldCheck className="h-4 w-4 text-indigo-400" />
                             <span>Digitally Sign Container (NIST FIPS 204 ML-DSA-65)</span>
                           </span>
@@ -555,12 +555,12 @@ export const App: React.FC = () => {
                       </div>
 
                       {enableAuthorSignature && (
-                        <div className="space-y-3 pt-1 border-t border-zinc-800 animate-in fade-in">
+                        <div className="space-y-3 pt-1 border-t border-slate-800 animate-in fade-in">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="space-y-1">
                               <label
                                 htmlFor="author-label-input"
-                                className="text-[11px] font-medium text-zinc-300"
+                                className="text-[11px] font-medium text-slate-300"
                               >
                                 Author / Officer Identity
                               </label>
@@ -570,7 +570,7 @@ export const App: React.FC = () => {
                                 value={authorLabel}
                                 onChange={(e) => setAuthorLabel(e.target.value)}
                                 placeholder="e.g. Alice - Chief Security Officer"
-                                className="w-full rounded-xl border border-zinc-750 bg-zinc-950 px-3 py-1.5 text-xs text-zinc-200 focus:border-indigo-500 focus:outline-none"
+                                className="w-full rounded-xl border border-slate-700/80 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 focus:border-indigo-500 focus-visible:ring-1 focus-visible:ring-indigo-500 focus-visible:outline-none"
                               />
                             </div>
 
@@ -579,7 +579,7 @@ export const App: React.FC = () => {
                                 type="button"
                                 onClick={handleGenerateAuthorKey}
                                 disabled={isGeneratingAuthorKey}
-                                className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-indigo-500/40 bg-indigo-950/40 hover:bg-indigo-900/60 py-2 text-xs font-semibold text-indigo-300 transition-colors cursor-pointer disabled:opacity-40"
+                                className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-indigo-500/40 bg-indigo-950/40 hover:bg-indigo-900/60 py-2 text-xs font-semibold text-indigo-300 transition-colors cursor-pointer disabled:opacity-40 focus-visible:ring-1 focus-visible:ring-indigo-500 focus-visible:outline-none"
                               >
                                 <RefreshCw
                                   className={cn(
@@ -597,7 +597,7 @@ export const App: React.FC = () => {
                           </div>
 
                           <div className="space-y-1">
-                            <div className="flex items-center justify-between text-[10px] text-zinc-400 font-mono">
+                            <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
                               <span>ML-DSA-65 Private Signing Key (Base64 Seed)</span>
                               {authorSigningKeyBase64 && (
                                 <span className="text-emerald-400 flex items-center gap-1">
@@ -610,7 +610,7 @@ export const App: React.FC = () => {
                               value={authorSigningKeyBase64}
                               onChange={(e) => setAuthorSigningKeyBase64(e.target.value)}
                               placeholder="Paste 32-byte Base64 ML-DSA Seed or click generate above..."
-                              className="w-full rounded-xl border border-zinc-750 bg-zinc-950 px-3 py-1.5 text-xs text-zinc-200 font-mono focus:border-indigo-500 focus:outline-none"
+                              className="w-full rounded-xl border border-slate-700/80 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 font-mono focus:border-indigo-500 focus-visible:ring-1 focus-visible:ring-indigo-500 focus-visible:outline-none"
                             />
                           </div>
                         </div>
@@ -621,7 +621,7 @@ export const App: React.FC = () => {
                       <button
                         type="button"
                         onClick={handleStartEncryption}
-                        className="w-full inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-teal-500 hover:from-cyan-500 hover:to-teal-400 py-4 text-sm font-bold text-white shadow-[0_0_30px_rgba(6,182,212,0.25)] transition-all cursor-pointer"
+                        className="w-full inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-teal-500 hover:from-cyan-500 hover:to-teal-400 py-4 text-sm font-bold text-white shadow-[0_0_30px_rgba(6,182,212,0.25)] transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
                       >
                         <Lock className="h-4 w-4" />
                         <span>Start Zero-Trust Dual-Control Encryption</span>
@@ -658,10 +658,10 @@ export const App: React.FC = () => {
 
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+                        <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
                           Custodian Quorum Authorization
                         </h3>
-                        <span className="text-xs text-zinc-400 font-mono">
+                        <span className="text-xs text-slate-400 font-mono">
                           Submit {quorum.thresholdK} of {quorum.totalN} credentials to unlock
                         </span>
                       </div>
@@ -704,7 +704,7 @@ export const App: React.FC = () => {
                         type="button"
                         disabled={!quorum.isQuorumMet}
                         onClick={handleStartDecryption}
-                        className="w-full inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 py-4 text-sm font-bold text-white shadow-[0_0_30px_rgba(16,185,129,0.25)] transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                        className="w-full inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 py-4 text-sm font-bold text-white shadow-[0_0_30px_rgba(16,185,129,0.25)] transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
                       >
                         <Unlock className="h-4 w-4" />
                         <span>Reconstruct Key & Decrypt File</span>

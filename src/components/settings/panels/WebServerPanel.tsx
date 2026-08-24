@@ -91,13 +91,13 @@ export const WebServerPanel: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="border-b border-zinc-800 pb-4 flex items-center justify-between">
+      <div className="border-b border-slate-800 pb-4 flex items-center justify-between">
         <div>
-          <h3 className="text-base font-bold text-zinc-100 flex items-center gap-2">
+          <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
             <Globe className="h-5 w-5 text-cyan-400" />
             <span>Embedded Local Web Server</span>
           </h3>
-          <p className="text-xs text-zinc-400 mt-1">
+          <p className="text-xs text-slate-400 mt-1">
             Serve the zero-knowledge DualCrypt web application across localhost or your local LAN.
           </p>
         </div>
@@ -105,7 +105,7 @@ export const WebServerPanel: React.FC = () => {
         <button
           type="button"
           onClick={refreshStatus}
-          className="p-2 rounded-lg border border-zinc-700 bg-zinc-800 text-zinc-300 hover:text-white"
+          className="p-2 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:text-white cursor-pointer focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none"
           title="Refresh server status"
         >
           <RefreshCw className="h-3.5 w-3.5" />
@@ -117,7 +117,7 @@ export const WebServerPanel: React.FC = () => {
         className={`p-4 rounded-2xl border transition-all flex items-center justify-between ${
           status.is_running
             ? "bg-emerald-950/20 border-emerald-500/40 shadow-[0_0_25px_rgba(16,185,129,0.15)]"
-            : "bg-zinc-950/60 border-zinc-800"
+            : "bg-slate-950/60 border-slate-800"
         }`}
       >
         <div className="flex items-center gap-3.5">
@@ -125,27 +125,27 @@ export const WebServerPanel: React.FC = () => {
             className={`flex h-10 w-10 items-center justify-center rounded-xl font-bold ${
               status.is_running
                 ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 animate-pulse"
-                : "bg-zinc-800 text-zinc-500 border border-zinc-700"
+                : "bg-slate-800 text-slate-500 border border-slate-700"
             }`}
           >
             <Radio className="h-5 w-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h4 className="text-sm font-bold text-zinc-100">
+              <h4 className="text-sm font-bold text-slate-100">
                 {status.is_running ? "Local Web Server Online" : "Web Server Offline"}
               </h4>
               <span
                 className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold border ${
                   status.is_running
                     ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                    : "bg-zinc-800 text-zinc-400 border-zinc-700"
+                    : "bg-slate-800 text-slate-400 border border-slate-700"
                 }`}
               >
                 {status.is_running ? "ACTIVE" : "STOPPED"}
               </span>
             </div>
-            <p className="text-xs text-zinc-400 font-mono mt-0.5">
+            <p className="text-xs text-slate-400 font-mono mt-0.5">
               {status.is_running ? status.url : "Ready to launch on local port"}
             </p>
           </div>
@@ -155,7 +155,7 @@ export const WebServerPanel: React.FC = () => {
           <button
             type="button"
             onClick={handleOpenBrowser}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-cyan-600/90 hover:bg-cyan-500 px-4 py-2 text-xs font-bold text-white transition-all shadow-md shadow-cyan-500/20"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-cyan-600/90 hover:bg-cyan-500 px-4 py-2 text-xs font-bold text-white transition-all shadow-md shadow-cyan-500/20 cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
           >
             <span>Open Web UI</span>
             <ExternalLink className="h-3.5 w-3.5" />
@@ -164,8 +164,8 @@ export const WebServerPanel: React.FC = () => {
       </div>
 
       {/* Network Interface Mode Selector */}
-      <div className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-5">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+      <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-5">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
           Network Binding & Access Mode
         </h4>
 
@@ -177,19 +177,19 @@ export const WebServerPanel: React.FC = () => {
               setCustomHost("127.0.0.1");
             }}
             disabled={status.is_running}
-            className={`p-4 rounded-xl border text-left transition-all ${
+            className={`p-4 rounded-xl border text-left transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none ${
               networkMode === "localhost"
-                ? "bg-zinc-800/90 border-cyan-500 text-zinc-100 shadow-md shadow-cyan-500/10"
-                : "bg-zinc-900/40 border-zinc-800 text-zinc-400 hover:border-zinc-700"
+                ? "bg-slate-800/90 border-cyan-500 text-slate-100 shadow-md shadow-cyan-500/10"
+                : "bg-slate-900/40 border-slate-800 text-slate-400 hover:border-slate-700"
             }`}
           >
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-xs font-bold flex items-center gap-1.5 text-cyan-400">
                 <Lock className="h-3.5 w-3.5" /> Localhost Only
               </span>
-              <span className="text-[10px] font-mono text-zinc-400">127.0.0.1</span>
+              <span className="text-[10px] font-mono text-slate-400">127.0.0.1</span>
             </div>
-            <p className="text-[11px] text-zinc-400">
+            <p className="text-[11px] text-slate-400">
               Only accessible from this local computer. Safest zero-trust configuration.
             </p>
           </button>
@@ -201,19 +201,19 @@ export const WebServerPanel: React.FC = () => {
               setCustomHost("0.0.0.0");
             }}
             disabled={status.is_running}
-            className={`p-4 rounded-xl border text-left transition-all ${
+            className={`p-4 rounded-xl border text-left transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none ${
               networkMode === "public"
-                ? "bg-zinc-800/90 border-amber-500 text-zinc-100 shadow-md shadow-amber-500/10"
-                : "bg-zinc-900/40 border-zinc-800 text-zinc-400 hover:border-zinc-700"
+                ? "bg-slate-800/90 border-amber-500 text-slate-100 shadow-md shadow-amber-500/10"
+                : "bg-slate-900/40 border-slate-800 text-slate-400 hover:border-slate-700"
             }`}
           >
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-xs font-bold flex items-center gap-1.5 text-amber-400">
                 <Globe className="h-3.5 w-3.5" /> LAN / Public Network
               </span>
-              <span className="text-[10px] font-mono text-zinc-400">0.0.0.0</span>
+              <span className="text-[10px] font-mono text-slate-400">0.0.0.0</span>
             </div>
-            <p className="text-[11px] text-zinc-400">
+            <p className="text-[11px] text-slate-400">
               Exposes server to other devices on your local Wi-Fi or LAN subnet.
             </p>
           </button>
@@ -222,7 +222,7 @@ export const WebServerPanel: React.FC = () => {
         {/* Port & Host Configuration */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
           <div className="sm:col-span-2 space-y-1.5">
-            <label htmlFor="server-host-input" className="text-xs font-semibold text-zinc-300">
+            <label htmlFor="server-host-input" className="text-xs font-semibold text-slate-300">
               Bound Host Interface
             </label>
             <input
@@ -231,12 +231,12 @@ export const WebServerPanel: React.FC = () => {
               disabled={status.is_running}
               value={networkMode === "public" ? "0.0.0.0" : customHost}
               onChange={(e) => setCustomHost(e.target.value)}
-              className="w-full rounded-xl border border-zinc-700/80 bg-zinc-900 px-3.5 py-2 text-xs text-zinc-200 focus:border-cyan-500 focus:outline-none font-mono disabled:opacity-50"
+              className="w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3.5 py-2 text-xs text-slate-200 focus:border-cyan-500 focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none font-mono disabled:opacity-50"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="server-port-input" className="text-xs font-semibold text-zinc-300">
+            <label htmlFor="server-port-input" className="text-xs font-semibold text-slate-300">
               Port
             </label>
             <input
@@ -245,7 +245,7 @@ export const WebServerPanel: React.FC = () => {
               disabled={status.is_running}
               value={port}
               onChange={(e) => setPort(Number.parseInt(e.target.value, 10) || 8080)}
-              className="w-full rounded-xl border border-zinc-700/80 bg-zinc-900 px-3.5 py-2 text-xs text-zinc-200 focus:border-cyan-500 focus:outline-none font-mono disabled:opacity-50"
+              className="w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3.5 py-2 text-xs text-slate-200 focus:border-cyan-500 focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none font-mono disabled:opacity-50"
             />
           </div>
         </div>
@@ -262,8 +262,8 @@ export const WebServerPanel: React.FC = () => {
         )}
 
         {/* Server Start / Stop Controls */}
-        <div className="pt-2 flex items-center justify-between border-t border-zinc-800">
-          <div className="text-[11px] text-zinc-500 font-mono">
+        <div className="pt-2 flex items-center justify-between border-t border-slate-800">
+          <div className="text-[11px] text-slate-500 font-mono">
             CLI Alternative:{" "}
             <span className="text-cyan-400">
               denc serve --host {customHost} --port {port}
@@ -275,7 +275,7 @@ export const WebServerPanel: React.FC = () => {
               type="button"
               onClick={handleStartServer}
               disabled={isLoading}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-emerald-600/20 transition-all disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-emerald-600/20 transition-all disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
             >
               <Play className="h-4 w-4" />
               <span>{isLoading ? "Starting..." : "Start Local Web Server"}</span>
@@ -285,7 +285,7 @@ export const WebServerPanel: React.FC = () => {
               type="button"
               onClick={handleStopServer}
               disabled={isLoading}
-              className="inline-flex items-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-500 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-rose-600/20 transition-all disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-500 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-rose-600/20 transition-all disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-none"
             >
               <Square className="h-4 w-4" />
               <span>{isLoading ? "Stopping..." : "Stop Web Server"}</span>

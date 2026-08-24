@@ -57,14 +57,14 @@ export const AnimatedQrStream: React.FC<AnimatedQrStreamProps> = ({
       {/* Progress Bar & Frame Info */}
       <div className="w-full max-w-[280px] space-y-2">
         <div className="flex items-center justify-between text-xs font-mono">
-          <span className="text-zinc-400">
+          <span className="text-slate-400">
             Frame {currentFrameIndex + 1} of {frames.length}
           </span>
           <span className="text-cyan-400 font-semibold">{fps} FPS</span>
         </div>
 
         {/* Multi-Segment Visual Progress Tracker */}
-        <div className="flex gap-1 h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+        <div className="flex gap-1 h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
           {frames.map((_, idx) => (
             <div
               // biome-ignore lint/suspicious/noArrayIndexKey: Fixed frame stream index
@@ -72,7 +72,7 @@ export const AnimatedQrStream: React.FC<AnimatedQrStreamProps> = ({
               className={`flex-1 transition-colors ${
                 idx === currentFrameIndex
                   ? "bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)]"
-                  : "bg-zinc-700/60"
+                  : "bg-slate-700/60"
               }`}
             />
           ))}
@@ -83,7 +83,7 @@ export const AnimatedQrStream: React.FC<AnimatedQrStreamProps> = ({
           <button
             type="button"
             onClick={() => setIsPlaying(!isPlaying)}
-            className="flex items-center gap-1 text-[11px] font-mono text-zinc-300 hover:text-white px-2 py-1 rounded-lg bg-zinc-800/80 border border-zinc-700 cursor-pointer"
+            className="flex items-center gap-1 text-[11px] font-mono text-slate-300 hover:text-white px-2 py-1 rounded-lg bg-slate-800/80 border border-slate-700 cursor-pointer focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none"
           >
             {isPlaying ? (
               <>
@@ -97,7 +97,7 @@ export const AnimatedQrStream: React.FC<AnimatedQrStreamProps> = ({
           </button>
 
           <div className="flex items-center gap-1.5">
-            <Sliders className="w-3 h-3 text-zinc-500" />
+            <Sliders className="w-3 h-3 text-slate-500" />
             <input
               type="range"
               min="3"
@@ -105,7 +105,7 @@ export const AnimatedQrStream: React.FC<AnimatedQrStreamProps> = ({
               step="1"
               value={fps}
               onChange={(e) => setFps(parseInt(e.target.value, 10))}
-              className="w-20 accent-cyan-400 cursor-pointer h-1.5 bg-zinc-800 rounded-lg"
+              className="w-20 accent-cyan-400 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
               title="Adjust optical transmission frame rate (FPS)"
             />
           </div>

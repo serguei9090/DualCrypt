@@ -127,6 +127,11 @@ The `.denc` container encapsulates the metadata and chunked authenticated stream
   * **`⚡ Auto-Generate` (1-Click)**: Instant auto-keypair generation for quick workflows.
   * **`📂 Use Recipient Key`**: Upload `.pqc.pub` or paste a colleague's public key to encrypt on their behalf.
 * **🔐 Optional PIN / Passphrase Protection for Key Files**: Exported `.dkey` (SSS) and `.pqc` / `.dsa` files can be PIN-protected via Argon2id key derivation and authenticated AES-256-GCM encryption.
+* **🎨 Standardized Cyber-Minimalist Enterprise Interface**:
+  * **Unified Dark Palette**: Strict adherence to `#080B13` obsidian background, `slate-900` surface cards, and `slate-800` borders across all 5 navigation tabs.
+  * **Typography Matrix**: `Inter` for clean high-contrast readability and `JetBrains Mono` for cryptographic fingerprints, key hashes, and container digests.
+  * **Accessible Keyboard Navigation & ARIA**: Full WCAG 2.1 compliance with visible cyan focus rings (`focus-visible:ring-cyan-500`), live regions (`aria-live="polite"`), semantic `<section>` landmarks, and `progressbar` roles on threshold meters.
+  * **Interactive Visual Feedback**: Smooth split-screen progress feedback for custodians, real-time threshold meters, and glowing status pills for tamper-evident provenance.
 * **📦 Bulk Key Packaging & Direct Dispatch**: Export all custodian keys in a single ZIP archive (`.zip`) with `README_CUSTODIAN_KEYS.txt`, copy Base64 public/private keys directly to the clipboard, or dispatch via SMTP email with custom instructions.
 * **🌐 Embedded Zero-Knowledge Web Server**: Self-host locally from the desktop app or run headlessly via CLI (`denc serve`) with flexible interface binding:
   * `🔒 Localhost Only (127.0.0.1)` for local-machine security.

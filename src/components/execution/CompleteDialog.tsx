@@ -299,15 +299,15 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
   };
 
   return (
-    <div className="rounded-2xl border border-emerald-500/40 bg-zinc-950/95 p-6 shadow-2xl backdrop-blur-xl space-y-5">
+    <div className="rounded-2xl border border-emerald-500/40 bg-slate-950/95 p-6 shadow-2xl backdrop-blur-xl space-y-5">
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-zinc-800 pb-4">
+      <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
         <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-400">
           <CheckCircle2 className="h-6 w-6" />
         </div>
         <div>
-          <h3 className="text-base font-bold text-zinc-100">{title}</h3>
-          <p className="text-xs text-zinc-400">{message}</p>
+          <h3 className="text-base font-bold text-slate-100">{title}</h3>
+          <p className="text-xs text-slate-400">{message}</p>
         </div>
       </div>
 
@@ -318,10 +318,10 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
       )}
 
       {/* Verified Payload Size Card */}
-      <div className="bg-zinc-900/60 rounded-xl p-4 border border-zinc-800 flex items-center justify-between">
+      <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-800 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-emerald-400" />
-          <span className="text-xs text-zinc-300 font-medium">Verified Payload Size:</span>
+          <span className="text-xs text-slate-300 font-medium">Verified Payload Size:</span>
         </div>
         <span className="font-mono text-sm font-bold text-emerald-400">
           {formatBytes(bytesProcessed)}
@@ -333,10 +333,10 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h4 className="text-xs font-semibold text-zinc-200 uppercase tracking-wider">
+              <h4 className="text-xs font-semibold text-slate-200 uppercase tracking-wider">
                 Exported Custodian Key Shares & Tokens ({exportedShares.length} Slots)
               </h4>
-              <p className="text-[11px] text-zinc-400">
+              <p className="text-[11px] text-slate-400">
                 Download key files, copy public/private keys, or email directly. Optional PIN
                 protection encrypts key material.
               </p>
@@ -347,7 +347,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
               type="button"
               onClick={handleBulkSaveZip}
               className={cn(
-                "inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-xs font-bold transition-all shadow-lg",
+                "inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-xs font-bold transition-all shadow-lg cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none",
                 zipSavedPath
                   ? "border-emerald-500/40 bg-emerald-500/20 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.2)]"
                   : "border-cyan-500/50 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white shadow-[0_0_15px_rgba(6,182,212,0.2)]",
@@ -377,7 +377,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
               return (
                 <div
                   key={s.custodian_id}
-                  className="flex flex-col lg:flex-row lg:items-center justify-between bg-zinc-900/90 border border-zinc-800 p-3.5 rounded-xl hover:border-zinc-700 transition-colors gap-3"
+                  className="flex flex-col lg:flex-row lg:items-center justify-between bg-slate-900/90 border border-slate-800 p-3.5 rounded-xl hover:border-slate-700 transition-colors gap-3"
                 >
                   <div className="flex items-center gap-3">
                     <span
@@ -385,14 +385,14 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                         "font-mono text-xs px-2.5 py-1 rounded-lg border font-bold",
                         isPqc
                           ? "bg-purple-950/60 text-purple-400 border-purple-800/60"
-                          : "bg-zinc-800 text-cyan-400 border-zinc-700",
+                          : "bg-slate-800 text-cyan-400 border-slate-700",
                       )}
                     >
                       P{s.custodian_id}
                     </span>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-zinc-100 font-medium">{s.label}</span>
+                        <span className="text-xs text-slate-100 font-medium">{s.label}</span>
                         {isPqc ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-purple-950/80 border border-purple-500/30 px-2 py-0.5 text-[9px] font-mono text-purple-300">
                             <Atom className="h-2.5 w-2.5 text-purple-400" />
@@ -405,7 +405,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                           </span>
                         )}
                       </div>
-                      <div className="text-[11px] text-zinc-500 font-mono">
+                      <div className="text-[11px] text-slate-500 font-mono">
                         {isSaved
                           ? `✓ ${savedName}`
                           : isPqc
@@ -417,7 +417,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
 
                   <div className="flex flex-wrap items-center gap-2">
                     {/* Optional PIN Input */}
-                    <div className="flex items-center gap-1 bg-zinc-950 border border-zinc-750 px-2 py-1 rounded-lg">
+                    <div className="flex items-center gap-1 bg-slate-950 border border-slate-700 px-2 py-1 rounded-lg">
                       <KeyRound className="h-3 w-3 text-amber-400" />
                       <input
                         type="text"
@@ -426,7 +426,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                           setSharePins({ ...sharePins, [s.custodian_id]: e.target.value })
                         }
                         placeholder="PIN (Optional)"
-                        className="w-24 bg-transparent text-[11px] text-zinc-200 focus:outline-none font-mono"
+                        className="w-24 bg-transparent text-[11px] text-slate-200 focus:outline-none font-mono"
                       />
                     </div>
 
@@ -437,7 +437,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                         onClick={() =>
                           handleCopyText(s.pqc_public_key_base64 || "", `pub-${s.custodian_id}`)
                         }
-                        className="inline-flex items-center gap-1 rounded-lg bg-zinc-800 hover:bg-purple-700 text-zinc-300 hover:text-white px-2 py-1.5 text-xs font-semibold border border-zinc-700 hover:border-purple-500 transition-all"
+                        className="inline-flex items-center gap-1 rounded-lg bg-slate-800 hover:bg-purple-700 text-slate-300 hover:text-white px-2 py-1.5 text-xs font-semibold border border-slate-700 hover:border-purple-500 transition-all cursor-pointer focus-visible:ring-1 focus-visible:ring-purple-500 focus-visible:outline-none"
                         title="Copy NIST FIPS 203 ML-KEM-768 Public Key Base64"
                       >
                         {copiedKey === `pub-${s.custodian_id}` ? (
@@ -458,7 +458,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                         onClick={() =>
                           handleCopyText(s.pqc_private_key_base64 || "", `priv-${s.custodian_id}`)
                         }
-                        className="inline-flex items-center gap-1 rounded-lg bg-zinc-800 hover:bg-purple-700 text-zinc-300 hover:text-white px-2 py-1.5 text-xs font-semibold border border-zinc-700 hover:border-purple-500 transition-all"
+                        className="inline-flex items-center gap-1 rounded-lg bg-slate-800 hover:bg-purple-700 text-slate-300 hover:text-white px-2 py-1.5 text-xs font-semibold border border-slate-700 hover:border-purple-500 transition-all cursor-pointer focus-visible:ring-1 focus-visible:ring-purple-500 focus-visible:outline-none"
                         title="Copy NIST FIPS 203 ML-KEM-768 Private Key Base64"
                       >
                         {copiedKey === `priv-${s.custodian_id}` ? (
@@ -477,7 +477,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                       <button
                         type="button"
                         onClick={() => handleSavePublicKey(s)}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-800 hover:bg-purple-900/80 text-purple-300 hover:text-white px-2.5 py-1.5 text-xs font-semibold border border-purple-900/60 hover:border-purple-500 transition-all"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 hover:bg-purple-900/80 text-purple-300 hover:text-white px-2.5 py-1.5 text-xs font-semibold border border-purple-900/60 hover:border-purple-500 transition-all cursor-pointer focus-visible:ring-1 focus-visible:ring-purple-500 focus-visible:outline-none"
                         title="Download shareable .pqc.pub public key"
                       >
                         <Download className="h-3.5 w-3.5 text-purple-400" />
@@ -489,7 +489,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                     <button
                       type="button"
                       onClick={() => handleOpenEmailModal(s)}
-                      className="relative inline-flex items-center gap-1 rounded-lg bg-zinc-800 hover:bg-teal-600 text-zinc-300 hover:text-white px-2.5 py-1.5 text-xs font-semibold border border-zinc-700 hover:border-teal-500 transition-all"
+                      className="relative inline-flex items-center gap-1 rounded-lg bg-slate-800 hover:bg-teal-600 text-slate-300 hover:text-white px-2.5 py-1.5 text-xs font-semibold border border-slate-700 hover:border-teal-500 transition-all cursor-pointer focus-visible:ring-1 focus-visible:ring-teal-500 focus-visible:outline-none"
                       title={
                         !smtpConfig
                           ? "SMTP server is not configured in Settings"
@@ -501,7 +501,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                       {!smtpConfig && (
                         <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500 border border-zinc-900" />
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500 border border-slate-900" />
                         </span>
                       )}
                     </button>
@@ -511,12 +511,12 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                       type="button"
                       onClick={() => handleSaveShare(s)}
                       className={cn(
-                        "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
+                        "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none",
                         isSaved
                           ? "border border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
                           : isPqc
                             ? "bg-purple-900/80 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-700 hover:border-purple-400"
-                            : "bg-zinc-800 hover:bg-cyan-600 text-zinc-200 hover:text-white border border-zinc-700 hover:border-cyan-500",
+                            : "bg-slate-800 hover:bg-cyan-600 text-slate-200 hover:text-white border border-slate-700 hover:border-cyan-500",
                       )}
                     >
                       <Download className="h-3.5 w-3.5" />
@@ -530,7 +530,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                       <button
                         type="button"
                         onClick={() => onEnrollPhone(s)}
-                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold bg-cyan-950/40 hover:bg-cyan-900/60 text-cyan-300 hover:text-cyan-200 border border-cyan-500/30 hover:border-cyan-400 transition-all cursor-pointer"
+                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold bg-cyan-950/40 hover:bg-cyan-900/60 text-cyan-300 hover:text-cyan-200 border border-cyan-500/30 hover:border-cyan-400 transition-all cursor-pointer focus-visible:ring-1 focus-visible:ring-cyan-500 focus-visible:outline-none"
                         title="Display QR code for the Android Authenticator App to scan and store"
                       >
                         <Smartphone className="h-3.5 w-3.5 text-cyan-400" />
@@ -548,18 +548,18 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
       {/* Direct Email Modal */}
       {emailModalShare && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-zinc-700 bg-zinc-900 p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+          <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <Mail className="h-5 w-5 text-teal-400" />
-                <h4 className="text-sm font-bold text-zinc-100">
+                <h4 className="text-sm font-bold text-slate-100">
                   Email Key Token: {emailModalShare.label}
                 </h4>
               </div>
               <button
                 type="button"
                 onClick={() => setEmailModalShare(null)}
-                className="text-zinc-400 hover:text-zinc-200"
+                className="text-slate-400 hover:text-slate-200 cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -572,7 +572,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                 <button
                   type="button"
                   onClick={() => setEmailModalShare(null)}
-                  className="rounded-xl bg-zinc-800 hover:bg-zinc-700 px-4 py-2 text-xs font-bold text-zinc-200"
+                  className="rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-2 text-xs font-bold text-slate-200 cursor-pointer"
                 >
                   Close
                 </button>
@@ -586,7 +586,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                       <div className="font-semibold text-rose-300">
                         SMTP Email Server Not Configured
                       </div>
-                      <p className="text-[11px] text-zinc-300 mt-0.5">
+                      <p className="text-[11px] text-slate-300 mt-0.5">
                         The outbound SMTP email server has not been configured yet. Please configure
                         your email server credentials in the Settings tab before sending keys.
                       </p>
@@ -597,7 +597,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                 <div className="space-y-1">
                   <label
                     htmlFor="custodian-email-input"
-                    className="text-xs font-semibold text-zinc-300"
+                    className="text-xs font-semibold text-slate-300"
                   >
                     Custodian Email Address
                   </label>
@@ -608,12 +608,15 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                     value={recipientEmail}
                     onChange={(e) => setRecipientEmail(e.target.value)}
                     placeholder="custodian@company.com"
-                    className="w-full rounded-xl border border-zinc-750 bg-zinc-950 px-3 py-2 text-xs text-zinc-200 focus:border-teal-500 focus:outline-none font-mono"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 focus:border-teal-500 focus-visible:ring-1 focus-visible:ring-teal-500 focus-visible:outline-none font-mono"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label htmlFor="admin-note-input" className="text-xs font-semibold text-zinc-300">
+                  <label
+                    htmlFor="admin-note-input"
+                    className="text-xs font-semibold text-slate-300"
+                  >
                     Admin Instructions / Custom Note (Optional)
                   </label>
                   <textarea
@@ -622,11 +625,11 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                     value={customNote}
                     onChange={(e) => setCustomNote(e.target.value)}
                     placeholder="e.g. Please save this key file to your secure encrypted USB drive."
-                    className="w-full rounded-xl border border-zinc-750 bg-zinc-950 px-3 py-2 text-xs text-zinc-200 focus:border-teal-500 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 focus:border-teal-500 focus-visible:ring-1 focus-visible:ring-teal-500 focus-visible:outline-none"
                   />
                 </div>
 
-                <div className="p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-[11px] text-zinc-400 space-y-1 font-mono">
+                <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-400 space-y-1 font-mono">
                   <div>
                     Attachment:{" "}
                     <span className="text-teal-400">
@@ -656,14 +659,14 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                   <button
                     type="button"
                     onClick={() => setEmailModalShare(null)}
-                    className="flex-1 rounded-xl border border-zinc-700 bg-zinc-800 py-2.5 text-xs font-bold text-zinc-300 hover:bg-zinc-700"
+                    className="flex-1 rounded-xl border border-slate-700 bg-slate-800 py-2.5 text-xs font-bold text-slate-300 hover:bg-slate-700 cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSendingEmail || !smtpConfig}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 py-2.5 text-xs font-bold text-white transition-all disabled:opacity-40"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 py-2.5 text-xs font-bold text-white transition-all disabled:opacity-40 cursor-pointer"
                   >
                     <Send className="h-3.5 w-3.5" />
                     <span>{isSendingEmail ? "Sending..." : "Send Email"}</span>
@@ -676,11 +679,11 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
       )}
 
       {/* Done Button */}
-      <div className="pt-2 border-t border-zinc-850">
+      <div className="pt-2 border-t border-slate-800">
         <button
           type="button"
           onClick={onDone}
-          className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-3.5 text-xs font-bold text-white transition-colors shadow-lg"
+          className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 py-3.5 text-xs font-bold text-white transition-colors shadow-lg cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
         >
           <span>Return to Workspace</span>
           <ArrowRight className="h-4 w-4" />

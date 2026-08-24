@@ -322,20 +322,20 @@ export const KeyEscrowView: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="rounded-2xl border border-amber-500/30 bg-zinc-900/60 p-6 backdrop-blur-md space-y-2">
+      <div className="rounded-2xl border border-amber-500/30 bg-slate-900/60 p-6 backdrop-blur-md space-y-2">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
             <Atom className="h-6 w-6 text-purple-400" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-zinc-100 flex items-center gap-2">
+            <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
               <span>Enterprise Key Escrow & Post-Quantum Vault</span>
               <span className="inline-flex items-center gap-1 rounded-full bg-purple-950/80 border border-purple-500/30 px-2 py-0.5 text-[10px] font-mono text-purple-300">
                 <Sparkles className="h-2.5 w-2.5 text-purple-400" />
                 FIPS 203
               </span>
             </h3>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-slate-400">
               Generate standalone quantum-safe keypairs, distribute shareable public keys
               (`.pqc.pub`), and verify key tokens offline.
             </p>
@@ -345,11 +345,11 @@ export const KeyEscrowView: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 1. STANDALONE POST-QUANTUM KEYPAIR GENERATOR */}
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5 space-y-4 backdrop-blur-md">
-          <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 space-y-4 backdrop-blur-md">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-purple-400" />
-              <h4 className="text-sm font-bold text-zinc-100">
+              <h4 className="text-sm font-bold text-slate-100">
                 1.{" "}
                 {keyAlgo === "ml-dsa"
                   ? "Post-Quantum Digital Signing Keypair"
@@ -362,7 +362,7 @@ export const KeyEscrowView: React.FC = () => {
           </div>
 
           {/* Algorithm Mode Switcher */}
-          <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-zinc-950 border border-zinc-800">
+          <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-950 border border-slate-800">
             <button
               type="button"
               onClick={() => {
@@ -370,10 +370,10 @@ export const KeyEscrowView: React.FC = () => {
                 setGeneratedKeypair(null);
               }}
               className={cn(
-                "py-1.5 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                "py-1.5 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer focus-visible:ring-1 focus-visible:ring-purple-500 focus-visible:outline-none",
                 keyAlgo === "ml-kem"
                   ? "bg-purple-600 text-white shadow-sm"
-                  : "text-zinc-400 hover:text-zinc-200",
+                  : "text-slate-400 hover:text-slate-200",
               )}
             >
               <Atom className="h-3.5 w-3.5" />
@@ -386,10 +386,10 @@ export const KeyEscrowView: React.FC = () => {
                 setGeneratedKeypair(null);
               }}
               className={cn(
-                "py-1.5 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                "py-1.5 px-3 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer focus-visible:ring-1 focus-visible:ring-indigo-500 focus-visible:outline-none",
                 keyAlgo === "ml-dsa"
                   ? "bg-indigo-600 text-white shadow-sm"
-                  : "text-zinc-400 hover:text-zinc-200",
+                  : "text-slate-400 hover:text-slate-200",
               )}
             >
               <ShieldCheck className="h-3.5 w-3.5" />
@@ -397,7 +397,7 @@ export const KeyEscrowView: React.FC = () => {
             </button>
           </div>
 
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-slate-400">
             {keyAlgo === "ml-dsa"
               ? "Generate an authorized NIST FIPS 204 digital signature keypair. Keep your Private Signing Key secret and distribute the Public Certificate (.dsa.pub) for anti-tamper container verification."
               : "Generate an asymmetric keypair in advance. Keep your Private Key secret and distribute your Public Key (.pqc.pub) to anyone who needs to encrypt files for you."}
@@ -405,7 +405,7 @@ export const KeyEscrowView: React.FC = () => {
 
           <div className="space-y-3">
             <div className="space-y-1">
-              <label htmlFor="pqc-custodian-label" className="text-xs font-semibold text-zinc-300">
+              <label htmlFor="pqc-custodian-label" className="text-xs font-semibold text-slate-300">
                 {keyAlgo === "ml-dsa"
                   ? "Author / Officer Identity Label"
                   : "Custodian Identity / Label"}
@@ -416,14 +416,14 @@ export const KeyEscrowView: React.FC = () => {
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
                 placeholder="e.g. Alice - Chief Financial Officer"
-                className="w-full rounded-xl border border-zinc-750 bg-zinc-950 px-3 py-2 text-xs text-zinc-200 focus:border-purple-500 focus:outline-none"
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 focus:border-purple-500 focus-visible:ring-1 focus-visible:ring-purple-500 focus-visible:outline-none"
               />
             </div>
 
             {/* Optional PIN Protection */}
-            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 space-y-2">
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3 space-y-2">
               <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-xs font-medium text-zinc-300 flex items-center gap-1.5">
+                <span className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
                   <KeyRound className="h-3.5 w-3.5 text-amber-400" />
                   <span>Protect Private Key with PIN</span>
                 </span>
@@ -431,7 +431,7 @@ export const KeyEscrowView: React.FC = () => {
                   type="checkbox"
                   checked={enablePin}
                   onChange={(e) => setEnablePin(e.target.checked)}
-                  className="h-4 w-4 rounded accent-purple-600"
+                  className="h-4 w-4 rounded accent-purple-600 cursor-pointer"
                 />
               </label>
 
@@ -442,9 +442,9 @@ export const KeyEscrowView: React.FC = () => {
                     value={pinCode}
                     onChange={(e) => setPinCode(e.target.value)}
                     placeholder="Set 4-12 digit PIN or passphrase..."
-                    className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200 font-mono focus:border-amber-500 focus:outline-none"
+                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-200 font-mono focus:border-amber-500 focus-visible:ring-1 focus-visible:ring-amber-500 focus-visible:outline-none"
                   />
-                  <p className="text-[10px] text-zinc-500 mt-1">
+                  <p className="text-[10px] text-slate-500 mt-1">
                     Protects the private key file with Argon2id + AES-256-GCM.
                   </p>
                 </div>
@@ -456,7 +456,7 @@ export const KeyEscrowView: React.FC = () => {
               type="button"
               disabled={isGenerating || !label.trim()}
               onClick={handleGenerateKeypair}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 py-3 text-xs font-bold text-white shadow-[0_0_20px_rgba(147,51,234,0.25)] transition-all disabled:opacity-40 cursor-pointer"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 py-3 text-xs font-bold text-white shadow-[0_0_20px_rgba(147,51,234,0.25)] transition-all disabled:opacity-40 cursor-pointer focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
             >
               <RefreshCw className={cn("h-3.5 w-3.5", isGenerating && "animate-spin")} />
               <span>
@@ -486,11 +486,11 @@ export const KeyEscrowView: React.FC = () => {
 
               {/* Public Key Preview */}
               <div className="space-y-1">
-                <div className="flex items-center justify-between text-[10px] uppercase font-mono text-zinc-400">
+                <div className="flex items-center justify-between text-[10px] uppercase font-mono text-slate-400">
                   <span>Public Key (Shareable)</span>
                   <span className="text-purple-400">1184 Bytes</span>
                 </div>
-                <div className="p-2.5 rounded-lg bg-zinc-950 border border-purple-900/60 font-mono text-[11px] text-zinc-300 break-all max-h-16 overflow-y-auto">
+                <div className="p-2.5 rounded-lg bg-slate-950 border border-purple-900/60 font-mono text-[11px] text-slate-300 break-all max-h-16 overflow-y-auto">
                   {generatedKeypair.public_key_base64}
                 </div>
               </div>
@@ -501,7 +501,7 @@ export const KeyEscrowView: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleSavePublicKey}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-purple-500/50 bg-purple-900/40 hover:bg-purple-800/60 py-2 text-xs font-semibold text-purple-200 hover:text-white transition-colors cursor-pointer"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-purple-500/50 bg-purple-900/40 hover:bg-purple-800/60 py-2 text-xs font-semibold text-purple-200 hover:text-white transition-colors cursor-pointer focus-visible:ring-1 focus-visible:ring-purple-500 focus-visible:outline-none"
                   title={
                     keyAlgo === "ml-dsa"
                       ? "Save NIST FIPS 204 ML-DSA-65 public certificate"
@@ -516,7 +516,7 @@ export const KeyEscrowView: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleSavePrivateKey}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 py-2 text-xs font-bold text-white transition-colors shadow-sm cursor-pointer"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 py-2 text-xs font-bold text-white transition-colors shadow-sm cursor-pointer focus-visible:ring-1 focus-visible:ring-purple-500 focus-visible:outline-none"
                   title="Save secret private key (keep confidential)"
                 >
                   <Download className="h-3.5 w-3.5" />
@@ -527,7 +527,7 @@ export const KeyEscrowView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleCopyText(generatedKeypair.public_key_base64, "pub-key")}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-800 hover:bg-zinc-750 py-1.5 text-xs text-zinc-300 hover:text-white transition-colors"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 py-1.5 text-xs text-slate-300 hover:text-white transition-colors cursor-pointer focus-visible:ring-1 focus-visible:ring-purple-500 focus-visible:outline-none"
                 >
                   {copiedKey === "pub-key" ? (
                     <Check className="h-3.5 w-3.5 text-emerald-400" />
@@ -546,7 +546,7 @@ export const KeyEscrowView: React.FC = () => {
                     setEmailError(null);
                     setEmailModalOpen(true);
                   }}
-                  className="relative inline-flex items-center justify-center gap-1.5 rounded-lg border border-teal-600/40 bg-teal-950/40 hover:bg-teal-900/60 py-1.5 text-xs text-teal-300 hover:text-white transition-colors"
+                  className="relative inline-flex items-center justify-center gap-1.5 rounded-lg border border-teal-600/40 bg-teal-950/40 hover:bg-teal-900/60 py-1.5 text-xs text-teal-300 hover:text-white transition-colors cursor-pointer focus-visible:ring-1 focus-visible:ring-teal-500 focus-visible:outline-none"
                   title={
                     !smtpConfig
                       ? "SMTP server is not configured in Settings"
@@ -558,7 +558,7 @@ export const KeyEscrowView: React.FC = () => {
                   {!smtpConfig && (
                     <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500 border border-zinc-900" />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500 border border-slate-900" />
                     </span>
                   )}
                 </button>
@@ -568,11 +568,11 @@ export const KeyEscrowView: React.FC = () => {
         </div>
 
         {/* 2. KEY FILE INSPECTOR & OFFLINE VERIFIER */}
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5 space-y-4 backdrop-blur-md">
-          <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 space-y-4 backdrop-blur-md">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <div className="flex items-center gap-2">
               <FileCheck className="h-4 w-4 text-cyan-400" />
-              <h4 className="text-sm font-bold text-zinc-100">
+              <h4 className="text-sm font-bold text-slate-100">
                 2. Key Token Inspector & PIN Verifier
               </h4>
             </div>
@@ -581,7 +581,7 @@ export const KeyEscrowView: React.FC = () => {
             </span>
           </div>
 
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-slate-400">
             Inspect any `.dkey`, `.pqc`, or `.pqc.pub` file to view its metadata and test its PIN
             protection without initiating a decryption process.
           </p>
@@ -590,7 +590,7 @@ export const KeyEscrowView: React.FC = () => {
             type="button"
             disabled={isInspecting}
             onClick={handlePickInspectFile}
-            className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-700 bg-zinc-950/60 py-4 text-xs text-zinc-300 hover:border-cyan-500 hover:text-cyan-300 transition-colors disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-slate-700 bg-slate-950/60 py-4 text-xs text-slate-300 hover:border-cyan-500 hover:text-cyan-300 transition-colors disabled:opacity-50 cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
           >
             <Upload className={cn("h-4 w-4 text-cyan-400", isInspecting && "animate-spin")} />
             <span>
@@ -604,9 +604,9 @@ export const KeyEscrowView: React.FC = () => {
 
           {/* Inspector Details */}
           {inspectorResult && (
-            <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 space-y-3">
-              <div className="flex items-center justify-between border-b border-zinc-850 pb-2">
-                <span className="text-xs font-semibold text-zinc-200">{inspectedFileName}</span>
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                <span className="text-xs font-semibold text-slate-200">{inspectedFileName}</span>
                 <span
                   className={cn(
                     "text-[10px] font-mono px-2 py-0.5 rounded-full border",
@@ -627,13 +627,13 @@ export const KeyEscrowView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div>
-                  <span className="text-zinc-500 text-[11px]">Algorithm:</span>
-                  <div className="font-mono text-zinc-200 text-[11px]">
+                  <span className="text-slate-500 text-[11px]">Algorithm:</span>
+                  <div className="font-mono text-slate-200 text-[11px]">
                     {inspectorResult.algorithm || "N/A"}
                   </div>
                 </div>
                 <div>
-                  <span className="text-zinc-500 text-[11px]">Security Status:</span>
+                  <span className="text-slate-500 text-[11px]">Security Status:</span>
                   <div className="font-mono text-[11px]">
                     {inspectorResult.isPinProtected ? (
                       <span className="text-amber-400 font-semibold flex items-center gap-1">
@@ -650,8 +650,8 @@ export const KeyEscrowView: React.FC = () => {
 
               {/* In-Memory PIN Test */}
               {inspectorResult.isPinProtected && (
-                <div className="pt-2 border-t border-zinc-850 space-y-2">
-                  <span className="text-[11px] font-semibold text-zinc-300">
+                <div className="pt-2 border-t border-slate-800 space-y-2">
+                  <span className="text-[11px] font-semibold text-slate-300">
                     Test Unlock PIN in Memory:
                   </span>
                   <div className="flex gap-2">
@@ -661,12 +661,12 @@ export const KeyEscrowView: React.FC = () => {
                       onChange={(e) => setTestPin(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleTestPinUnlock()}
                       placeholder="Enter PIN to test..."
-                      className="flex-1 rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200 font-mono focus:border-amber-500 focus:outline-none"
+                      className="flex-1 rounded-xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-200 font-mono focus:border-amber-500 focus-visible:ring-1 focus-visible:ring-amber-500 focus-visible:outline-none"
                     />
                     <button
                       type="button"
                       onClick={handleTestPinUnlock}
-                      className="rounded-xl bg-amber-600 hover:bg-amber-500 px-3 py-1.5 text-xs font-bold text-white transition-colors"
+                      className="rounded-xl bg-amber-600 hover:bg-amber-500 px-3 py-1.5 text-xs font-bold text-white transition-colors cursor-pointer"
                     >
                       Test
                     </button>
@@ -692,16 +692,16 @@ export const KeyEscrowView: React.FC = () => {
       {/* Direct Email Modal for Public Key */}
       {emailModalOpen && generatedKeypair && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-zinc-700 bg-zinc-900 p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+          <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <Mail className="h-5 w-5 text-teal-400" />
-                <h4 className="text-sm font-bold text-zinc-100">Email Public Key: {label}</h4>
+                <h4 className="text-sm font-bold text-slate-100">Email Public Key: {label}</h4>
               </div>
               <button
                 type="button"
                 onClick={() => setEmailModalOpen(false)}
-                className="text-zinc-400 hover:text-zinc-200"
+                className="text-slate-400 hover:text-slate-200 cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -714,7 +714,7 @@ export const KeyEscrowView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setEmailModalOpen(false)}
-                  className="rounded-xl bg-zinc-800 hover:bg-zinc-700 px-4 py-2 text-xs font-bold text-zinc-200"
+                  className="rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-2 text-xs font-bold text-slate-200 cursor-pointer"
                 >
                   Close
                 </button>
@@ -728,7 +728,7 @@ export const KeyEscrowView: React.FC = () => {
                       <div className="font-semibold text-rose-300">
                         SMTP Email Server Not Configured
                       </div>
-                      <p className="text-[11px] text-zinc-300 mt-0.5">
+                      <p className="text-[11px] text-slate-300 mt-0.5">
                         The outbound SMTP email server has not been configured yet. Please configure
                         your email host, port, and credentials in the Settings tab before sending
                         keys.
@@ -746,7 +746,7 @@ export const KeyEscrowView: React.FC = () => {
                 <div className="space-y-1">
                   <label
                     htmlFor="email-recipient-input"
-                    className="text-xs font-semibold text-zinc-300"
+                    className="text-xs font-semibold text-slate-300"
                   >
                     Recipient / Admin Email Address
                   </label>
@@ -757,12 +757,15 @@ export const KeyEscrowView: React.FC = () => {
                     value={recipientEmail}
                     onChange={(e) => setRecipientEmail(e.target.value)}
                     placeholder="security@company.com"
-                    className="w-full rounded-xl border border-zinc-750 bg-zinc-950 px-3 py-2 text-xs text-zinc-200 focus:border-teal-500 focus:outline-none font-mono"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 focus:border-teal-500 focus-visible:ring-1 focus-visible:ring-teal-500 focus-visible:outline-none font-mono"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label htmlFor="email-note-input" className="text-xs font-semibold text-zinc-300">
+                  <label
+                    htmlFor="email-note-input"
+                    className="text-xs font-semibold text-slate-300"
+                  >
                     Instructions / Message (Optional)
                   </label>
                   <textarea
@@ -771,11 +774,11 @@ export const KeyEscrowView: React.FC = () => {
                     value={customNote}
                     onChange={(e) => setCustomNote(e.target.value)}
                     placeholder="e.g. Please use this public key when encrypting confidential archives for my slot."
-                    className="w-full rounded-xl border border-zinc-750 bg-zinc-950 px-3 py-2 text-xs text-zinc-200 focus:border-teal-500 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 focus:border-teal-500 focus-visible:ring-1 focus-visible:ring-teal-500 focus-visible:outline-none"
                   />
                 </div>
 
-                <div className="p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-[11px] text-zinc-400 space-y-1 font-mono">
+                <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-400 space-y-1 font-mono">
                   <div>
                     Attachment:{" "}
                     <span className="text-teal-400">{label.replace(/\s+/g, "_")}.pqc.pub</span>
@@ -787,14 +790,14 @@ export const KeyEscrowView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setEmailModalOpen(false)}
-                    className="flex-1 rounded-xl border border-zinc-700 bg-zinc-800 py-2.5 text-xs font-bold text-zinc-300 hover:bg-zinc-700"
+                    className="flex-1 rounded-xl border border-slate-700 bg-slate-800 py-2.5 text-xs font-bold text-slate-300 hover:bg-slate-700 cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSendingEmail || !smtpConfig}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 py-2.5 text-xs font-bold text-white transition-all disabled:opacity-40"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 py-2.5 text-xs font-bold text-white transition-all disabled:opacity-40 cursor-pointer"
                   >
                     <Send className="h-3.5 w-3.5" />
                     <span>{isSendingEmail ? "Sending..." : "Send Public Key"}</span>
@@ -808,24 +811,24 @@ export const KeyEscrowView: React.FC = () => {
 
       {/* 3. Theoretical & Security Guarantees */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-        <div className="bg-zinc-950/70 p-4 rounded-xl border border-zinc-800 space-y-2">
-          <h4 className="text-xs font-semibold text-zinc-200">Zero Trust Guarantee</h4>
-          <p className="text-[11px] text-zinc-400 leading-relaxed">
+        <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-2">
+          <h4 className="text-xs font-semibold text-slate-200">Zero Trust Guarantee</h4>
+          <p className="text-[11px] text-slate-400 leading-relaxed">
             Any party with fewer than \(k\) shares has zero mathematical knowledge of the key, even
             against quantum adversaries.
           </p>
         </div>
-        <div className="bg-zinc-950/70 p-4 rounded-xl border border-zinc-800 space-y-2">
-          <h4 className="text-xs font-semibold text-zinc-200">Memory Hygiene</h4>
-          <p className="text-[11px] text-zinc-400 leading-relaxed">
+        <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-2">
+          <h4 className="text-xs font-semibold text-slate-200">Memory Hygiene</h4>
+          <p className="text-[11px] text-slate-400 leading-relaxed">
             Reconstructed keys and shares implement{" "}
-            <code className="text-cyan-400">ZeroizeOnDrop</code> and are immediately purged after
-            stream initiation.
+            <code className="text-cyan-400 font-mono">ZeroizeOnDrop</code> and are immediately
+            purged after stream initiation.
           </p>
         </div>
-        <div className="bg-zinc-950/70 p-4 rounded-xl border border-zinc-800 space-y-2">
-          <h4 className="text-xs font-semibold text-zinc-200">Tamper Evident</h4>
-          <p className="text-[11px] text-zinc-400 leading-relaxed">
+        <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-2">
+          <h4 className="text-xs font-semibold text-slate-200">Tamper Evident</h4>
+          <p className="text-[11px] text-slate-400 leading-relaxed">
             Authenticated STREAM cipher with per-chunk MAC tags prevents any byte manipulation or
             chunk reordering.
           </p>
