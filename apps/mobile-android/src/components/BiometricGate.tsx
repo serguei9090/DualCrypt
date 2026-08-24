@@ -98,7 +98,7 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
           </h2>
           <p
             className={`text-xs max-w-xs mx-auto ${
-              theme === "dark" ? "text-zinc-400" : "text-slate-500"
+              theme === "dark" ? "text-slate-400" : "text-slate-500"
             }`}
           >
             Configure your Master PIN and biometric hardware protection to secure offline key
@@ -111,7 +111,7 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
             <label
               htmlFor="setup-pin"
               className={`text-xs font-semibold ${
-                theme === "dark" ? "text-zinc-300" : "text-slate-700"
+                theme === "dark" ? "text-slate-300" : "text-slate-700"
               }`}
             >
               Create 4-8 Digit Master PIN
@@ -124,9 +124,9 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
               value={setupPin}
               onChange={(e) => setSetupPin(e.target.value)}
               placeholder="••••"
-              className={`w-full text-center tracking-widest font-mono text-base rounded-xl border px-3 py-2.5 focus:outline-none ${
+              className={`w-full text-center tracking-widest font-mono text-base rounded-xl border px-3 py-2.5 transition-all focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none ${
                 theme === "dark"
-                  ? "border-zinc-800 bg-zinc-950 text-white focus:border-cyan-500"
+                  ? "border-slate-800 bg-slate-950 text-white placeholder-slate-600 focus:border-cyan-500"
                   : "border-slate-300 bg-white text-slate-900 focus:border-cyan-600 shadow-sm"
               }`}
             />
@@ -136,7 +136,7 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
             <label
               htmlFor="confirm-pin"
               className={`text-xs font-semibold ${
-                theme === "dark" ? "text-zinc-300" : "text-slate-700"
+                theme === "dark" ? "text-slate-300" : "text-slate-700"
               }`}
             >
               Confirm Master PIN
@@ -149,9 +149,9 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
               value={confirmPin}
               onChange={(e) => setConfirmPin(e.target.value)}
               placeholder="••••"
-              className={`w-full text-center tracking-widest font-mono text-base rounded-xl border px-3 py-2.5 focus:outline-none ${
+              className={`w-full text-center tracking-widest font-mono text-base rounded-xl border px-3 py-2.5 transition-all focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none ${
                 theme === "dark"
-                  ? "border-zinc-800 bg-zinc-950 text-white focus:border-cyan-500"
+                  ? "border-slate-800 bg-slate-950 text-white placeholder-slate-600 focus:border-cyan-500"
                   : "border-slate-300 bg-white text-slate-900 focus:border-cyan-600 shadow-sm"
               }`}
             />
@@ -160,7 +160,7 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
           <label
             className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer ${
               theme === "dark"
-                ? "bg-zinc-900 border-zinc-800 text-zinc-200"
+                ? "bg-slate-900 border-slate-800 text-slate-200"
                 : "bg-white border-slate-200 text-slate-800 shadow-sm"
             }`}
           >
@@ -177,7 +177,7 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
               </span>
               <span
                 className={`text-[10px] block ${
-                  theme === "dark" ? "text-zinc-400" : "text-slate-500"
+                  theme === "dark" ? "text-slate-400" : "text-slate-500"
                 }`}
               >
                 {hardwareAvailable === false
@@ -188,12 +188,12 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
           </label>
 
           {setupError && (
-            <p className="text-xs text-rose-500 font-mono text-center">{setupError}</p>
+            <p className="text-xs text-rose-400 font-mono text-center">{setupError}</p>
           )}
 
           <button
             type="submit"
-            className="w-full py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all cursor-pointer"
+            className="w-full py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
           >
             Save Security Profile & Enter Vault
           </button>
@@ -205,9 +205,9 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
   return (
     <div className="w-full max-w-sm space-y-6 py-6 text-center animate-in fade-in">
       <div
-        className={`w-20 h-20 rounded-3xl border flex items-center justify-center mx-auto ${
+        className={`w-20 h-20 rounded-2xl border flex items-center justify-center mx-auto ${
           theme === "dark"
-            ? "bg-zinc-900 border-cyan-500/30 text-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.15)]"
+            ? "bg-slate-900 border-cyan-500/30 text-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.15)]"
             : "bg-white border-cyan-300 text-cyan-600 shadow-md"
         }`}
       >
@@ -220,7 +220,7 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
         </h2>
         <p
           className={`text-xs mt-1 max-w-xs mx-auto ${
-            theme === "dark" ? "text-zinc-400" : "text-slate-500"
+            theme === "dark" ? "text-slate-400" : "text-slate-500"
           }`}
         >
           Authenticate to access your offline custodian keys.
@@ -233,7 +233,7 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
             type="button"
             onClick={handleBiometricAuth}
             disabled={isPrompting}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all cursor-pointer disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all cursor-pointer disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
           >
             <Fingerprint className="w-5 h-5" />
             <span>
@@ -245,19 +245,19 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
         <div className="relative flex py-1 items-center">
           <div
             className={`flex-grow border-t ${
-              theme === "dark" ? "border-zinc-800" : "border-slate-300"
+              theme === "dark" ? "border-slate-800" : "border-slate-300"
             }`}
           />
           <span
             className={`flex-shrink mx-3 text-[10px] uppercase font-mono ${
-              theme === "dark" ? "text-zinc-500" : "text-slate-400"
+              theme === "dark" ? "text-slate-500" : "text-slate-400"
             }`}
           >
             Or Master PIN
           </span>
           <div
             className={`flex-grow border-t ${
-              theme === "dark" ? "border-zinc-800" : "border-slate-300"
+              theme === "dark" ? "border-slate-800" : "border-slate-300"
             }`}
           />
         </div>
@@ -269,17 +269,17 @@ export const BiometricGate: React.FC<BiometricGateProps> = ({
             value={unlockPin}
             onChange={(e) => setUnlockPin(e.target.value)}
             placeholder="Enter Master PIN"
-            className={`flex-1 rounded-xl border px-3 py-2 text-center text-sm font-mono tracking-widest focus:outline-none ${
+            className={`flex-1 rounded-xl border px-3 py-2 text-center text-sm font-mono tracking-widest transition-all focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none ${
               theme === "dark"
-                ? "border-zinc-800 bg-zinc-950 text-white focus:border-cyan-500"
+                ? "border-slate-800 bg-slate-950 text-white placeholder-slate-600 focus:border-cyan-500"
                 : "border-slate-300 bg-white text-slate-900 focus:border-cyan-600 shadow-sm"
             }`}
           />
           <button
             type="submit"
-            className={`px-4 py-2 rounded-xl text-xs font-semibold font-mono cursor-pointer border ${
+            className={`px-4 py-2 rounded-xl text-xs font-semibold font-mono cursor-pointer border transition-all focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none ${
               theme === "dark"
-                ? "bg-zinc-800 hover:bg-zinc-700 text-white border-zinc-700"
+                ? "bg-slate-800 hover:bg-slate-700 text-white border-slate-700"
                 : "bg-slate-800 hover:bg-slate-900 text-white border-slate-800"
             }`}
           >

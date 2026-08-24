@@ -51,7 +51,7 @@ export const App: React.FC = () => {
   return (
     <div
       className={`min-h-screen flex flex-col p-4 max-w-md mx-auto justify-between transition-colors duration-200 ${
-        theme === "dark" ? "bg-[#07080d] text-slate-100" : "bg-slate-100 text-slate-900"
+        theme === "dark" ? "bg-[#080b13] text-slate-100" : "bg-slate-100 text-slate-900"
       }`}
     >
       <div className="w-full space-y-4">
@@ -59,7 +59,7 @@ export const App: React.FC = () => {
         <header
           className={`w-full flex items-center justify-between py-2.5 px-3 rounded-2xl border backdrop-blur-md transition-colors ${
             theme === "dark"
-              ? "border-zinc-800/80 bg-zinc-950/70"
+              ? "border-slate-800/80 bg-slate-950/70"
               : "border-slate-300/80 bg-white/80 shadow-sm"
           }`}
         >
@@ -83,7 +83,7 @@ export const App: React.FC = () => {
               </div>
               <div
                 className={`text-[10px] font-mono ${
-                  theme === "dark" ? "text-zinc-400" : "text-slate-500"
+                  theme === "dark" ? "text-slate-400" : "text-slate-500"
                 }`}
               >
                 Android Air-Gapped Enclave
@@ -96,9 +96,9 @@ export const App: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowAirGapInfo(true)}
-              className={`p-1.5 rounded-xl border transition-colors cursor-pointer ${
+              className={`p-1.5 rounded-xl border transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none ${
                 theme === "dark"
-                  ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700"
+                  ? "bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700"
                   : "bg-slate-200 border-slate-300 text-slate-600 hover:text-slate-900"
               }`}
               title="Air-Gap Security & Architecture Info"
@@ -110,9 +110,9 @@ export const App: React.FC = () => {
             <button
               type="button"
               onClick={toggleTheme}
-              className={`p-1.5 rounded-xl border transition-colors cursor-pointer ${
+              className={`p-1.5 rounded-xl border transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none ${
                 theme === "dark"
-                  ? "bg-zinc-900 border-zinc-800 text-amber-400 hover:text-amber-300"
+                  ? "bg-slate-900 border-slate-800 text-amber-400 hover:text-amber-300"
                   : "bg-slate-200 border-slate-300 text-slate-700 hover:text-slate-950"
               }`}
               title={theme === "dark" ? "Switch to Light Theme" : "Switch to Dark Theme"}
@@ -128,9 +128,9 @@ export const App: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsUnlocked(false)}
-                className={`p-1.5 rounded-xl border transition-colors cursor-pointer ${
+                className={`p-1.5 rounded-xl border transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none ${
                   theme === "dark"
-                    ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white"
+                    ? "bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
                     : "bg-slate-200 border-slate-300 text-slate-600 hover:text-slate-900"
                 }`}
                 title="Lock Authenticator"
@@ -145,57 +145,57 @@ export const App: React.FC = () => {
         {showAirGapInfo && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
             <div
-              className={`w-full max-w-sm rounded-3xl border p-5 space-y-4 shadow-2xl relative ${
+              className={`w-full max-w-sm rounded-2xl border p-5 space-y-4 shadow-2xl relative ${
                 theme === "dark"
-                  ? "bg-zinc-950 border-zinc-800 text-white"
+                  ? "bg-slate-950 border-slate-800 text-white"
                   : "bg-white border-slate-200 text-slate-900"
               }`}
             >
-              <div className="flex items-center justify-between border-b pb-3 border-zinc-800">
+              <div className="flex items-center justify-between border-b pb-3 border-slate-800">
                 <div className="flex items-center gap-2">
                   <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
                     <Shield className="w-4 h-4" />
                   </div>
                   <div>
                     <div className="text-xs font-bold font-mono">100% Air-Gapped Security</div>
-                    <div className="text-[10px] text-zinc-400">Zero Network Attack Surface</div>
+                    <div className="text-[10px] text-slate-400">Zero Network Attack Surface</div>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowAirGapInfo(false)}
-                  className="p-1 rounded-lg text-zinc-400 hover:text-white cursor-pointer"
+                  className="p-1 rounded-lg text-slate-400 hover:text-white cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
               <div className="space-y-3 text-xs">
-                <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-1">
+                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
                   <div className="font-bold text-emerald-400 flex items-center gap-1.5">
                     <span>📡 Zero Network Permissions</span>
                   </div>
-                  <p className="text-[11px] text-zinc-400">
+                  <p className="text-[11px] text-slate-400">
                     This mobile authenticator requires no Wi-Fi, Bluetooth, or cellular connection.
                     No telemetry or network sockets exist.
                   </p>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-1">
+                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
                   <div className="font-bold text-cyan-400 flex items-center gap-1.5">
                     <span>📷 Optical Camera-to-Screen Handshake</span>
                   </div>
-                  <p className="text-[11px] text-zinc-400">
+                  <p className="text-[11px] text-slate-400">
                     All cryptographic challenges and signed authorizations pass exclusively via
                     high-speed animated QR code streams.
                   </p>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-1">
+                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
                   <div className="font-bold text-purple-400 flex items-center gap-1.5">
                     <span>🔐 Isolated Hardware Keystore</span>
                   </div>
-                  <p className="text-[11px] text-zinc-400">
+                  <p className="text-[11px] text-slate-400">
                     Keys are locked in local device storage and protected by your Master PIN &
                     Biometric sensor.
                   </p>
@@ -205,7 +205,7 @@ export const App: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowAirGapInfo(false)}
-                className="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs cursor-pointer shadow-lg transition-all"
+                className="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs cursor-pointer shadow-lg transition-all focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
               >
                 Close Security Passport
               </button>
@@ -256,7 +256,9 @@ export const App: React.FC = () => {
       {/* Persistent Footer */}
       <footer
         className={`w-full text-center py-3 border-t text-[10px] font-mono transition-colors ${
-          theme === "dark" ? "border-zinc-800/80 text-zinc-600" : "border-slate-200 text-slate-400"
+          theme === "dark"
+            ? "border-slate-800/80 text-slate-500"
+            : "border-slate-200 text-slate-400"
         }`}
       >
         NIST FIPS 203 & 204 • Optical Air-Gap • Hardware Protected

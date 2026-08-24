@@ -31,9 +31,9 @@ export const EnrollScanner: React.FC<EnrollScannerProps> = ({
       <button
         type="button"
         onClick={onBack}
-        className={`inline-flex items-center gap-1.5 text-xs font-mono mb-1 transition-colors cursor-pointer ${
+        className={`inline-flex items-center gap-1.5 text-xs font-mono mb-1 transition-colors cursor-pointer rounded-lg px-2 py-1 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none ${
           theme === "dark"
-            ? "text-zinc-400 hover:text-white"
+            ? "text-slate-400 hover:text-white"
             : "text-slate-500 hover:text-slate-900"
         }`}
       >
@@ -46,7 +46,7 @@ export const EnrollScanner: React.FC<EnrollScannerProps> = ({
         </h2>
         <p
           className={`text-[11px] max-w-xs mx-auto ${
-            theme === "dark" ? "text-zinc-400" : "text-slate-500"
+            theme === "dark" ? "text-slate-400" : "text-slate-500"
           }`}
         >
           Point camera at the rotating QR code on the desktop Encrypt Complete dialog.
@@ -61,10 +61,10 @@ export const EnrollScanner: React.FC<EnrollScannerProps> = ({
               : "border-emerald-500 bg-emerald-50 text-slate-900"
           }`}
         >
-          <CheckCircle2 className="w-12 h-12 text-emerald-500 animate-bounce" />
+          <CheckCircle2 className="w-12 h-12 text-emerald-400 animate-bounce" />
           <div>
             <div className="text-sm font-bold">Key Enrolled Successfully!</div>
-            <div className="text-xs text-emerald-500 font-mono mt-1">
+            <div className="text-xs text-emerald-400 font-mono mt-1">
               {enrolledKey.fileName} — Custodian #{enrolledKey.custodianId}
             </div>
           </div>

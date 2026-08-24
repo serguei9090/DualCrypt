@@ -113,7 +113,7 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
 
   const getClassificationBadge = (cls?: string) => {
     const c = (cls || "").toUpperCase();
-    if (c.includes("SECRET")) return "bg-red-500/20 text-red-400 border-red-500/40";
+    if (c.includes("SECRET")) return "bg-rose-500/20 text-rose-400 border-rose-500/40";
     if (c.includes("CONFIDENTIAL")) return "bg-amber-500/20 text-amber-400 border-amber-500/40";
     if (c.includes("RESTRICTED")) return "bg-purple-500/20 text-purple-400 border-purple-500/40";
     return "bg-cyan-500/20 text-cyan-400 border-cyan-500/40";
@@ -124,9 +124,9 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
       <button
         type="button"
         onClick={onBack}
-        className={`inline-flex items-center gap-1.5 text-xs font-mono mb-1 transition-colors cursor-pointer ${
+        className={`inline-flex items-center gap-1.5 text-xs font-mono mb-1 transition-colors cursor-pointer rounded-lg px-2 py-1 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none ${
           theme === "dark"
-            ? "text-zinc-400 hover:text-white"
+            ? "text-slate-400 hover:text-white"
             : "text-slate-500 hover:text-slate-900"
         }`}
       >
@@ -144,7 +144,7 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
             </h2>
             <p
               className={`text-[11px] max-w-xs mx-auto ${
-                theme === "dark" ? "text-zinc-400" : "text-slate-500"
+                theme === "dark" ? "text-slate-400" : "text-slate-500"
               }`}
             >
               Point camera at the desktop workstation screen when clicking{" "}
@@ -171,7 +171,7 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
                   : "bg-emerald-50 border-emerald-300 text-emerald-900"
               }`}
             >
-              <ShieldCheck className="w-6 h-6 text-emerald-500 shrink-0 mt-0.5" />
+              <ShieldCheck className="w-6 h-6 text-emerald-400 shrink-0 mt-0.5" />
               <div className="space-y-1 min-w-0">
                 <div className="text-xs font-bold font-mono tracking-tight flex items-center gap-1.5">
                   <span>✓ AUTO-MATCHED VAULT KEY</span>
@@ -208,20 +208,20 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
           <div
             className={`rounded-2xl border p-4 space-y-3 relative overflow-hidden shadow-lg ${
               theme === "dark"
-                ? "border-zinc-800 bg-zinc-900/80 text-white"
+                ? "border-slate-800 bg-slate-900/80 text-white"
                 : "border-slate-200 bg-white text-slate-900"
             }`}
           >
             <div
               className={`flex items-center justify-between border-b pb-2.5 ${
-                theme === "dark" ? "border-zinc-800" : "border-slate-100"
+                theme === "dark" ? "border-slate-800" : "border-slate-100"
               }`}
             >
               <div className="flex items-center gap-1.5">
-                <Tag className="w-3.5 h-3.5 text-cyan-500" />
+                <Tag className="w-3.5 h-3.5 text-cyan-400" />
                 <span
                   className={`text-[10px] font-mono uppercase ${
-                    theme === "dark" ? "text-zinc-400" : "text-slate-500"
+                    theme === "dark" ? "text-slate-400" : "text-slate-500"
                   }`}
                 >
                   Provenance Passport:
@@ -238,11 +238,11 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
 
             <div className="space-y-2.5">
               <div className="flex items-start gap-2">
-                <FileText className="w-4 h-4 text-cyan-500 shrink-0 mt-0.5" />
+                <FileText className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
                 <div>
                   <div
                     className={`text-[10px] font-mono uppercase ${
-                      theme === "dark" ? "text-zinc-500" : "text-slate-400"
+                      theme === "dark" ? "text-slate-500" : "text-slate-400"
                     }`}
                   >
                     Target Container File
@@ -253,11 +253,11 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
 
               {activeChallenge.purpose && (
                 <div className="flex items-start gap-2">
-                  <Shield className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <Shield className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
                     <div
                       className={`text-[10px] font-mono uppercase ${
-                        theme === "dark" ? "text-zinc-500" : "text-slate-400"
+                        theme === "dark" ? "text-slate-500" : "text-slate-400"
                       }`}
                     >
                       Governance Purpose / Scope
@@ -269,11 +269,11 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
 
               {activeChallenge.organization && (
                 <div className="flex items-start gap-2">
-                  <Building2 className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" />
+                  <Building2 className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
                   <div>
                     <div
                       className={`text-[10px] font-mono uppercase ${
-                        theme === "dark" ? "text-zinc-500" : "text-slate-400"
+                        theme === "dark" ? "text-slate-500" : "text-slate-400"
                       }`}
                     >
                       Issuing Organization
@@ -287,7 +287,7 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
             <div
               className={`border-t pt-2 flex items-center justify-between text-[10px] font-mono ${
                 theme === "dark"
-                  ? "border-zinc-800 text-zinc-500"
+                  ? "border-slate-800 text-slate-500"
                   : "border-slate-100 text-slate-400"
               }`}
             >
@@ -308,10 +308,10 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
                   <label
                     htmlFor="custodian-pin"
                     className={`text-[11px] font-medium flex items-center gap-1 ${
-                      theme === "dark" ? "text-zinc-300" : "text-slate-700"
+                      theme === "dark" ? "text-slate-300" : "text-slate-700"
                     }`}
                   >
-                    <KeyRound className="w-3 h-3 text-cyan-500" />
+                    <KeyRound className="w-3 h-3 text-cyan-400" />
                     <span>Custodian Slot Passphrase</span>
                   </label>
                   <input
@@ -320,9 +320,9 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
                     value={custodianPinInput}
                     onChange={(e) => setCustodianPinInput(e.target.value)}
                     placeholder="Enter custodian password..."
-                    className={`w-full rounded-xl border px-3 py-2.5 text-xs font-mono focus:outline-none ${
+                    className={`w-full rounded-xl border px-3 py-2.5 text-xs font-mono transition-all focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none ${
                       theme === "dark"
-                        ? "border-zinc-800 bg-zinc-950 text-white focus:border-cyan-500"
+                        ? "border-slate-800 bg-slate-950 text-white placeholder-slate-600 focus:border-cyan-500"
                         : "border-slate-300 bg-white text-slate-900 focus:border-cyan-600 shadow-sm"
                     }`}
                   />
@@ -333,7 +333,7 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
                     <label
                       htmlFor="manual-vault-select"
                       className={`text-[11px] font-medium block ${
-                        theme === "dark" ? "text-zinc-400" : "text-slate-600"
+                        theme === "dark" ? "text-slate-400" : "text-slate-600"
                       }`}
                     >
                       Or Select an Existing Key from Vault:
@@ -344,9 +344,9 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
                         const selected = availableVaultKeys.find((k) => k.id === e.target.value);
                         if (selected) setMatchedVaultKey(selected);
                       }}
-                      className={`w-full rounded-xl border px-3 py-2 text-xs font-mono ${
+                      className={`w-full rounded-xl border px-3 py-2 text-xs font-mono transition-all focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none ${
                         theme === "dark"
-                          ? "border-zinc-800 bg-zinc-950 text-white"
+                          ? "border-slate-800 bg-slate-950 text-white focus:border-cyan-500"
                           : "border-slate-300 bg-white text-slate-900"
                       }`}
                     >
@@ -373,7 +373,7 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
               type="button"
               onClick={() => handleApprove(true)}
               disabled={isVerifying}
-              className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 hover:to-emerald-300 text-black font-bold text-sm shadow-[0_0_25px_rgba(6,182,212,0.35)] transition-all cursor-pointer disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 hover:to-emerald-300 text-black font-bold text-sm shadow-[0_0_25px_rgba(6,182,212,0.35)] transition-all cursor-pointer disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
             >
               <Fingerprint className="w-5 h-5" />
               <span>
@@ -392,7 +392,7 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
       {isFlashing && (
         <div className="w-full space-y-4 text-center animate-in fade-in">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 text-xs font-mono font-bold">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold">
               <CheckCircle2 className="w-4 h-4" /> Share Authorized Offline
             </div>
             <h2
@@ -404,7 +404,7 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
             </h2>
             <p
               className={`text-[11px] max-w-xs mx-auto ${
-                theme === "dark" ? "text-zinc-400" : "text-slate-500"
+                theme === "dark" ? "text-slate-400" : "text-slate-500"
               }`}
             >
               The workstation webcam will scan this rotating response stream to complete quorum.
@@ -416,9 +416,9 @@ export const DecryptScanner: React.FC<DecryptScannerProps> = ({ theme, onBack })
           <button
             type="button"
             onClick={onBack}
-            className={`w-full py-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition-colors ${
+            className={`w-full py-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition-colors focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none ${
               theme === "dark"
-                ? "border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
+                ? "border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white"
                 : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 shadow-sm"
             }`}
           >

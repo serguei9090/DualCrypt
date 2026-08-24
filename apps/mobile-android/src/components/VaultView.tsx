@@ -56,9 +56,9 @@ export const VaultView: React.FC<VaultViewProps> = ({
         <button
           type="button"
           onClick={onOpenEnrollScanner}
-          className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border transition-all cursor-pointer text-center group ${
+          className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border transition-all cursor-pointer text-center group focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none ${
             theme === "dark"
-              ? "bg-gradient-to-b from-cyan-950/40 to-zinc-950/70 hover:from-cyan-900/50 hover:to-zinc-900 border-cyan-500/40 text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.15)]"
+              ? "bg-gradient-to-b from-cyan-950/40 to-slate-950/70 hover:from-cyan-900/50 hover:to-slate-900 border-cyan-500/40 text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.15)]"
               : "bg-gradient-to-b from-cyan-50 to-white hover:from-cyan-100 hover:to-white border-cyan-300 text-cyan-800 shadow-sm"
           }`}
         >
@@ -74,7 +74,7 @@ export const VaultView: React.FC<VaultViewProps> = ({
           <span className="text-xs font-bold tracking-tight">Scan & Add Key</span>
           <span
             className={`text-[10px] font-mono mt-0.5 ${
-              theme === "dark" ? "text-zinc-400" : "text-slate-500"
+              theme === "dark" ? "text-slate-400" : "text-slate-500"
             }`}
           >
             From Encrypt Screen
@@ -84,9 +84,9 @@ export const VaultView: React.FC<VaultViewProps> = ({
         <button
           type="button"
           onClick={onOpenDecryptScanner}
-          className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border transition-all cursor-pointer text-center group ${
+          className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border transition-all cursor-pointer text-center group focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none ${
             theme === "dark"
-              ? "bg-gradient-to-b from-emerald-950/40 to-zinc-950/70 hover:from-emerald-900/50 hover:to-zinc-900 border-emerald-500/40 text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.15)]"
+              ? "bg-gradient-to-b from-emerald-950/40 to-slate-950/70 hover:from-emerald-900/50 hover:to-slate-900 border-emerald-500/40 text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.15)]"
               : "bg-gradient-to-b from-emerald-50 to-white hover:from-emerald-100 hover:to-white border-emerald-300 text-emerald-800 shadow-sm"
           }`}
         >
@@ -102,7 +102,7 @@ export const VaultView: React.FC<VaultViewProps> = ({
           <span className="text-xs font-bold tracking-tight">Authorize Decrypt</span>
           <span
             className={`text-[10px] font-mono mt-0.5 ${
-              theme === "dark" ? "text-zinc-400" : "text-slate-500"
+              theme === "dark" ? "text-slate-400" : "text-slate-500"
             }`}
           >
             Auto-Match & Unlock
@@ -115,10 +115,10 @@ export const VaultView: React.FC<VaultViewProps> = ({
         <div className="flex items-center justify-between">
           <div
             className={`flex items-center gap-1.5 text-xs font-bold ${
-              theme === "dark" ? "text-zinc-200" : "text-slate-800"
+              theme === "dark" ? "text-slate-200" : "text-slate-800"
             }`}
           >
-            <KeyRound className="w-4 h-4 text-cyan-500" />
+            <KeyRound className="w-4 h-4 text-cyan-400" />
             <span>Stored Custodian Keys ({keys.length})</span>
           </div>
           <span
@@ -135,7 +135,7 @@ export const VaultView: React.FC<VaultViewProps> = ({
         <div className="relative">
           <Search
             className={`absolute left-3 top-2.5 w-3.5 h-3.5 ${
-              theme === "dark" ? "text-zinc-500" : "text-slate-400"
+              theme === "dark" ? "text-slate-500" : "text-slate-400"
             }`}
           />
           <input
@@ -143,9 +143,9 @@ export const VaultView: React.FC<VaultViewProps> = ({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search keys by filename or role..."
-            className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs transition-colors focus:outline-none ${
+            className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs transition-all focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none ${
               theme === "dark"
-                ? "border-zinc-800 bg-zinc-950 text-white placeholder-zinc-500 focus:border-cyan-500"
+                ? "border-slate-800 bg-slate-950 text-white placeholder-slate-500 focus:border-cyan-500"
                 : "border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:border-cyan-600 shadow-sm"
             }`}
           />
@@ -158,17 +158,17 @@ export const VaultView: React.FC<VaultViewProps> = ({
           <div
             className={`rounded-2xl border border-dashed p-8 text-center space-y-2 ${
               theme === "dark"
-                ? "border-zinc-800 bg-zinc-950/30 text-zinc-400"
+                ? "border-slate-800 bg-slate-950/30 text-slate-400"
                 : "border-slate-300 bg-white text-slate-600"
             }`}
           >
             <FileKey
-              className={`w-8 h-8 mx-auto ${theme === "dark" ? "text-zinc-600" : "text-slate-400"}`}
+              className={`w-8 h-8 mx-auto ${theme === "dark" ? "text-slate-600" : "text-slate-400"}`}
             />
             <div className="text-xs font-semibold">No Keys in Offline Vault</div>
             <p
               className={`text-[11px] max-w-xs mx-auto ${
-                theme === "dark" ? "text-zinc-500" : "text-slate-400"
+                theme === "dark" ? "text-slate-500" : "text-slate-400"
               }`}
             >
               When encrypting on desktop, click <strong>📲 Scan to Phone (QR)</strong> and scan it
@@ -181,7 +181,7 @@ export const VaultView: React.FC<VaultViewProps> = ({
               key={keyItem.id}
               className={`rounded-2xl border p-3.5 space-y-2.5 transition-all relative overflow-hidden ${
                 theme === "dark"
-                  ? "border-zinc-800/90 bg-zinc-900/70 hover:border-zinc-700 hover:bg-zinc-900"
+                  ? "border-slate-800/90 bg-slate-900/70 hover:border-slate-700 hover:bg-slate-900"
                   : "border-slate-200 bg-white hover:border-cyan-300 hover:shadow-md"
               }`}
             >
@@ -189,7 +189,7 @@ export const VaultView: React.FC<VaultViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setSelectedKey(keyItem)}
-                  className="flex items-start gap-2.5 min-w-0 flex-1 text-left cursor-pointer"
+                  className="flex items-start gap-2.5 min-w-0 flex-1 text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none rounded-xl p-1 -m-1"
                 >
                   <div
                     className={`p-2 rounded-xl border shrink-0 mt-0.5 ${
@@ -218,7 +218,7 @@ export const VaultView: React.FC<VaultViewProps> = ({
                     </div>
                     <div
                       className={`text-[11px] font-medium truncate ${
-                        theme === "dark" ? "text-zinc-300" : "text-slate-600"
+                        theme === "dark" ? "text-slate-300" : "text-slate-600"
                       }`}
                     >
                       Custodian {keyItem.custodianId}: {keyItem.custodianLabel}
@@ -226,7 +226,7 @@ export const VaultView: React.FC<VaultViewProps> = ({
                   </div>
                   <ChevronRight
                     className={`w-4 h-4 mt-2 shrink-0 ${
-                      theme === "dark" ? "text-zinc-600" : "text-slate-300"
+                      theme === "dark" ? "text-slate-600" : "text-slate-300"
                     }`}
                   />
                 </button>
@@ -234,9 +234,9 @@ export const VaultView: React.FC<VaultViewProps> = ({
                 <button
                   type="button"
                   onClick={(e) => handleDelete(keyItem.id, keyItem.fileName, e)}
-                  className={`p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 ${
+                  className={`p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-none ${
                     theme === "dark"
-                      ? "text-zinc-500 hover:text-rose-400 hover:bg-rose-950/30"
+                      ? "text-slate-500 hover:text-rose-400 hover:bg-rose-950/30"
                       : "text-slate-400 hover:text-rose-600 hover:bg-rose-50"
                   }`}
                   title="Delete key"
@@ -248,7 +248,7 @@ export const VaultView: React.FC<VaultViewProps> = ({
               <div
                 className={`flex items-center justify-between border-t pt-2 text-[10px] font-mono ${
                   theme === "dark"
-                    ? "border-zinc-800/80 text-zinc-500"
+                    ? "border-slate-800/80 text-slate-500"
                     : "border-slate-100 text-slate-400"
                 }`}
               >
@@ -276,26 +276,26 @@ export const VaultView: React.FC<VaultViewProps> = ({
       {selectedKey && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
           <div
-            className={`w-full max-w-sm rounded-3xl border p-5 space-y-4 shadow-2xl relative ${
+            className={`w-full max-w-sm rounded-2xl border p-5 space-y-4 shadow-2xl relative ${
               theme === "dark"
-                ? "bg-zinc-950 border-zinc-800 text-white"
+                ? "bg-slate-950 border-slate-800 text-white"
                 : "bg-white border-slate-200 text-slate-900"
             }`}
           >
-            <div className="flex items-start justify-between border-b pb-3 border-zinc-800">
+            <div className="flex items-start justify-between border-b pb-3 border-slate-800">
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-500">
+                <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
                   <Shield className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="text-xs font-bold font-mono">Key Enclave Details</div>
-                  <div className="text-[10px] text-zinc-500">Offline Hardware Enclave</div>
+                  <div className="text-[10px] text-slate-500">Offline Hardware Enclave</div>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedKey(null)}
-                className="p-1 rounded-lg text-zinc-400 hover:text-white cursor-pointer"
+                className="p-1 rounded-lg text-slate-400 hover:text-white cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -303,7 +303,7 @@ export const VaultView: React.FC<VaultViewProps> = ({
 
             <div className="space-y-2.5 text-xs">
               <div>
-                <div className="text-[10px] font-mono text-zinc-500 uppercase">
+                <div className="text-[10px] font-mono text-slate-500 uppercase">
                   Target Container
                 </div>
                 <div className="font-mono font-bold text-sm text-cyan-400">
@@ -312,14 +312,14 @@ export const VaultView: React.FC<VaultViewProps> = ({
               </div>
 
               <div>
-                <div className="text-[10px] font-mono text-zinc-500 uppercase">Custodian Role</div>
-                <div className="font-semibold text-zinc-200">
+                <div className="text-[10px] font-mono text-slate-500 uppercase">Custodian Role</div>
+                <div className="font-semibold text-slate-200">
                   Slot #{selectedKey.custodianId} — {selectedKey.custodianLabel}
                 </div>
               </div>
 
               <div>
-                <div className="text-[10px] font-mono text-zinc-500 uppercase">
+                <div className="text-[10px] font-mono text-slate-500 uppercase">
                   Cryptographic Standard
                 </div>
                 <div className="font-mono text-xs text-purple-400">
@@ -330,23 +330,23 @@ export const VaultView: React.FC<VaultViewProps> = ({
               </div>
 
               <div>
-                <div className="text-[10px] font-mono text-zinc-500 uppercase">
+                <div className="text-[10px] font-mono text-slate-500 uppercase">
                   Enrolled Timestamp
                 </div>
-                <div className="font-mono text-xs text-zinc-400">
+                <div className="font-mono text-xs text-slate-400">
                   {new Date(selectedKey.enrolledAt).toLocaleString()}
                 </div>
               </div>
             </div>
 
-            <div className="space-y-2 pt-2 border-t border-zinc-800">
+            <div className="space-y-2 pt-2 border-t border-slate-800">
               <button
                 type="button"
                 onClick={() => {
                   setSelectedKey(null);
                   onOpenDecryptScanner();
                 }}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs shadow-lg transition-all cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs shadow-lg transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:outline-none"
               >
                 <Unlock className="w-4 h-4" />
                 <span>Ready to Authorize Decryption</span>
@@ -355,7 +355,7 @@ export const VaultView: React.FC<VaultViewProps> = ({
               <button
                 type="button"
                 onClick={() => handleDelete(selectedKey.id, selectedKey.fileName)}
-                className="w-full py-2 text-center text-xs font-semibold text-rose-400 hover:text-rose-300 cursor-pointer"
+                className="w-full py-2 text-center text-xs font-semibold text-rose-400 hover:text-rose-300 cursor-pointer focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-none rounded-lg"
               >
                 Delete Key from Enclave
               </button>

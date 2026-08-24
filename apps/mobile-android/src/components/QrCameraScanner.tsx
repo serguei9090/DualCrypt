@@ -99,11 +99,11 @@ export function QrCameraScanner<T>({
 
   return (
     <div className={`flex flex-col items-center gap-3 ${className}`}>
-      <div className="relative w-full max-w-[320px] aspect-square rounded-2xl overflow-hidden border-2 border-primary/40 bg-zinc-950 shadow-lg flex items-center justify-center">
+      <div className="relative w-full max-w-[320px] aspect-square rounded-2xl overflow-hidden border-2 border-cyan-500/40 bg-slate-950 shadow-lg flex items-center justify-center">
         {streamError ? (
           <div className="p-4 text-center space-y-2">
-            <AlertCircle className="w-8 h-8 text-red-400 mx-auto" />
-            <p className="text-xs text-red-300 font-mono">{streamError}</p>
+            <AlertCircle className="w-8 h-8 text-rose-400 mx-auto" />
+            <p className="text-xs text-rose-300 font-mono">{streamError}</p>
           </div>
         ) : (
           <>
@@ -130,8 +130,8 @@ export function QrCameraScanner<T>({
 
       <div className="w-full max-w-[320px] space-y-2 text-center">
         <div className="flex items-center justify-between text-xs font-mono">
-          <span className="text-zinc-400 flex items-center gap-1.5">
-            <Camera className="w-3.5 h-3.5 text-primary" />
+          <span className="text-slate-400 flex items-center gap-1.5">
+            <Camera className="w-3.5 h-3.5 text-cyan-400" />
             {targetDescription}
           </span>
           {collectorProgress.totalCount > 0 && (
@@ -141,7 +141,7 @@ export function QrCameraScanner<T>({
           )}
         </div>
 
-        <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+        <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 transition-all duration-150"
             style={{ width: `${collectorProgress.percentage}%` }}
