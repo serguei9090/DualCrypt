@@ -43,6 +43,8 @@ jobs:
           bun-version: latest
 
       - name: Build Wasm Engine
+        env:
+          RUSTFLAGS: '--cfg getrandom_backend="wasm_js"'
         run: |
           cd crates/denc-wasm
           wasm-pack build --target web --out-dir ../../src/wasm
