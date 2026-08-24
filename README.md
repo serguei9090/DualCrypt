@@ -3,8 +3,13 @@
 > **Zero-Trust Multi-Party Threshold File Encryption & Disaster Escrow Platform**  
 > Engineered with **Rust (`denc-core`, `denc-cli`, `denc-wasm`)**, **Tauri v2**, **React 19**, and **Tailwind CSS**.
 
+[![GitHub Release](https://img.shields.io/github/v/release/serguei9090/DualCrypt?color=0ea5e9&label=Release)](https://github.com/serguei9090/DualCrypt/releases/latest)
+[![CI / Quality Gate](https://github.com/serguei9090/DualCrypt/actions/workflows/ci.yml/badge.svg)](https://github.com/serguei9090/DualCrypt/actions/workflows/ci.yml)
+[![Web Client](https://img.shields.io/badge/Web%20Client-Live%20Demo-10b981)](https://serguei9090.github.io/DualCrypt/)
+[![License: DualCrypt 1.0](https://img.shields.io/badge/License-DualCrypt%20Source--Available%201.0-blue.svg)](LICENSE.md)
+
 > [!NOTE]
-> **Research & Open Engineering Initiative**: DualCrypt Enterprise is an open-technology cryptographic research and engineering project.
+> **Production Releases Ready**: Download pre-compiled native installers for Windows, macOS, Linux, and Android from the **[GitHub Releases Page](https://github.com/serguei9090/DualCrypt/releases/tag/v0.5.0)** or try the **[Zero-Knowledge Web Client](https://serguei9090.github.io/DualCrypt/)**.
 
 ---
 
