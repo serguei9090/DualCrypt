@@ -27,6 +27,7 @@ export interface StartEncryptRequest {
   custodians: EncryptCustodianRequest[];
   author_signing_key_base64?: string;
   author_label?: string;
+  manifest?: import("./container").DencManifest;
 }
 
 export interface EncryptResponse {

@@ -78,6 +78,12 @@ The `.denc` container encapsulates the metadata and chunked authenticated stream
 
 ## 🚀 Live Features
 
+* **📋 Embedded Immutable Container Manifest & Governance Passport**:
+  * Cryptographically signed governance metadata embedded directly inside `.denc` container headers.
+  * **Security Classification Levels**: `TOP SECRET 🔴`, `CONFIDENTIAL 🟠`, `INTERNAL 🔵`, `RESTRICTED 🟣`, `GENERAL 🟢`.
+  * **Governance Fields**: Purpose/Scope summary, Issuing Organization & Department, and UTC Creation Timestamp.
+  * **Mathematical Tamper-Proof Binding**: Embedded in the header AAD digest and protected by NIST FIPS 204 ML-DSA-65 digital signatures.
+  * **Interactive Provenance Passport**: Sleek high-contrast metadata passport rendered in the Decrypt tab, allowing custodians to verify classification and intent before authorizing quorum unlocking.
 * **🔏 NIST FIPS 204 Digital Container Signatures (ML-DSA-65 / Dilithium)**:
   * Authors can digitally sign `.denc` containers using post-quantum ML-DSA-65 keys.
   * Mathematical origin authentication & anti-tampering verification over the canonical header digest before custodian unlocking.
@@ -168,7 +174,7 @@ denc serve --host 0.0.0.0 --port 8080
 - [x] **ML-DSA-65 (Dilithium-3)**: NIST FIPS 204 post-quantum container signatures and verification. *(Completed)*
 
 ### 🔵 Phase 3: Governance & Shell Integration
-- [ ] **Immutable Container Audit Trail**: Cryptographically signed audit manifests embedded in container headers with creation timestamps and custodian records.
+- [x] **Immutable Container Audit Manifest**: Cryptographically signed audit manifests embedded in container headers with classification, timestamps, and custodian provenance. *(Completed)*
 - [x] **Headless CLI (`denc-cli`)**: Standalone binary for automated server backups, scripts, and CI/CD pipelines. *(Completed)*
 - [x] **Embedded Local Web Server**: Workstation & CLI HTTP server with Localhost/LAN binding. *(Completed)*
 - [ ] **Windows Explorer Context Menu**: Right-click shell extension integration ("Encrypt with DualCrypt Enterprise").

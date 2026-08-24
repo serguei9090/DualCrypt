@@ -7,6 +7,7 @@ export interface AuditEvent {
   custodianCount: number;
   thresholdK: number;
   cipherSuite: string;
+  classification?: string;
   authorSigned: boolean;
   authorLabel?: string;
   status: "completed" | "failed";
@@ -75,6 +76,7 @@ export const exportAuditHistoryCsv = (): void => {
     "Timestamp",
     "Action",
     "Filename",
+    "Classification",
     "Size",
     "Custodians",
     "Threshold (k-of-n)",
@@ -88,6 +90,7 @@ export const exportAuditHistoryCsv = (): void => {
     `"${e.timestamp}"`,
     `"${e.action.toUpperCase()}"`,
     `"${e.filename.replace(/"/g, '""')}"`,
+    `"${e.classification || "N/A"}"`,
     `"${e.fileSizeFormatted}"`,
     e.custodianCount,
     `"${e.thresholdK}-of-${e.custodianCount}"`,

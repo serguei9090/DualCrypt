@@ -82,6 +82,7 @@ pub fn wasm_inspect_denc(bytes: &[u8]) -> Result<JsValue, JsValue> {
         custodians,
         signature_block: header.signature_block,
         is_signature_valid,
+        manifest: header.manifest,
     };
 
     serde_wasm_bindgen::to_value(&inspection)
@@ -223,6 +224,7 @@ pub fn wasm_encrypt_payload(
             base_nonce,
             custodians: descriptors.clone(),
             signature_block: None,
+            manifest: params.manifest.clone(),
         };
         let (_, draft_digest) = draft_header.serialize()
             .map_err(|e| JsValue::from_str(&format!("Draft header error: {}", e)))?;
@@ -242,7 +244,7 @@ pub fn wasm_encrypt_payload(
     };
 
     let header = DencHeader {
-        version: if signature_block.is_some() {
+        version: if signature_block.is_some() || params.manifest.is_some() {
             FORMAT_VERSION_2
         } else {
             FORMAT_VERSION_1
@@ -256,6 +258,7 @@ pub fn wasm_encrypt_payload(
         base_nonce,
         custodians: descriptors,
         signature_block: signature_block.clone(),
+        manifest: params.manifest.clone(),
     };
 
     let (header_bytes, header_digest) = header.serialize()

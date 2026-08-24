@@ -1,5 +1,14 @@
 import { save } from "@tauri-apps/plugin-dialog";
-import { AlertTriangle, Lock, RefreshCw, ShieldCheck, Unlock } from "lucide-react";
+import {
+  AlertTriangle,
+  Building2,
+  FileText,
+  Lock,
+  RefreshCw,
+  ShieldCheck,
+  Tag,
+  Unlock,
+} from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { FileDropzone } from "./components/dropzone/FileDropzone";
@@ -40,6 +49,12 @@ export const App: React.FC = () => {
   const [authorLabel, setAuthorLabel] = useState("Chief Security Officer (CSO)");
   const [authorSigningKeyBase64, setAuthorSigningKeyBase64] = useState("");
   const [isGeneratingAuthorKey, setIsGeneratingAuthorKey] = useState(false);
+
+  // Container Governance & Manifest State
+  const [enableManifest, setEnableManifest] = useState(false);
+  const [manifestClassification, setManifestClassification] = useState("CONFIDENTIAL");
+  const [manifestPurpose, setManifestPurpose] = useState("");
+  const [manifestOrganization, setManifestOrganization] = useState("");
 
   const handleGenerateAuthorKey = async () => {
     setIsGeneratingAuthorKey(true);
@@ -141,6 +156,15 @@ export const App: React.FC = () => {
               : undefined,
           author_label:
             enableAuthorSignature && authorLabel.trim() ? authorLabel.trim() : undefined,
+          manifest: enableManifest
+            ? {
+                classification: manifestClassification,
+                purpose: manifestPurpose.trim() || undefined,
+                organization: manifestOrganization.trim() || undefined,
+                created_at_utc: Math.floor(Date.now() / 1000),
+                original_filename: fileName,
+              }
+            : undefined,
         },
         job.updateProgress,
       );
@@ -161,6 +185,7 @@ export const App: React.FC = () => {
         custodianCount: quorum.totalN,
         thresholdK: quorum.thresholdK,
         cipherSuite: quorum.cipher,
+        classification: enableManifest ? manifestClassification : undefined,
         authorSigned: enableAuthorSignature && !!authorSigningKeyBase64.trim(),
         authorLabel: enableAuthorSignature ? authorLabel : undefined,
         status: "completed",
@@ -217,6 +242,7 @@ export const App: React.FC = () => {
         custodianCount: quorum.totalN,
         thresholdK: quorum.thresholdK,
         cipherSuite: quorum.cipher,
+        classification: containerMetadata?.manifest?.classification,
         authorSigned: !!containerMetadata?.signature_block,
         authorLabel: containerMetadata?.signature_block?.author_label,
         status: "completed",
@@ -328,6 +354,124 @@ export const App: React.FC = () => {
                         onCredentialSubmit={quorum.handleCredentialSubmit}
                         onUpdateSetup={quorum.handleUpdateSetup}
                       />
+                    </div>
+
+                    {/* Container Governance & Compliance Manifest */}
+                    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 space-y-3 backdrop-blur-md">
+                      <div className="flex items-center justify-between">
+                        <label className="flex items-center gap-2.5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={enableManifest}
+                            onChange={(e) => setEnableManifest(e.target.checked)}
+                            className="h-4 w-4 rounded accent-primary cursor-pointer"
+                          />
+                          <span className="text-xs font-bold text-zinc-100 flex items-center gap-1.5">
+                            <Tag className="h-4 w-4 text-primary" />
+                            <span>Embed Governance & Compliance Manifest (Optional)</span>
+                          </span>
+                        </label>
+                        <span className="text-[10px] font-mono text-cyan-300 bg-cyan-950/60 border border-cyan-800/40 px-2 py-0.5 rounded-md">
+                          Provenance Passport
+                        </span>
+                      </div>
+
+                      {enableManifest && (
+                        <div className="space-y-3 pt-2 border-t border-zinc-800 animate-in fade-in">
+                          {/* Classification Selector */}
+                          <div className="space-y-1.5">
+                            <span className="block text-[11px] font-medium text-zinc-300">
+                              Security Classification Level
+                            </span>
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                              {[
+                                {
+                                  id: "TOP_SECRET",
+                                  label: "Top Secret 🔴",
+                                  border: "hover:border-red-500",
+                                  active: "bg-red-500/20 text-red-400 border-red-500/50",
+                                },
+                                {
+                                  id: "CONFIDENTIAL",
+                                  label: "Confidential 🟠",
+                                  border: "hover:border-amber-500",
+                                  active: "bg-amber-500/20 text-amber-400 border-amber-500/50",
+                                },
+                                {
+                                  id: "INTERNAL",
+                                  label: "Internal 🔵",
+                                  border: "hover:border-blue-500",
+                                  active: "bg-blue-500/20 text-blue-400 border-blue-500/50",
+                                },
+                                {
+                                  id: "RESTRICTED",
+                                  label: "Restricted 🟣",
+                                  border: "hover:border-purple-500",
+                                  active: "bg-purple-500/20 text-purple-400 border-purple-500/50",
+                                },
+                                {
+                                  id: "GENERAL",
+                                  label: "General 🟢",
+                                  border: "hover:border-emerald-500",
+                                  active:
+                                    "bg-emerald-500/20 text-emerald-400 border-emerald-500/50",
+                                },
+                              ].map((lvl) => (
+                                <button
+                                  key={lvl.id}
+                                  type="button"
+                                  onClick={() => setManifestClassification(lvl.id)}
+                                  className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold font-mono border transition-all cursor-pointer ${
+                                    manifestClassification === lvl.id
+                                      ? lvl.active
+                                      : `bg-zinc-950 text-zinc-400 border-zinc-800 ${lvl.border}`
+                                  }`}
+                                >
+                                  {lvl.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <label
+                                htmlFor="manifest-purpose-input"
+                                className="text-[11px] font-medium text-zinc-300 flex items-center gap-1"
+                              >
+                                <FileText className="w-3 h-3 text-zinc-400" />
+                                <span>Purpose / Scope Summary</span>
+                              </label>
+                              <input
+                                id="manifest-purpose-input"
+                                type="text"
+                                value={manifestPurpose}
+                                onChange={(e) => setManifestPurpose(e.target.value)}
+                                placeholder="e.g. Q3 Financial Audit & Disaster Recovery Archive"
+                                className="w-full rounded-xl border border-zinc-750 bg-zinc-950 px-3 py-1.5 text-xs text-zinc-200 focus:border-primary focus:outline-none"
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <label
+                                htmlFor="manifest-org-input"
+                                className="text-[11px] font-medium text-zinc-300 flex items-center gap-1"
+                              >
+                                <Building2 className="w-3 h-3 text-zinc-400" />
+                                <span>Issuing Organization / Dept</span>
+                              </label>
+                              <input
+                                id="manifest-org-input"
+                                type="text"
+                                value={manifestOrganization}
+                                onChange={(e) => setManifestOrganization(e.target.value)}
+                                placeholder="e.g. Tokyo Treasury & Corporate Legal"
+                                className="w-full rounded-xl border border-zinc-750 bg-zinc-950 px-3 py-1.5 text-xs text-zinc-200 focus:border-primary focus:outline-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Author Digital Signature (NIST FIPS 204 ML-DSA-65) */}

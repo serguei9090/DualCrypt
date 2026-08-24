@@ -277,19 +277,38 @@ export const AuditHistoryView: React.FC = () => {
                       )}
                     </td>
 
-                    {/* Filename & Size */}
+                    {/* Filename & Size & Classification */}
                     <td className="py-3 px-4">
-                      <div className="flex items-center gap-2 max-w-xs md:max-w-sm">
-                        <FileText className="w-4 h-4 text-primary shrink-0" />
-                        <span
-                          className="font-medium text-foreground truncate font-sans"
-                          title={evt.filename}
-                        >
-                          {evt.filename}
-                        </span>
-                        <span className="text-[11px] text-muted-foreground shrink-0 font-mono">
-                          ({evt.fileSizeFormatted})
-                        </span>
+                      <div className="flex flex-col gap-1 max-w-xs md:max-w-sm">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-primary shrink-0" />
+                          <span
+                            className="font-medium text-foreground truncate font-sans"
+                            title={evt.filename}
+                          >
+                            {evt.filename}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground shrink-0 font-mono">
+                            ({evt.fileSizeFormatted})
+                          </span>
+                        </div>
+                        {evt.classification && (
+                          <div className="flex items-center gap-1.5 pl-6">
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase border ${
+                                evt.classification.includes("SECRET")
+                                  ? "bg-red-500/15 text-red-400 border-red-500/30"
+                                  : evt.classification.includes("CONFIDENTIAL")
+                                    ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
+                                    : evt.classification.includes("RESTRICTED")
+                                      ? "bg-purple-500/15 text-purple-400 border-purple-500/30"
+                                      : "bg-blue-500/15 text-blue-400 border-blue-500/30"
+                              }`}
+                            >
+                              {evt.classification}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </td>
 

@@ -44,10 +44,19 @@ pub struct CustodianDescriptor {
 /// NIST FIPS 204 ML-DSA-65 Digital Container Signature block
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DencSignatureBlock {
-    pub algorithm: String, // "NIST-FIPS-204-ML-DSA-65"
+    pub algorithm: String,
     pub author_label: String,
     pub author_public_key_base64: String,
     pub signature_base64: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct DencManifest {
+    pub classification: String,
+    pub purpose: Option<String>,
+    pub organization: Option<String>,
+    pub created_at_utc: u64,
+    pub original_filename: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -62,6 +71,7 @@ pub struct DencHeader {
     pub base_nonce: [u8; 24],
     pub custodians: Vec<CustodianDescriptor>,
     pub signature_block: Option<DencSignatureBlock>,
+    pub manifest: Option<DencManifest>,
 }
 
 impl DencHeader {
@@ -69,7 +79,9 @@ impl DencHeader {
     pub fn serialize(&self) -> Result<(Vec<u8>, [u8; 32]), DencError> {
         let mut buf = Vec::with_capacity(256);
 
-        let effective_version = if self.signature_block.is_some() && self.version < FORMAT_VERSION_2 {
+        let effective_version = if (self.signature_block.is_some() || self.manifest.is_some())
+            && self.version < FORMAT_VERSION_2
+        {
             FORMAT_VERSION_2
         } else {
             self.version
@@ -106,7 +118,7 @@ impl DencHeader {
             buf.write_all(&c.encrypted_share)?;
         }
 
-        // Optional Signature Block (for Version >= 2)
+        // Optional Signature Block and Manifest (for Version >= 2)
         if effective_version >= FORMAT_VERSION_2 {
             if let Some(sig) = &self.signature_block {
                 buf.write_u8(1)?;
@@ -114,6 +126,16 @@ impl DencHeader {
                     .map_err(|e| DencError::Custom(format!("Failed to serialize signature block: {e}")))?;
                 buf.write_u16::<LittleEndian>(sig_json.len() as u16)?;
                 buf.write_all(&sig_json)?;
+            } else {
+                buf.write_u8(0)?;
+            }
+
+            if let Some(man) = &self.manifest {
+                buf.write_u8(1)?;
+                let man_json = serde_json::to_vec(man)
+                    .map_err(|e| DencError::Custom(format!("Failed to serialize manifest: {e}")))?;
+                buf.write_u16::<LittleEndian>(man_json.len() as u16)?;
+                buf.write_all(&man_json)?;
             } else {
                 buf.write_u8(0)?;
             }
@@ -203,23 +225,45 @@ impl DencHeader {
             });
         }
 
-        let signature_block = if version >= FORMAT_VERSION_2 {
+        let (signature_block, manifest) = if version >= FORMAT_VERSION_2 {
             let has_sig_byte = reader.read_u8()?;
             raw_header_bytes.push(has_sig_byte);
-            if has_sig_byte == 1 {
+            let sig = if has_sig_byte == 1 {
                 let sig_len = reader.read_u16::<LittleEndian>()? as usize;
                 raw_header_bytes.extend_from_slice(&(sig_len as u16).to_le_bytes());
                 let mut sig_buf = vec![0u8; sig_len];
                 reader.read_exact(&mut sig_buf)?;
                 raw_header_bytes.extend_from_slice(&sig_buf);
-                let sig: DencSignatureBlock = serde_json::from_slice(&sig_buf)
+                let s: DencSignatureBlock = serde_json::from_slice(&sig_buf)
                     .map_err(|e| DencError::Custom(format!("Failed to parse signature block: {e}")))?;
-                Some(sig)
+                Some(s)
             } else {
                 None
-            }
+            };
+
+            // Optional Manifest Byte (handles backwards-compatibility with v2 header drafts)
+            let mut has_man_buf = [0u8; 1];
+            let man = if reader.read_exact(&mut has_man_buf).is_ok() {
+                raw_header_bytes.push(has_man_buf[0]);
+                if has_man_buf[0] == 1 {
+                    let man_len = reader.read_u16::<LittleEndian>()? as usize;
+                    raw_header_bytes.extend_from_slice(&(man_len as u16).to_le_bytes());
+                    let mut man_buf = vec![0u8; man_len];
+                    reader.read_exact(&mut man_buf)?;
+                    raw_header_bytes.extend_from_slice(&man_buf);
+                    let m: DencManifest = serde_json::from_slice(&man_buf)
+                        .map_err(|e| DencError::Custom(format!("Failed to parse manifest: {e}")))?;
+                    Some(m)
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
+            (sig, man)
         } else {
-            None
+            (None, None)
         };
 
         let digest: [u8; 32] = Sha256::digest(&raw_header_bytes).into();
@@ -237,6 +281,7 @@ impl DencHeader {
                 base_nonce,
                 custodians,
                 signature_block,
+                manifest,
             },
             digest,
             total_bytes,
@@ -277,6 +322,7 @@ mod tests {
                 },
             ],
             signature_block: None,
+            manifest: None,
         };
 
         let (bytes, digest1) = header.serialize().expect("Serialization failed");
@@ -313,6 +359,7 @@ mod tests {
                 author_public_key_base64: "MII...test...pubkey".to_string(),
                 signature_base64: "MII...test...sig".to_string(),
             }),
+            manifest: None,
         };
 
         let (bytes, digest1) = header.serialize().expect("Serialization failed");
@@ -323,6 +370,53 @@ mod tests {
         assert_eq!(header, parsed_header);
         assert_eq!(digest1, digest2);
         assert_eq!(bytes.len(), bytes_read);
+    }
+
+    #[test]
+    fn test_header_v2_manifest_roundtrip() {
+        let header = DencHeader {
+            version: 2,
+            cipher_suite: CipherSuite::Aes256Gcm,
+            kdf_id: 1,
+            threshold_k: 2,
+            total_n: 2,
+            chunk_size: 65536,
+            master_salt: [0x88u8; 32],
+            base_nonce: [0x99u8; 24],
+            custodians: vec![CustodianDescriptor {
+                custodian_id: 1,
+                auth_type: AuthType::Passphrase,
+                label: "Bob - Treasury".to_string(),
+                salt: [0xaau8; 32],
+                encrypted_share: vec![1, 2, 3],
+            }],
+            signature_block: Some(DencSignatureBlock {
+                algorithm: "NIST-FIPS-204-ML-DSA-65".to_string(),
+                author_label: "Alice - CSO".to_string(),
+                author_public_key_base64: "MII...pubkey".to_string(),
+                signature_base64: "MII...sig".to_string(),
+            }),
+            manifest: Some(DencManifest {
+                classification: "TOP_SECRET".to_string(),
+                purpose: Some("2026 Emergency Liquidity Reserves".to_string()),
+                organization: Some("Global Treasury".to_string()),
+                created_at_utc: 1771930000,
+                original_filename: Some("reserves_vault.tar.gz".to_string()),
+            }),
+        };
+
+        let (bytes, digest1) = header.serialize().expect("Serialization failed");
+        let mut cursor = Cursor::new(&bytes);
+        let (parsed_header, digest2, bytes_read) =
+            DencHeader::deserialize(&mut cursor).expect("Deserialization failed");
+
+        assert_eq!(header, parsed_header);
+        assert_eq!(digest1, digest2);
+        assert_eq!(bytes.len(), bytes_read);
+        assert_eq!(
+            parsed_header.manifest.unwrap().classification,
+            "TOP_SECRET"
+        );
         assert!(parsed_header.signature_block.is_some());
     }
 }

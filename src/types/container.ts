@@ -7,6 +7,14 @@ export interface DencSignatureBlock {
   signature_base64: string;
 }
 
+export interface DencManifest {
+  classification: string; // "TOP_SECRET" | "CONFIDENTIAL" | "INTERNAL" | "RESTRICTED" | "GENERAL"
+  purpose?: string;
+  organization?: string;
+  created_at_utc: number;
+  original_filename?: string;
+}
+
 export interface CustodianDescriptorInfo {
   custodian_id: number;
   label: string;
@@ -23,6 +31,7 @@ export interface ContainerHeaderInfo {
   custodians: CustodianDescriptorInfo[];
   signature_block?: DencSignatureBlock;
   is_signature_valid?: boolean;
+  manifest?: DencManifest;
 }
 
 export interface SecretShareData {

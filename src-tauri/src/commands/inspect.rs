@@ -10,6 +10,9 @@ pub struct HeaderMetadataResponse {
     pub total_n: u8,
     pub chunk_size: u32,
     pub custodians: Vec<CustodianMetadata>,
+    pub signature_block: Option<denc_core::container::DencSignatureBlock>,
+    pub is_signature_valid: Option<bool>,
+    pub manifest: Option<denc_core::container::DencManifest>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -55,5 +58,8 @@ pub fn inspect_denc_file(file_path: String) -> Result<HeaderMetadataResponse, St
         total_n: header.total_n,
         chunk_size: header.chunk_size,
         custodians,
+        signature_block: header.signature_block,
+        is_signature_valid: header.is_signature_valid,
+        manifest: header.manifest,
     })
 }

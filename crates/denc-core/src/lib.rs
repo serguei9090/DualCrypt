@@ -11,7 +11,7 @@ use cipher::{
     encrypt_stream_chunks, generate_base_nonce, CipherSuite, DEFAULT_CHUNK_SIZE,
 };
 use container::{
-    AuthType, CustodianDescriptor, DencHeader, DencSignatureBlock, FORMAT_VERSION_1,
+    AuthType, CustodianDescriptor, DencHeader, DencManifest, DencSignatureBlock, FORMAT_VERSION_1,
     FORMAT_VERSION_2,
 };
 use error::DencError;
@@ -46,6 +46,7 @@ pub struct EncryptionParams {
     pub custodians: Vec<CustodianInput>,
     pub author_signing_key_base64: Option<String>,
     pub author_label: Option<String>,
+    pub manifest: Option<DencManifest>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -75,6 +76,7 @@ pub struct HeaderInspection {
     pub custodians: Vec<CustodianInspection>,
     pub signature_block: Option<DencSignatureBlock>,
     pub is_signature_valid: Option<bool>,
+    pub manifest: Option<DencManifest>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -130,6 +132,7 @@ pub fn inspect_container<P: AsRef<Path>>(path: P) -> Result<HeaderInspection, De
         custodians,
         signature_block: header.signature_block,
         is_signature_valid,
+        manifest: header.manifest,
     })
 }
 
@@ -312,6 +315,7 @@ pub fn encrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
             base_nonce,
             custodians: descriptors.clone(),
             signature_block: None,
+            manifest: params.manifest.clone(),
         };
         let (_, draft_digest) = draft_header.serialize()?;
         let signature_base64 = pqc::sign_digest_ml_dsa(author_key, &draft_digest)?;
@@ -328,7 +332,7 @@ pub fn encrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
     };
 
     let header = DencHeader {
-        version: if signature_block.is_some() {
+        version: if signature_block.is_some() || params.manifest.is_some() {
             FORMAT_VERSION_2
         } else {
             FORMAT_VERSION_1
@@ -342,6 +346,7 @@ pub fn encrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
         base_nonce,
         custodians: descriptors,
         signature_block: signature_block.clone(),
+        manifest: params.manifest.clone(),
     };
 
     // Serialize header & compute AAD digest
@@ -513,6 +518,7 @@ mod tests {
             ],
             author_signing_key_base64: None,
             author_label: None,
+            manifest: None,
         };
 
         // Encrypt
@@ -567,13 +573,15 @@ mod tests {
     #[test]
     fn test_directory_encryption_roundtrip() {
         let temp_dir = tempfile::tempdir().unwrap();
-        let sub_dir = temp_dir.path().join("subfolder");
-        std::fs::create_dir(&sub_dir).unwrap();
-        std::fs::write(temp_dir.path().join("file1.txt"), b"Document 1 contents").unwrap();
-        std::fs::write(sub_dir.join("file2.txt"), b"Nested confidential file 2").unwrap();
+        let encrypted_file = NamedTempFile::new().unwrap();
+        let decrypted_tar_file = NamedTempFile::new().unwrap();
 
-        let encrypted_file = tempfile::NamedTempFile::new().unwrap();
-        let decrypted_tar_file = tempfile::NamedTempFile::new().unwrap();
+        // Create sample files in temp_dir
+        let file1 = temp_dir.path().join("doc1.txt");
+        let file2 = temp_dir.path().join("sub/doc2.txt");
+        std::fs::create_dir_all(temp_dir.path().join("sub")).unwrap();
+        std::fs::write(&file1, b"Hello inside archive 1").unwrap();
+        std::fs::write(&file2, b"Hello inside subfolder 2").unwrap();
 
         let params = EncryptionParams {
             cipher: CipherSuite::Aes256Gcm,
@@ -598,6 +606,7 @@ mod tests {
             ],
             author_signing_key_base64: None,
             author_label: None,
+            manifest: None,
         };
 
         let enc_res = encrypt_file(
@@ -681,6 +690,7 @@ mod tests {
             ],
             author_signing_key_base64: None,
             author_label: None,
+            manifest: None,
         };
 
         encrypt_file(
@@ -757,6 +767,7 @@ mod tests {
             ],
             author_signing_key_base64: Some(signing_keypair.private_key_base64.clone()),
             author_label: Some("Alice - Chief Financial Officer".to_string()),
+            manifest: None,
         };
 
         let enc_res = encrypt_file(
@@ -778,6 +789,78 @@ mod tests {
         assert_eq!(
             inspection.signature_block.as_ref().unwrap().author_label,
             "Alice - Chief Financial Officer"
+        );
+    }
+
+    #[test]
+    fn test_ml_dsa_signed_manifest_roundtrip_and_tamper_detection() {
+        use crate::pqc::generate_ml_dsa_keypair;
+
+        let input_file = NamedTempFile::new().unwrap();
+        let encrypted_file = NamedTempFile::new().unwrap();
+
+        let original_data = b"CONFIDENTIAL BOARD RESOLUTION AND SHAREHOLDER RECORD".repeat(20);
+        std::fs::write(input_file.path(), &original_data).unwrap();
+
+        let signing_keypair = generate_ml_dsa_keypair().expect("ML-DSA keygen failed");
+
+        let manifest = DencManifest {
+            classification: "TOP_SECRET".to_string(),
+            purpose: Some("Annual Strategic M&A Valuation".to_string()),
+            organization: Some("Global Corporate Legal".to_string()),
+            created_at_utc: 1771935000,
+            original_filename: Some("board_resolution.pdf".to_string()),
+        };
+
+        let params = EncryptionParams {
+            cipher: CipherSuite::XChaCha20Poly1305,
+            threshold_k: 2,
+            total_n: 2,
+            chunk_size: Some(1024),
+            custodians: vec![
+                CustodianInput {
+                    custodian_id: 1,
+                    label: "Party 1".to_string(),
+                    auth_type: AuthType::Passphrase,
+                    passphrase: Some("PassOne#1".to_string()),
+                    public_key_base64: None,
+                },
+                CustodianInput {
+                    custodian_id: 2,
+                    label: "Party 2".to_string(),
+                    auth_type: AuthType::Passphrase,
+                    passphrase: Some("PassTwo#2".to_string()),
+                    public_key_base64: None,
+                },
+            ],
+            author_signing_key_base64: Some(signing_keypair.private_key_base64.clone()),
+            author_label: Some("Alice - Chief Security Officer".to_string()),
+            manifest: Some(manifest.clone()),
+        };
+
+        encrypt_file(
+            input_file.path(),
+            encrypted_file.path(),
+            params,
+            |_, _| {},
+            None,
+        )
+        .expect("Signed manifest encryption failed");
+
+        // Inspect container and verify manifest and signature
+        let inspection = inspect_container(encrypted_file.path()).expect("Inspection failed");
+        assert_eq!(inspection.version, 2);
+        assert_eq!(inspection.is_signature_valid, Some(true));
+        assert!(inspection.manifest.is_some());
+        let insp_man = inspection.manifest.unwrap();
+        assert_eq!(insp_man.classification, "TOP_SECRET");
+        assert_eq!(
+            insp_man.purpose.as_deref(),
+            Some("Annual Strategic M&A Valuation")
+        );
+        assert_eq!(
+            insp_man.organization.as_deref(),
+            Some("Global Corporate Legal")
         );
     }
 }

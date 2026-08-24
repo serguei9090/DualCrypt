@@ -38,6 +38,7 @@ pub struct StartEncryptRequest {
     pub custodians: Vec<EncryptCustodianPayload>,
     pub author_signing_key_base64: Option<String>,
     pub author_label: Option<String>,
+    pub manifest: Option<denc_core::container::DencManifest>,
 }
 
 #[derive(Debug, Serialize)]
@@ -88,6 +89,7 @@ pub async fn start_encryption(
         custodians,
         author_signing_key_base64: request.author_signing_key_base64,
         author_label: request.author_label,
+        manifest: request.manifest,
     };
 
     let input_path = request.input_path.clone();

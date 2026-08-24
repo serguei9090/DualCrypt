@@ -226,6 +226,7 @@ async fn handle_encrypt(
         custodians,
         author_signing_key_base64: None,
         author_label: None,
+        manifest: None,
     };
 
     let pb = ProgressBar::new(100);
@@ -394,7 +395,32 @@ fn handle_inspect(input: PathBuf, json: bool) -> Result<(), Box<dyn std::error::
         inspection.threshold_k,
         inspection.total_n
     );
-    println!("  {:<20} {} KiB", "Streaming Chunk:".bright_white(), inspection.chunk_size / 1024);
+    if let Some(sig) = &inspection.signature_block {
+        let valid_str = if inspection.is_signature_valid == Some(true) {
+            "✔ VALID (NIST FIPS 204 ML-DSA-65)".green().bold()
+        } else {
+            "✖ INVALID / TAMPERED".red().bold()
+        };
+        println!("  {:<20} {}", "Author Signature:".bright_white(), valid_str);
+        println!("  {:<20} {}", "Author Identity:".bright_white(), sig.author_label.cyan());
+    }
+
+    if let Some(man) = &inspection.manifest {
+        println!("\n{}", "  Governance & Compliance Manifest:".magenta().bold());
+        let class_badge = match man.classification.to_uppercase().as_str() {
+            "TOP_SECRET" | "TOP SECRET" => man.classification.red().bold(),
+            "CONFIDENTIAL" => man.classification.yellow().bold(),
+            "RESTRICTED" => man.classification.purple().bold(),
+            _ => man.classification.blue().bold(),
+        };
+        println!("   • Classification : {}", class_badge);
+        if let Some(p) = &man.purpose {
+            println!("   • Purpose/Scope  : {}", p.bright_white());
+        }
+        if let Some(org) = &man.organization {
+            println!("   • Organization   : {}", org.cyan());
+        }
+    }
 
     println!("\n{}", "  Custodian Roster:".yellow().bold());
     for c in &inspection.custodians {
