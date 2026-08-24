@@ -1,0 +1,112 @@
+name: CI Quality Gate & Automated Tests
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-format:
+    name: 🎨 Biome Lint & Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Biome Globally
+        run: bun add -g @biomejs/biome
+
+      - name: Run Biome Check
+        run: biome check .
+
+  rust-crypto-core:
+    name: 🔒 Rust Cryptographic Tests & Cargo Check
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Cargo Check (Workspace)
+        run: cargo check --workspace --all-targets
+
+      - name: Cargo Test (Cryptographic Core & AEAD Primitives)
+        run: cargo test --workspace --verbose
+
+  build-desktop-web:
+    name: 🖥️ Desktop Web & WASM Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Build Wasm Engine
+        run: |
+          cd crates/denc-wasm
+          wasm-pack build --target web --out-dir ../../src/wasm
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile || bun install
+
+      - name: Build Desktop Application (TypeScript & Vite)
+        run: bun run build
+
+  build-mobile-android:
+    name: 📱 Mobile Android Authenticator Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Mobile Dependencies
+        run: |
+          cd apps/mobile-android
+          bun install --frozen-lockfile || bun install
+
+      - name: Build Mobile Android Authenticator
+        run: |
+          cd apps/mobile-android
+          bun run build

@@ -213,6 +213,48 @@ denc serve --host 0.0.0.0 --port 8080
 
 ---
 
+## 🚀 CI/CD & Automated Release Matrix
+
+The repository features enterprise GitHub Actions automation workflows covering continuous testing, web deployment, multi-platform desktop packaging, and signed Android mobile releases.
+
+```mermaid
+flowchart TD
+    Push[Push / Pull Request] --> CI[CI Quality Gate]
+    CI --> Biome[Biome Lint & Format]
+    CI --> Cargo[Cargo Workspace Tests]
+    CI --> Web[Desktop & Mobile Web Build]
+
+    Tag[Release Tag v* / Dispatch] --> CD[CD Release Pipelines]
+    CD --> Pages[GitHub Pages Web Portal]
+    CD --> Desktop[Windows .msi/.exe | Linux .deb/.AppImage | macOS .dmg]
+    CD --> Android[Signed Android APK & AAB]
+```
+
+### Automated Workflows
+
+| Workflow | File | Trigger | Output / Artifacts |
+| :--- | :--- | :--- | :--- |
+| **CI Quality Gate** | [`.github/workflows/ci.yml`](file:///.github/workflows/ci.yml) | Push & PR (`main`, `master`) | Biome check, Cargo tests, WASM build, Desktop & Android build tests. |
+| **GitHub Pages** | [`.github/workflows/deploy-pages.yml`](file:///.github/workflows/deploy-pages.yml) | Push to `main`/`master` | Live Zero-Knowledge in-browser decryptor & mobile portal. |
+| **Desktop Releases** | [`.github/workflows/release-desktop.yml`](file:///.github/workflows/release-desktop.yml) | Tags `v*` or Manual Dispatch | Multi-OS binaries: Windows (`.msi`, `.exe`), Linux (`.deb`, `.AppImage`), macOS (`.dmg`). |
+| **Signed Android** | [`.github/workflows/release-android.yml`](file:///.github/workflows/release-android.yml) | Tags `v*` or Manual Dispatch | Cryptographically signed `.apk` and Google Play `.aab` bundles. |
+
+### 🔐 Configuring GitHub Repository Secrets
+
+To enable production code signing for Android APKs and desktop auto-updates, configure the following secrets in **Repository Settings $\rightarrow$ Secrets and variables $\rightarrow$ Actions**:
+
+| Secret Name | Purpose | Example / Format |
+| :--- | :--- | :--- |
+| `ANDROID_KEYSTORE_BASE64` | Base64-encoded release `.jks` keystore | `cat release.jks \| base64` |
+| `ANDROID_KEYSTORE_PASSWORD` | Keystore password | `your-keystore-password` |
+| `ANDROID_KEY_ALIAS` | Key alias in keystore | `dualcrypt-key` |
+| `ANDROID_KEY_PASSWORD` | Specific key password | `your-key-password` |
+| `TAURI_SIGNING_PRIVATE_KEY` | Tauri updater signature private key | Generated via `tauri signer generate` |
+
+*(Note: If Android secrets are omitted, the workflow automatically generates an ephemeral self-signed key so builds never fail).*
+
+---
+
 ## 🛠️ Development & Building
 
 ### Prerequisites
@@ -228,6 +270,9 @@ bun install
 # Run desktop application in development mode
 bun run tauri dev
 
+# Run mobile authenticator in development mode
+bun run mobile:dev
+
 # Run CLI directly
 cargo run -p denc-cli -- --help
 ```
@@ -235,4 +280,7 @@ cargo run -p denc-cli -- --help
 ### Run Full Test Suite
 ```bash
 cargo test --workspace
+biome check .
+bun run build
+bun run mobile:build
 ```
