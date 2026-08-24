@@ -27,6 +27,11 @@ __pycache__/
 hooks_log.txt
 .DS_Store
 Thumbs.db
-*.dkey.tmp
-*.denc.tmp
+# Android & Gradle
+.gradle/
+**/.gradle/
+**/build/
+*.apk
+*.aab
+dist-android/
 

@@ -31,35 +31,17 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android NDK & Build Tools
-        run: |
-          sdkmanager --install "ndk;27.1.12297006" "build-tools;34.0.0" "platforms;android-34"
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.1.12297006" >> $GITHUB_ENV
-          echo "NDK_HOME=$ANDROID_HOME/ndk/27.1.12297006" >> $GITHUB_ENV
-
-      - name: Install Rust Toolchain & Android Targets
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
-      - name: Install Root & Mobile Dependencies
-        run: |
-          bun install --frozen-lockfile || bun install
-          cd apps/mobile-android
-          bun install --frozen-lockfile || bun install
-
-      - name: Build Mobile Frontend Assets
+      - name: Install Dependencies & Build Web Assets
         run: |
           cd apps/mobile-android
+          bun install --frozen-lockfile || bun install
           bun run build
+          bunx cap sync android
 
       - name: Prepare Android Signing Keystore
         id: keystore-setup
@@ -90,19 +72,28 @@ jobs:
             echo "KEY_PASSWORD=$RANDOM_PASS" >> $GITHUB_ENV
           fi
 
-      - name: Initialize Tauri Android Target (if needed)
+      - name: Build Android Release APK & App Bundle
         run: |
-          bunx tauri android init --ci || true
+          cd apps/mobile-android/android
+          chmod +x gradlew
+          ./gradlew assembleRelease bundleRelease
 
-      - name: Build Android APKs & App Bundles (Release)
-        run: |
-          bunx tauri android build --apk --aab --ci || true
-
-      - name: Sign & Align Android Packages
+      - name: Sign & Align Android APK
         uses: r0adkll/sign-android-release@v1
         id: sign_app
         with:
-          releaseDirectory: src-tauri/gen/android/app/build/outputs/apk/universal/release
+          releaseDirectory: apps/mobile-android/android/app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          alias: ${{ env.KEY_ALIAS }}
+          keyStorePassword: ${{ env.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ env.KEY_PASSWORD }}
+        continue-on-error: true
+
+      - name: Sign & Align Android AAB (App Bundle)
+        uses: r0adkll/sign-android-release@v1
+        id: sign_bundle
+        with:
+          releaseDirectory: apps/mobile-android/android/app/build/outputs/bundle/release
           signingKeyBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           alias: ${{ env.KEY_ALIAS }}
           keyStorePassword: ${{ env.KEYSTORE_PASSWORD }}
@@ -112,8 +103,8 @@ jobs:
       - name: Collect Android Artifacts
         run: |
           mkdir -p dist-android
-          find src-tauri/gen/android/app/build/outputs/ -type f \( -name "*.apk" -o -name "*.aab" \) -exec cp {} dist-android/ \; || true
-          ls -lah dist-android || true
+          find apps/mobile-android/android/app/build/outputs/ -type f \( -name "*.apk" -o -name "*.aab" \) -exec cp {} dist-android/ \;
+          ls -lah dist-android
 
       - name: Upload Android Build Artifacts (Actions)
         uses: actions/upload-artifact@v4

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DualCrypt Authenticator</string>
+    <string name="title_activity_main">DualCrypt Authenticator</string>
+    <string name="package_name">com.enterprise.dualcrypt.auth</string>
+    <string name="custom_url_scheme">com.enterprise.dualcrypt.auth</string>
+</resources>
