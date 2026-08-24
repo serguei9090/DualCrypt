@@ -2,6 +2,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import {
   AlertTriangle,
   Atom,
+  Calendar,
   CheckCircle2,
   Clock,
   Cpu,
@@ -95,11 +96,17 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
   const [pqcError, setPqcError] = useState<string | null>(null);
 
   // Time-Lock Recovery State
-  const [timelockChoice, setTimelockChoice] = useState<string>("none");
+  const [isTimelockEnabled, setIsTimelockEnabled] = useState(false);
+  const [timelockDate, setTimelockDate] = useState(() => {
+    const d = new Date(Date.now() + 30 * 86400000);
+    return d.toISOString().slice(0, 16);
+  });
 
-  const handleTimelockChange = (choice: string) => {
-    setTimelockChoice(choice);
-    if (choice === "none") {
+  const minDateTime = new Date().toISOString().slice(0, 16);
+
+  const handleToggleTimelock = (enabled: boolean) => {
+    setIsTimelockEnabled(enabled);
+    if (!enabled) {
       onUpdateSetup?.({
         label: currentLabel,
         authType: selectedMethod,
@@ -108,16 +115,46 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
         timelockNotBeforeUtc: undefined,
       });
     } else {
-      const days = parseInt(choice, 10);
-      const unlockUtc = Math.floor(Date.now() / 1000) + days * 86400;
+      const selectedUtc = Math.floor(new Date(timelockDate).getTime() / 1000);
       onUpdateSetup?.({
         label: currentLabel,
         authType: selectedMethod,
         passphrase,
         publicKeyBase64: pqcPublicKey,
-        timelockNotBeforeUtc: unlockUtc,
+        timelockNotBeforeUtc: selectedUtc > 0 ? selectedUtc : undefined,
       });
     }
+  };
+
+  const handleDateChange = (val: string) => {
+    setTimelockDate(val);
+    if (isTimelockEnabled && val) {
+      const selectedUtc = Math.floor(new Date(val).getTime() / 1000);
+      if (selectedUtc > Math.floor(Date.now() / 1000)) {
+        onUpdateSetup?.({
+          label: currentLabel,
+          authType: selectedMethod,
+          passphrase,
+          publicKeyBase64: pqcPublicKey,
+          timelockNotBeforeUtc: selectedUtc,
+        });
+      }
+    }
+  };
+
+  const handleQuickAddDays = (days: number) => {
+    const d = new Date(Date.now() + days * 86400000);
+    const dateStr = d.toISOString().slice(0, 16);
+    setTimelockDate(dateStr);
+    setIsTimelockEnabled(true);
+    const selectedUtc = Math.floor(d.getTime() / 1000);
+    onUpdateSetup?.({
+      label: currentLabel,
+      authType: selectedMethod,
+      passphrase,
+      publicKeyBase64: pqcPublicKey,
+      timelockNotBeforeUtc: selectedUtc,
+    });
   };
 
   const nowUtc = Math.floor(Date.now() / 1000);
@@ -931,37 +968,77 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                 </div>
               )}
 
-              {/* Time-Lock Recovery Share Option for Encrypt Setup Mode */}
+              {/* Time-Lock Recovery Share Option with Interactive Calendar */}
               {mode === "encrypt_setup" && (
-                <div className="pt-2 border-t border-zinc-800/60 space-y-1.5 text-left">
+                <div className="pt-2.5 border-t border-zinc-800/80 space-y-2 text-left">
                   <div className="flex items-center justify-between">
                     <label
-                      htmlFor={`timelock-select-${custodianId}`}
-                      className="flex items-center gap-1.5 text-[11px] font-medium text-amber-300"
+                      htmlFor={`timelock-toggle-${custodianId}`}
+                      className="flex items-center gap-2 cursor-pointer select-none"
                     >
-                      <Clock className="w-3.5 h-3.5 text-amber-400" />
-                      <span>⏳ Time-Lock Escrow</span>
+                      <input
+                        type="checkbox"
+                        id={`timelock-toggle-${custodianId}`}
+                        checked={isTimelockEnabled}
+                        onChange={(e) => handleToggleTimelock(e.target.checked)}
+                        className="w-3.5 h-3.5 rounded bg-zinc-950 border-zinc-700 text-amber-500 focus:ring-0 focus:ring-offset-0 cursor-pointer accent-amber-500"
+                      />
+                      <span className="flex items-center gap-1.5 text-xs font-semibold text-amber-300">
+                        <Clock className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Time-Lock Escrow</span>
+                      </span>
                     </label>
-                    <select
-                      id={`timelock-select-${custodianId}`}
-                      value={timelockChoice}
-                      onChange={(e) => handleTimelockChange(e.target.value)}
-                      className="rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-1 text-[10px] text-zinc-300 font-mono focus:border-amber-500 focus:outline-none"
-                    >
-                      <option value="none">Immediate (Active Now)</option>
-                      <option value="30">30 Days Timelock</option>
-                      <option value="90">90 Days Timelock</option>
-                      <option value="180">6 Months Timelock</option>
-                      <option value="365">1 Year Timelock</option>
-                    </select>
+                    {isTimelockEnabled && (
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300">
+                        Sealed
+                      </span>
+                    )}
                   </div>
-                  {timelockChoice !== "none" && (
-                    <p className="text-[10px] text-amber-400/80 font-mono">
-                      Sealed until:{" "}
-                      {new Date(
-                        Date.now() + parseInt(timelockChoice, 10) * 86400000,
-                      ).toLocaleDateString()}
-                    </p>
+
+                  {isTimelockEnabled && (
+                    <div className="p-2.5 rounded-xl border border-amber-500/30 bg-amber-950/20 space-y-2 animate-in fade-in">
+                      <div className="space-y-1">
+                        <label
+                          htmlFor={`timelock-date-${custodianId}`}
+                          className="text-[10px] text-zinc-400 font-mono flex items-center gap-1"
+                        >
+                          <Calendar className="w-3 h-3 text-amber-400" />
+                          <span>Release Date & Time (UTC):</span>
+                        </label>
+                        <input
+                          type="datetime-local"
+                          id={`timelock-date-${custodianId}`}
+                          min={minDateTime}
+                          value={timelockDate}
+                          onChange={(e) => handleDateChange(e.target.value)}
+                          className="w-full rounded-lg border border-amber-500/40 bg-zinc-950 px-3 py-1.5 text-xs text-amber-200 font-mono focus:border-amber-400 focus:outline-none"
+                        />
+                      </div>
+
+                      {/* Quick Preset Buttons */}
+                      <div className="flex items-center gap-1.5 pt-0.5">
+                        <span className="text-[10px] text-zinc-500 font-mono mr-1">Quick:</span>
+                        {[
+                          { label: "+30D", days: 30 },
+                          { label: "+90D", days: 90 },
+                          { label: "+6M", days: 180 },
+                          { label: "+1Yr", days: 365 },
+                        ].map((preset) => (
+                          <button
+                            key={preset.days}
+                            type="button"
+                            onClick={() => handleQuickAddDays(preset.days)}
+                            className="px-2 py-0.5 rounded-md bg-zinc-900 hover:bg-amber-500/20 border border-zinc-800 hover:border-amber-500/40 text-[10px] font-mono text-zinc-300 hover:text-amber-300 transition-colors cursor-pointer"
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <p className="text-[10px] text-amber-300/80 font-mono">
+                        Locked until: {new Date(timelockDate).toLocaleString()}
+                      </p>
+                    </div>
                   )}
                 </div>
               )}
