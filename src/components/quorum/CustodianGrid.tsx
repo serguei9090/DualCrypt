@@ -33,6 +33,7 @@ interface CustodianGridProps {
       publicKeyBase64?: string;
     },
   ) => void;
+  onAirGapClick?: (custodianId: number) => void;
 }
 
 export const CustodianGrid: React.FC<CustodianGridProps> = ({
@@ -40,6 +41,7 @@ export const CustodianGrid: React.FC<CustodianGridProps> = ({
   mode,
   onCredentialSubmit,
   onUpdateSetup,
+  onAirGapClick,
 }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -53,6 +55,7 @@ export const CustodianGrid: React.FC<CustodianGridProps> = ({
           mode={mode}
           onCredentialSubmit={onCredentialSubmit}
           onUpdateSetup={(data) => onUpdateSetup?.(c.custodianId, data)}
+          onAirGapClick={onAirGapClick}
         />
       ))}
     </div>

@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
+import { AirGapDesktopModal } from "./components/airgap/AirGapDesktopModal";
+import { AirGapMobileApp } from "./components/airgap/AirGapMobileApp";
 import { FileDropzone } from "./components/dropzone/FileDropzone";
 import { FileMetadataCard } from "./components/dropzone/FileMetadataCard";
 import { KeyEscrowView } from "./components/escrow/KeyEscrowView";
@@ -34,7 +36,12 @@ import {
   isTauriEnvironment,
 } from "./lib/tauri";
 import { cn, formatBytes } from "./lib/utils";
-import type { AuthType, ContainerHeaderInfo, ExportedShare } from "./types/container";
+import type {
+  AuthType,
+  ContainerHeaderInfo,
+  CustodianDescriptorInfo,
+  ExportedShare,
+} from "./types/container";
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>("encrypt");
@@ -43,6 +50,11 @@ export const App: React.FC = () => {
   const [filePath, setFilePath] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileSize, setFileSize] = useState<number | null>(null);
+
+  // Optical Air-Gap Handshake Modal State
+  const [airGapModalCustodian, setAirGapModalCustodian] = useState<CustodianDescriptorInfo | null>(
+    null,
+  );
 
   // Author Digital Signature State (NIST FIPS 204 ML-DSA-65)
   const [enableAuthorSignature, setEnableAuthorSignature] = useState(false);
@@ -610,8 +622,34 @@ export const App: React.FC = () => {
                         custodians={quorum.custodians}
                         mode="decrypt_unlock"
                         onCredentialSubmit={quorum.handleCredentialSubmit}
+                        onAirGapClick={(id) => {
+                          const c = containerMetadata?.custodians.find(
+                            (x) => x.custodian_id === id,
+                          );
+                          if (c) setAirGapModalCustodian(c);
+                        }}
                       />
                     </div>
+
+                    {/* Air-Gap Optical Handshake Modal */}
+                    {airGapModalCustodian && containerMetadata && (
+                      <AirGapDesktopModal
+                        isOpen={!!airGapModalCustodian}
+                        onClose={() => setAirGapModalCustodian(null)}
+                        custodian={airGapModalCustodian}
+                        containerMetadata={containerMetadata}
+                        fileName={fileName || "Container"}
+                        onResponseReceived={(resp) => {
+                          quorum.handleCredentialSubmit({
+                            custodianId: resp.custodianId,
+                            passphrase: resp.passphrase,
+                            keyFileContent: resp.shareDataJson,
+                            pqcPrivateKeyBase64: resp.pqcPrivateKeyBase64,
+                            authType: "passphrase",
+                          });
+                        }}
+                      />
+                    )}
 
                     <div className="pt-2">
                       <button
@@ -632,10 +670,13 @@ export const App: React.FC = () => {
             {/* 3. KEY TOOLS & ESCROW TAB */}
             {activeTab === "keytools" && <KeyEscrowView />}
 
-            {/* 4. ACTIVITY & AUDIT HISTORY TAB */}
+            {/* 4. AIR-GAPPED MOBILE AUTHENTICATOR APP TAB */}
+            {activeTab === "airgap_mobile" && <AirGapMobileApp />}
+
+            {/* 5. ACTIVITY & AUDIT HISTORY TAB */}
             {activeTab === "history" && <AuditHistoryView />}
 
-            {/* 5. SETTINGS & EMAIL DISPATCH TAB */}
+            {/* 6. SETTINGS & EMAIL DISPATCH TAB */}
             {activeTab === "settings" && <SettingsTab />}
           </>
         )}

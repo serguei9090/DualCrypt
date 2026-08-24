@@ -11,6 +11,7 @@ import {
   Lock,
   RefreshCw,
   Shield,
+  Smartphone,
   Upload,
   Zap,
 } from "lucide-react";
@@ -49,6 +50,7 @@ interface CustodianCardProps {
     passphrase?: string;
     publicKeyBase64?: string;
   }) => void;
+  onAirGapClick?: (custodianId: number) => void;
 }
 
 export const CustodianCard: React.FC<CustodianCardProps> = ({
@@ -59,6 +61,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
   mode,
   onCredentialSubmit,
   onUpdateSetup,
+  onAirGapClick,
 }) => {
   const [selectedMethod, setSelectedMethod] = useState<AuthMethod>(
     authType === ("postquantum" as unknown) ? "pqc" : authType,
@@ -821,6 +824,20 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
                 className="rounded-xl bg-cyan-600 px-4 py-2 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-40"
               >
                 Verify
+              </button>
+            </div>
+          )}
+
+          {/* Optical Air-Gap Handshake Option */}
+          {onAirGapClick && (
+            <div className="pt-2 border-t border-zinc-800/80">
+              <button
+                type="button"
+                onClick={() => onAirGapClick(custodianId)}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/30 text-cyan-300 text-xs font-semibold font-mono transition-all cursor-pointer shadow-sm hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]"
+              >
+                <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
+                <span>📲 100% Air-Gapped Optical Sign-Off</span>
               </button>
             </div>
           )}

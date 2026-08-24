@@ -78,6 +78,12 @@ The `.denc` container encapsulates the metadata and chunked authenticated stream
 
 ## 🚀 Live Features
 
+* **📲 Air-Gapped Mobile Authenticator & Dynamic Animated QR Handshake**:
+  * **100% Optical Air-Gap Protocol (`DENC-AIRGAP-V1`)**: 2-way camera-to-screen communication with zero Wi-Fi, Bluetooth, or USB cable exposure.
+  * **Biometric Authentication & Master PIN**: Offline Android Authenticator requiring Fingerprint/Face Unlock or Master PIN before releasing key material in memory.
+  * **Multipart Fountain Streaming**: Encodes large cryptographic shares and ML-KEM payloads into high-speed rotating QR frames (4–12 FPS) with built-in CRC/SHA-256 error correction.
+  * **On-Device Provenance Inspection**: Mobile screen renders the container's security classification (`TOP SECRET 🔴`), purpose, and issuing organization before signing.
+  * **Split-Screen Desktop Modal**: Workstation projects the challenge stream while its webcam captures the mobile response stream in real-time, auto-filling the quorum slot.
 * **📋 Embedded Immutable Container Manifest & Governance Passport**:
   * Cryptographically signed governance metadata embedded directly inside `.denc` container headers.
   * **Security Classification Levels**: `TOP SECRET 🔴`, `CONFIDENTIAL 🟠`, `INTERNAL 🔵`, `RESTRICTED 🟣`, `GENERAL 🟢`.
@@ -167,7 +173,7 @@ denc serve --host 0.0.0.0 --port 8080
 ## 🗺️ Product Roadmap
 
 ### 🟢 Phase 1: Air-Gapped Co-Presence & Mobile
-- [ ] **Dynamic Animated QR Handshake**: Challenge-response animated QR code generator/scanner enabling 100% air-gapped custodian sign-off via offline mobile devices.
+- [x] **Dynamic Animated QR Handshake & Mobile Authenticator**: 2-way challenge-response animated QR code generator/scanner enabling 100% air-gapped custodian sign-off via offline mobile devices with Biometric/PIN protection. *(Completed)*
 
 ### 🟡 Phase 2: Post-Quantum Cryptography (PQC)
 - [x] **ML-KEM-768 (Kyber-768)**: NIST FIPS 203 public-key encapsulation for asynchronous custodian key distribution without pre-shared secrets. *(Completed)*
