@@ -19,8 +19,14 @@ __pycache__/
 
 # Scratch and transient files
 /scratch/
+/release_credentials/
+*.jks
+*.keystore
+*.key
+*.pem
 hooks_log.txt
 .DS_Store
 Thumbs.db
 *.dkey.tmp
 *.denc.tmp
+

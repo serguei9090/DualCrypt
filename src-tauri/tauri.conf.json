@@ -1,8 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/v2/crates/tauri-cli/schema.json",
   "productName": "DualCrypt Enterprise",
-  "version": "2.0.0",
-  "identifier": "com.enterprise.dualencryption",
+  "version": "0.5.0",
+  "identifier": "com.enterprise.dualcrypt",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:5173",
@@ -42,21 +42,21 @@
         "name": "DualCrypt Encrypted Container",
         "description": "DualCrypt Enterprise Threshold Encrypted Container",
         "role": "Editor",
-        "mimeType": "application/x-dual-encryption-container"
+        "mimeType": "application/x-dualcrypt-container"
       },
       {
         "ext": ["dkey"],
         "name": "DualCrypt Key Share",
         "description": "DualCrypt Shamir Secret Key Share",
         "role": "Viewer",
-        "mimeType": "application/x-dual-encryption-key"
+        "mimeType": "application/x-dualcrypt-key"
       },
       {
         "ext": ["pqc"],
         "name": "DualCrypt Post-Quantum Certificate",
         "description": "DualCrypt NIST FIPS Post-Quantum Key Armor",
         "role": "Viewer",
-        "mimeType": "application/x-dual-encryption-pqc"
+        "mimeType": "application/x-dualcrypt-pqc"
       }
     ],
     "windows": {

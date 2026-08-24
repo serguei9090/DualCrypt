@@ -1,6 +1,6 @@
 [package]
 name = "denc-core"
-version = "0.1.0"
+version = "0.5.0"
 edition = "2021"
 authors = ["DualCrypt Enterprise"]
 description = "High-assurance threshold and dual-custody cryptographic engine"

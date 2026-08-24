@@ -1029,7 +1029,7 @@ dependencies = [
 
 [[package]]
 name = "denc-cli"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "axum",
  "clap",
@@ -1046,7 +1046,7 @@ dependencies = [
 
 [[package]]
 name = "denc-core"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -1070,7 +1070,7 @@ dependencies = [
 
 [[package]]
 name = "denc-wasm"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "aes-gcm",
  "denc-core",
@@ -1277,8 +1277,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f678cf4a922c215c63e0de95eb1ff08a958a81d47e485cf9da1e27bf6305cfa5"
 
 [[package]]
-name = "dual-encryption-app"
-version = "2.0.0"
+name = "dualcrypt-app"
+version = "0.5.0"
 dependencies = [
  "axum",
  "denc-core",
