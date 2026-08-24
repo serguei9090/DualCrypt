@@ -44,23 +44,8 @@ jobs:
           bunx cap sync android
 
       - name: Prepare Android Signing Keystore
-        id: keystore-setup
         run: |
           mkdir -p $HOME/keystore
-          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
-            echo "Attempting to use production signing keystore from GitHub Secrets..."
-            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > $HOME/keystore/release.jks
-            if keytool -list -keystore $HOME/keystore/release.jks -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" > /dev/null 2>&1; then
-              echo "Secret keystore verified successfully."
-              echo "KEYSTORE_PATH=$HOME/keystore/release.jks" >> $GITHUB_ENV
-              echo "KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> $GITHUB_ENV
-              echo "KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
-              echo "KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> $GITHUB_ENV
-              exit 0
-            fi
-            echo "Secrets keystore verification failed. Generating dedicated release keystore..."
-          fi
-
           RELEASE_PASS="DualCrypt2026SecurePass!"
           keytool -genkeypair -v \
             -keystore $HOME/keystore/release.jks \
@@ -74,29 +59,39 @@ jobs:
             -keypass "$RELEASE_PASS"
           echo "KEYSTORE_PATH=$HOME/keystore/release.jks" >> $GITHUB_ENV
           echo "KEY_ALIAS=dualcrypt" >> $GITHUB_ENV
-          echo "KEYSTORE_PASSWORD=$RELEASE_PASS" >> $GITHUB_ENV
-          echo "KEY_PASSWORD=$RELEASE_PASS" >> $GITHUB_ENV
+          echo "KEY_PASS=$RELEASE_PASS" >> $GITHUB_ENV
 
-      - name: Build Android Release APK & App Bundle (Signed & Protected)
+      - name: Build Android Release Artifacts (R8 Code Protected)
         run: |
           cd apps/mobile-android/android
           chmod +x gradlew
           ./gradlew assembleRelease bundleRelease
 
-      - name: Collect & Brand Android Artifacts
+      - name: Sign & Align Android Packages
         run: |
           mkdir -p dist-android
-          # Copy release APK
-          find apps/mobile-android/android/app/build/outputs/apk/release/ -type f -name "*.apk" -exec cp {} dist-android/DualCrypt.Enterprise_0.5.0.apk \;
-          # Copy release AAB (App Bundle)
-          find apps/mobile-android/android/app/build/outputs/bundle/release/ -type f -name "*.aab" -exec cp {} dist-android/DualCrypt.Enterprise_0.5.0.aab \;
-          ls -lah dist-android
+          APKSIGNER=$(find $ANDROID_SDK_ROOT/build-tools/ -name apksigner | sort -V | tail -n 1)
+          ZIPALIGN=$(find $ANDROID_SDK_ROOT/build-tools/ -name zipalign | sort -V | tail -n 1)
+          
+          # 1. Align and Sign APK with v1, v2, v3, and v4 signatures
+          RAW_APK=$(find apps/mobile-android/android/app/build/outputs/apk/release/ -type f -name "*.apk" | head -n 1)
+          echo "Found raw APK: $RAW_APK"
+          $ZIPALIGN -v -p 4 "$RAW_APK" dist-android/DualCrypt.Enterprise_0.5.0.apk
+          $APKSIGNER sign --ks "$KEYSTORE_PATH" --ks-pass pass:"$KEY_PASS" --key-pass pass:"$KEY_PASS" --ks-key-alias "$KEY_ALIAS" --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true dist-android/DualCrypt.Enterprise_0.5.0.apk
+
+          # 2. Sign AAB with jarsigner
+          RAW_AAB=$(find apps/mobile-android/android/app/build/outputs/bundle/release/ -type f -name "*.aab" | head -n 1)
+          echo "Found raw AAB: $RAW_AAB"
+          cp "$RAW_AAB" dist-android/DualCrypt.Enterprise_0.5.0.aab
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore "$KEYSTORE_PATH" -storepass "$KEY_PASS" -keypass "$KEY_PASS" dist-android/DualCrypt.Enterprise_0.5.0.aab "$KEY_ALIAS"
 
       - name: Verify Android Cryptographic Signatures
         run: |
           APKSIGNER=$(find $ANDROID_SDK_ROOT/build-tools/ -name apksigner | sort -V | tail -n 1)
-          echo "Using apksigner at: $APKSIGNER"
-          $APKSIGNER verify --verbose dist-android/DualCrypt.Enterprise_0.5.0.apk
+          echo "=== APK Cryptographic Signature Verification ==="
+          $APKSIGNER verify --verbose --print-certs dist-android/DualCrypt.Enterprise_0.5.0.apk
+          echo "=== AAB Cryptographic Signature Verification ==="
+          jarsigner -verify -verbose -certs dist-android/DualCrypt.Enterprise_0.5.0.aab
 
       - name: Upload Android Build Artifacts (Actions)
         uses: actions/upload-artifact@v4
