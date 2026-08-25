@@ -185,8 +185,9 @@ pub fn encapsulate_share_ml_kem(
         )));
     }
 
-    let encoded_key = Encoded::<EncapsulationKey<MlKem768Params>>::try_from(pub_bytes.as_slice())
-        .map_err(|_| DencError::Custom("Invalid ML-KEM public key buffer size".to_string()))?;
+    let encoded_key =
+        Encoded::<EncapsulationKey<MlKem768Params>>::try_from(pub_bytes.as_slice())
+            .map_err(|_| DencError::Custom("Invalid ML-KEM public key buffer size".to_string()))?;
     let enc_key = EncapsulationKey::<MlKem768Params>::from_bytes(&encoded_key);
 
     let (ciphertext, shared_secret) = enc_key
@@ -386,7 +387,9 @@ pub fn encrypt_dsa_keyfile_with_pin(
                 aad: &salt,
             },
         )
-        .map_err(|_| DencError::Custom("Failed to encrypt ML-DSA private key with PIN".to_string()))?;
+        .map_err(|_| {
+            DencError::Custom("Failed to encrypt ML-DSA private key with PIN".to_string())
+        })?;
 
     Ok(EncryptedMlDsaKeyFile {
         algorithm: keypair.algorithm.clone(),
@@ -416,10 +419,13 @@ pub fn decrypt_dsa_keyfile_with_pin(
                 aad: &enc_file.salt,
             },
         )
-        .map_err(|_| DencError::Custom("Invalid PIN for ML-DSA key file or corrupted data".to_string()))?;
+        .map_err(|_| {
+            DencError::Custom("Invalid PIN for ML-DSA key file or corrupted data".to_string())
+        })?;
 
-    let priv_key_str = String::from_utf8(decrypted)
-        .map_err(|_| DencError::Custom("Invalid UTF-8 in decrypted ML-DSA private key".to_string()))?;
+    let priv_key_str = String::from_utf8(decrypted).map_err(|_| {
+        DencError::Custom("Invalid UTF-8 in decrypted ML-DSA private key".to_string())
+    })?;
 
     Ok(priv_key_str)
 }
@@ -495,10 +501,7 @@ pub fn verify_signature_ml_dsa(
 }
 
 /// Generates a Post-Quantum Container Signature & Origin Authentication (Legacy helper)
-pub fn sign_container_digest(
-    private_key_material: &[u8],
-    header_digest: &[u8; 32],
-) -> Vec<u8> {
+pub fn sign_container_digest(private_key_material: &[u8], header_digest: &[u8; 32]) -> Vec<u8> {
     let mut hasher = Sha256::new();
     hasher.update(b"NIST-FIPS-204-SIGNATURE-CONTEXT:");
     hasher.update(private_key_material);
@@ -555,7 +558,8 @@ mod tests {
         assert!(decrypt_pqc_keyfile_with_pin(&enc, "WrongPin").is_err());
 
         // Correct PIN
-        let priv_key = decrypt_pqc_keyfile_with_pin(&enc, "MyPin#2026").expect("PIN decryption failed");
+        let priv_key =
+            decrypt_pqc_keyfile_with_pin(&enc, "MyPin#2026").expect("PIN decryption failed");
         assert_eq!(priv_key, keypair.private_key_base64);
     }
 
@@ -569,17 +573,19 @@ mod tests {
         let test_message = b"Canonical DENC Container Header Digest v2";
 
         // Sign
-        let signature = sign_digest_ml_dsa(&keypair.private_key_base64, test_message)
-            .expect("Signing failed");
+        let signature =
+            sign_digest_ml_dsa(&keypair.private_key_base64, test_message).expect("Signing failed");
 
         // Verify valid
-        let is_valid = verify_signature_ml_dsa(&keypair.public_key_base64, test_message, &signature)
-            .expect("Verification check failed");
+        let is_valid =
+            verify_signature_ml_dsa(&keypair.public_key_base64, test_message, &signature)
+                .expect("Verification check failed");
         assert!(is_valid);
 
         // Verify invalid message
-        let is_invalid = verify_signature_ml_dsa(&keypair.public_key_base64, b"Tampered Message", &signature)
-            .expect("Verification check failed");
+        let is_invalid =
+            verify_signature_ml_dsa(&keypair.public_key_base64, b"Tampered Message", &signature)
+                .expect("Verification check failed");
         assert!(!is_invalid);
     }
 
@@ -594,7 +600,8 @@ mod tests {
         assert!(decrypt_dsa_keyfile_with_pin(&enc, "WrongPin").is_err());
 
         // Correct PIN
-        let priv_key = decrypt_dsa_keyfile_with_pin(&enc, "DsaPin#2026").expect("PIN decryption failed");
+        let priv_key =
+            decrypt_dsa_keyfile_with_pin(&enc, "DsaPin#2026").expect("PIN decryption failed");
         assert_eq!(priv_key, keypair.private_key_base64);
     }
 }

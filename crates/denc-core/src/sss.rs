@@ -343,7 +343,9 @@ mod tests {
         let original_share = shares[0].clone();
 
         let pin = "987654";
-        let encrypted_share = original_share.encrypt_with_pin(pin).expect("PIN encryption failed");
+        let encrypted_share = original_share
+            .encrypt_with_pin(pin)
+            .expect("PIN encryption failed");
         assert!(encrypted_share.is_encrypted);
 
         // Wrong PIN should fail
@@ -351,7 +353,9 @@ mod tests {
         assert!(wrong_res.is_err());
 
         // Correct PIN should recover identical SecretShare
-        let recovered_share = encrypted_share.decrypt_with_pin(pin).expect("PIN decryption failed");
+        let recovered_share = encrypted_share
+            .decrypt_with_pin(pin)
+            .expect("PIN decryption failed");
         assert_eq!(recovered_share.id, original_share.id);
         assert_eq!(recovered_share.data, original_share.data);
     }

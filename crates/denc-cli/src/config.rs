@@ -70,7 +70,9 @@ pub fn read_config_content(path_or_dash: &Path) -> Result<String, Box<dyn std::e
 }
 
 /// Parses encryption configuration from JSON or YAML content
-pub fn parse_encrypt_config(content: &str) -> Result<PipelineEncryptConfig, Box<dyn std::error::Error>> {
+pub fn parse_encrypt_config(
+    content: &str,
+) -> Result<PipelineEncryptConfig, Box<dyn std::error::Error>> {
     if let Ok(cfg) = serde_json::from_str::<PipelineEncryptConfig>(content) {
         return Ok(cfg);
     }
@@ -79,7 +81,9 @@ pub fn parse_encrypt_config(content: &str) -> Result<PipelineEncryptConfig, Box<
 }
 
 /// Parses decryption configuration from JSON or YAML content
-pub fn parse_decrypt_config(content: &str) -> Result<PipelineDecryptConfig, Box<dyn std::error::Error>> {
+pub fn parse_decrypt_config(
+    content: &str,
+) -> Result<PipelineDecryptConfig, Box<dyn std::error::Error>> {
     if let Ok(cfg) = serde_json::from_str::<PipelineDecryptConfig>(content) {
         return Ok(cfg);
     }

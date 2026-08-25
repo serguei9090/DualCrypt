@@ -104,13 +104,14 @@ pub fn save_all_keyfiles_zip(
     let file = File::create(&file_path)
         .map_err(|e| format!("Failed to create zip file at '{file_path}': {e}"))?;
     let mut zip = ZipWriter::new(file);
-    let options = SimpleFileOptions::default()
-        .compression_method(zip::CompressionMethod::Deflated);
+    let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
 
     let pins_map = pins.unwrap_or_default();
 
     for s in &shares {
-        let sanitized_label = s.label.replace(|c: char| !c.is_alphanumeric() && c != '_', "_");
+        let sanitized_label = s
+            .label
+            .replace(|c: char| !c.is_alphanumeric() && c != '_', "_");
 
         if let Some(priv_b64) = &s.pqc_private_key_base64 {
             let pub_b64 = s.pqc_public_key_base64.clone().unwrap_or_default();
@@ -125,9 +126,14 @@ pub fn save_all_keyfiles_zip(
             zip.start_file(&priv_filename, options)
                 .map_err(|e| format!("Failed to add entry '{priv_filename}' to zip: {e}"))?;
 
-            let json = if let Some(pin) = pins_map.get(&s.custodian_id).filter(|p| !p.trim().is_empty()) {
+            let json = if let Some(pin) = pins_map
+                .get(&s.custodian_id)
+                .filter(|p| !p.trim().is_empty())
+            {
                 let enc_pqc = encrypt_pqc_keyfile_with_pin(&keypair, s.custodian_id, &s.label, pin)
-                    .map_err(|e| format!("Failed to encrypt PQC key with PIN for {priv_filename}: {e}"))?;
+                    .map_err(|e| {
+                        format!("Failed to encrypt PQC key with PIN for {priv_filename}: {e}")
+                    })?;
                 serde_json::to_string_pretty(&enc_pqc)
                     .map_err(|e| format!("Serialization error for {priv_filename}: {e}"))?
             } else {
@@ -147,7 +153,8 @@ pub fn save_all_keyfiles_zip(
 
             // Write Public Key (.pqc.pub)
             if !pub_b64.is_empty() {
-                let pub_filename = format!("custodian_{}_{}.pqc.pub", s.custodian_id, sanitized_label);
+                let pub_filename =
+                    format!("custodian_{}_{}.pqc.pub", s.custodian_id, sanitized_label);
                 zip.start_file(&pub_filename, options)
                     .map_err(|e| format!("Failed to add entry '{pub_filename}' to zip: {e}"))?;
                 let pub_obj = serde_json::json!({
@@ -167,7 +174,10 @@ pub fn save_all_keyfiles_zip(
             zip.start_file(&filename, options)
                 .map_err(|e| format!("Failed to add entry '{filename}' to zip: {e}"))?;
 
-            let json = if let Some(pin) = pins_map.get(&s.custodian_id).filter(|p| !p.trim().is_empty()) {
+            let json = if let Some(pin) = pins_map
+                .get(&s.custodian_id)
+                .filter(|p| !p.trim().is_empty())
+            {
                 let enc_share = share
                     .encrypt_with_pin(pin)
                     .map_err(|e| format!("Failed to encrypt share with PIN: {e}"))?;
@@ -212,7 +222,10 @@ pub fn save_all_keyfiles_zip(
 }
 
 #[tauri::command]
-pub fn parse_keyfile(file_path: String, pin: Option<String>) -> Result<KeyFileParseResponse, String> {
+pub fn parse_keyfile(
+    file_path: String,
+    pin: Option<String>,
+) -> Result<KeyFileParseResponse, String> {
     let content = std::fs::read_to_string(&file_path)
         .map_err(|e| format!("Failed to read key file '{file_path}': {e}"))?;
 

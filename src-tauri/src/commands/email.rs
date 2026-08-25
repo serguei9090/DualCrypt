@@ -46,8 +46,8 @@ fn get_config_path() -> PathBuf {
 #[tauri::command]
 pub async fn save_smtp_config(config: SmtpConfig) -> Result<(), String> {
     let path = get_config_path();
-    let json = serde_json::to_string_pretty(&config)
-        .map_err(|e| format!("Serialization error: {e}"))?;
+    let json =
+        serde_json::to_string_pretty(&config).map_err(|e| format!("Serialization error: {e}"))?;
     fs::write(&path, json).map_err(|e| format!("Failed to save SMTP config: {e}"))?;
     Ok(())
 }
@@ -58,10 +58,10 @@ pub async fn load_smtp_config() -> Result<Option<SmtpConfig>, String> {
     if !path.exists() {
         return Ok(None);
     }
-    let content = fs::read_to_string(&path)
-        .map_err(|e| format!("Failed to read SMTP config: {e}"))?;
-    let config: SmtpConfig = serde_json::from_str(&content)
-        .map_err(|e| format!("Failed to parse SMTP config: {e}"))?;
+    let content =
+        fs::read_to_string(&path).map_err(|e| format!("Failed to read SMTP config: {e}"))?;
+    let config: SmtpConfig =
+        serde_json::from_str(&content).map_err(|e| format!("Failed to parse SMTP config: {e}"))?;
     Ok(Some(config))
 }
 
@@ -86,7 +86,10 @@ fn build_smtp_transport(config: &SmtpConfig) -> Result<AsyncSmtpTransport<Tokio1
 }
 
 #[tauri::command]
-pub async fn test_smtp_connection(config: SmtpConfig, test_recipient: String) -> Result<String, String> {
+pub async fn test_smtp_connection(
+    config: SmtpConfig,
+    test_recipient: String,
+) -> Result<String, String> {
     let transport = build_smtp_transport(&config)?;
 
     let from_header = format!("{} <{}>", config.from_name, config.from_email);
@@ -112,11 +115,16 @@ pub async fn test_smtp_connection(config: SmtpConfig, test_recipient: String) ->
 }
 
 #[tauri::command]
-pub async fn send_custodian_key_email(request: SendCustodianEmailRequest) -> Result<String, String> {
+pub async fn send_custodian_key_email(
+    request: SendCustodianEmailRequest,
+) -> Result<String, String> {
     let transport = build_smtp_transport(&request.config)?;
 
-    let from_header = format!("{} <{}>", request.config.from_name, request.config.from_email);
-    
+    let from_header = format!(
+        "{} <{}>",
+        request.config.from_name, request.config.from_email
+    );
+
     let pin_instructions = if request.is_pin_protected {
         if let Some(ref pin) = request.pin_code {
             format!("\n🔐 PIN PROTECTION ACTIVE:\nYour key share file is encrypted. Your decryption PIN is: {}\nPlease store this PIN separately from the attached file.\n", pin)
@@ -154,17 +162,29 @@ pub async fn send_custodian_key_email(request: SendCustodianEmailRequest) -> Res
     );
 
     let text_part = SinglePart::plain(body_text);
-    let attachment_part = Attachment::new(request.share_filename)
-        .body(request.share_content, ContentType::parse("application/json").unwrap());
+    let attachment_part = Attachment::new(request.share_filename).body(
+        request.share_content,
+        ContentType::parse("application/json").unwrap(),
+    );
 
     let multipart = MultiPart::mixed()
         .singlepart(text_part)
         .singlepart(attachment_part);
 
     let email = Message::builder()
-        .from(from_header.parse().map_err(|e| format!("Invalid sender format: {e}"))?)
-        .to(request.recipient_email.parse().map_err(|e| format!("Invalid recipient format: {e}"))?)
-        .subject(format!("DualCrypt Custodian Key Share: {}", request.custodian_label))
+        .from(
+            from_header
+                .parse()
+                .map_err(|e| format!("Invalid sender format: {e}"))?,
+        )
+        .to(request
+            .recipient_email
+            .parse()
+            .map_err(|e| format!("Invalid recipient format: {e}"))?)
+        .subject(format!(
+            "DualCrypt Custodian Key Share: {}",
+            request.custodian_label
+        ))
         .multipart(multipart)
         .map_err(|e| format!("Message building error: {e}"))?;
 
@@ -173,5 +193,8 @@ pub async fn send_custodian_key_email(request: SendCustodianEmailRequest) -> Res
         .await
         .map_err(|e| format!("Failed to send custodian email: {e}"))?;
 
-    Ok(format!("Key share successfully emailed to {}", request.recipient_email))
+    Ok(format!(
+        "Key share successfully emailed to {}",
+        request.recipient_email
+    ))
 }

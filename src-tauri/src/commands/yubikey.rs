@@ -19,7 +19,9 @@ pub struct YubiKeyAuthResult {
 }
 
 #[tauri::command]
-pub fn list_hardware_tokens(allow_simulation: Option<bool>) -> Result<Vec<YubiKeyDeviceInfo>, String> {
+pub fn list_hardware_tokens(
+    allow_simulation: Option<bool>,
+) -> Result<Vec<YubiKeyDeviceInfo>, String> {
     let mut devices = Vec::new();
 
     // Check Windows PnP device list for Yubico (VID_1050) or FIDO2 devices

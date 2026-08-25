@@ -81,14 +81,16 @@ pub fn encrypt_stream_chunks<R: Read, W: Write, F: FnMut(u64, u64)>(
     };
 
     let xchacha_cipher = if cipher_suite == CipherSuite::XChaCha20Poly1305 {
-        Some(XChaCha20Poly1305::new(chacha20poly1305::Key::from_slice(key)))
+        Some(XChaCha20Poly1305::new(chacha20poly1305::Key::from_slice(
+            key,
+        )))
     } else {
         None
     };
 
     // Buffer one chunk ahead to accurately detect the final chunk (is_last)
     let mut current_chunk_len = read_full_chunk(reader, &mut buffer)?;
-    
+
     // If empty file, write one empty final chunk
     if current_chunk_len == 0 {
         let is_last = true;
@@ -224,7 +226,9 @@ pub fn decrypt_stream_chunks<R: Read, W: Write, F: FnMut(u64, u64)>(
     };
 
     let xchacha_cipher = if cipher_suite == CipherSuite::XChaCha20Poly1305 {
-        Some(XChaCha20Poly1305::new(chacha20poly1305::Key::from_slice(key)))
+        Some(XChaCha20Poly1305::new(chacha20poly1305::Key::from_slice(
+            key,
+        )))
     } else {
         None
     };
@@ -344,7 +348,8 @@ mod tests {
         let key = [0x77u8; 32];
         let base_nonce = generate_base_nonce();
         let header_aad = b"TEST_HEADER_AAD_V1";
-        let plaintext = b"Hello, Enterprise Cryptographic World! Streaming 64KB+ chunk test.".repeat(1000);
+        let plaintext =
+            b"Hello, Enterprise Cryptographic World! Streaming 64KB+ chunk test.".repeat(1000);
 
         let mut encrypted_output = Vec::new();
         let total_len = plaintext.len() as u64;

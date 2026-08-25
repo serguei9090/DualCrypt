@@ -32,7 +32,9 @@ pub enum DencError {
     #[error("Mismatched share lengths: expected {expected}, got {actual}")]
     MismatchedShareLength { expected: usize, actual: usize },
 
-    #[error("AEAD integrity check failed: ciphertext chunk was modified, truncated, or incorrect keys")]
+    #[error(
+        "AEAD integrity check failed: ciphertext chunk was modified, truncated, or incorrect keys"
+    )]
     IntegrityCheckFailed,
 
     #[error("Stream terminated unexpectedly without final chunk marker")]

@@ -16,8 +16,8 @@ pub fn derive_key_argon2id(password: &[u8], salt: &[u8]) -> Result<[u8; KEY_LEN]
     }
 
     // Enterprise Argon2id parameters (m_cost = 64 MB, t_cost = 3, p_cost = 4)
-    let params = Params::new(65536, 3, 4, Some(KEY_LEN))
-        .map_err(|e| DencError::KdfError(e.to_string()))?;
+    let params =
+        Params::new(65536, 3, 4, Some(KEY_LEN)).map_err(|e| DencError::KdfError(e.to_string()))?;
 
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
 

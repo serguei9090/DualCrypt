@@ -1,3 +1,5 @@
+use aes_gcm::aead::{Aead, KeyInit, Payload};
+use aes_gcm::{Aes256Gcm, Key, Nonce};
 use denc_core::cipher::{
     decrypt_stream_chunks, encrypt_stream_chunks, generate_base_nonce, DEFAULT_CHUNK_SIZE,
 };
@@ -14,8 +16,6 @@ use denc_core::sss::{combine_shares, split_secret, SecretShare};
 use denc_core::{
     CustodianCredential, CustodianInspection, EncryptionParams, ExportedKeyShare, HeaderInspection,
 };
-use aes_gcm::aead::{Aead, KeyInit, Payload};
-use aes_gcm::{Aes256Gcm, Key, Nonce};
 use rand_core::{OsRng, RngCore};
 use std::io::{BufReader, Cursor, Write};
 use wasm_bindgen::prelude::*;
@@ -99,10 +99,7 @@ pub fn wasm_inspect_denc(bytes: &[u8]) -> Result<JsValue, JsValue> {
 }
 
 #[wasm_bindgen]
-pub fn wasm_encrypt_payload(
-    payload_bytes: &[u8],
-    params_json: &str,
-) -> Result<JsValue, JsValue> {
+pub fn wasm_encrypt_payload(payload_bytes: &[u8], params_json: &str) -> Result<JsValue, JsValue> {
     let params: EncryptionParams = serde_json::from_str(params_json)
         .map_err(|e| JsValue::from_str(&format!("Invalid params JSON: {}", e)))?;
 
@@ -135,10 +132,12 @@ pub fn wasm_encrypt_payload(
 
         match custodian.auth_type {
             AuthType::Passphrase => {
-                let passphrase = custodian
-                    .passphrase
-                    .as_deref()
-                    .ok_or_else(|| JsValue::from_str(&format!("Passphrase required for custodian {}", custodian.label)))?;
+                let passphrase = custodian.passphrase.as_deref().ok_or_else(|| {
+                    JsValue::from_str(&format!(
+                        "Passphrase required for custodian {}",
+                        custodian.label
+                    ))
+                })?;
 
                 let mut pass_key = derive_key_argon2id(passphrase.as_bytes(), &custodian_salt)
                     .map_err(|e| JsValue::from_str(&format!("KDF failed: {}", e)))?;
@@ -148,7 +147,13 @@ pub fn wasm_encrypt_payload(
 
                 let share_nonce = Nonce::from_slice(&custodian_salt[0..12]);
                 let encrypted_share = cipher
-                    .encrypt(share_nonce, Payload { msg: &share_json, aad: &custodian_salt })
+                    .encrypt(
+                        share_nonce,
+                        Payload {
+                            msg: &share_json,
+                            aad: &custodian_salt,
+                        },
+                    )
                     .map_err(|_| JsValue::from_str("Failed to encrypt share with passphrase"))?;
 
                 pass_key.zeroize();
@@ -189,11 +194,15 @@ pub fn wasm_encrypt_payload(
                 } else {
                     let kp = generate_ml_kem_keypair()
                         .map_err(|e| JsValue::from_str(&format!("PQC keygen error: {}", e)))?;
-                    (kp.public_key_base64.clone(), Some(kp.private_key_base64.clone()))
+                    (
+                        kp.public_key_base64.clone(),
+                        Some(kp.private_key_base64.clone()),
+                    )
                 };
 
-                let pqc_share = encapsulate_share_ml_kem(&pub_key_b64, &share)
-                    .map_err(|e| JsValue::from_str(&format!("ML-KEM Encapsulation failed: {}", e)))?;
+                let pqc_share = encapsulate_share_ml_kem(&pub_key_b64, &share).map_err(|e| {
+                    JsValue::from_str(&format!("ML-KEM Encapsulation failed: {}", e))
+                })?;
                 let share_bytes = serde_json::to_vec(&pqc_share)
                     .map_err(|e| JsValue::from_str(&format!("Serialize PQC share error: {}", e)))?;
 
@@ -235,7 +244,8 @@ pub fn wasm_encrypt_payload(
             signature_block: None,
             manifest: params.manifest.clone(),
         };
-        let (_, draft_digest) = draft_header.serialize()
+        let (_, draft_digest) = draft_header
+            .serialize()
             .map_err(|e| JsValue::from_str(&format!("Draft header error: {}", e)))?;
         let signature_base64 = sign_digest_ml_dsa(author_key, &draft_digest)
             .map_err(|e| JsValue::from_str(&format!("Signing failed: {}", e)))?;
@@ -270,11 +280,13 @@ pub fn wasm_encrypt_payload(
         manifest: params.manifest.clone(),
     };
 
-    let (header_bytes, header_digest) = header.serialize()
+    let (header_bytes, header_digest) = header
+        .serialize()
         .map_err(|e| JsValue::from_str(&format!("Serialize header failed: {}", e)))?;
 
     let mut output_bytes = Vec::new();
-    output_bytes.write_all(&header_bytes)
+    output_bytes
+        .write_all(&header_bytes)
         .map_err(|e| JsValue::from_str(&format!("Write header error: {}", e)))?;
 
     let mut input_cursor = Cursor::new(payload_bytes);
@@ -291,7 +303,8 @@ pub fn wasm_encrypt_payload(
         chunk_size,
         |_, _| {},
         None,
-    ).map_err(|e| JsValue::from_str(&format!("Stream encryption error: {}", e)))?;
+    )
+    .map_err(|e| JsValue::from_str(&format!("Stream encryption error: {}", e)))?;
 
     dek.zeroize();
     raw_shares.zeroize();
@@ -314,10 +327,7 @@ pub fn wasm_encrypt_payload(
 }
 
 #[wasm_bindgen]
-pub fn wasm_decrypt_payload(
-    denc_bytes: &[u8],
-    creds_json: &str,
-) -> Result<Vec<u8>, JsValue> {
+pub fn wasm_decrypt_payload(denc_bytes: &[u8], creds_json: &str) -> Result<Vec<u8>, JsValue> {
     let credentials: Vec<CustodianCredential> = serde_json::from_str(creds_json)
         .map_err(|e| JsValue::from_str(&format!("Invalid credentials JSON: {}", e)))?;
 
@@ -334,10 +344,17 @@ pub fn wasm_decrypt_payload(
             continue;
         }
 
-        if let Some(descriptor) = header.custodians.iter().find(|c| c.custodian_id == cred.custodian_id) {
+        if let Some(descriptor) = header
+            .custodians
+            .iter()
+            .find(|c| c.custodian_id == cred.custodian_id)
+        {
             if descriptor.auth_type == AuthType::Passphrase {
                 let pass = cred.passphrase.as_deref().ok_or_else(|| {
-                    JsValue::from_str(&format!("Passphrase required for custodian {}", descriptor.label))
+                    JsValue::from_str(&format!(
+                        "Passphrase required for custodian {}",
+                        descriptor.label
+                    ))
                 })?;
 
                 let mut pass_key = derive_key_argon2id(pass.as_bytes(), &descriptor.salt)
@@ -346,8 +363,19 @@ pub fn wasm_decrypt_payload(
                 let share_nonce = Nonce::from_slice(&descriptor.salt[0..12]);
 
                 let decrypted_json = cipher
-                    .decrypt(share_nonce, Payload { msg: &descriptor.encrypted_share, aad: &descriptor.salt })
-                    .map_err(|_| JsValue::from_str(&format!("Invalid passphrase for custodian {}", descriptor.label)))?;
+                    .decrypt(
+                        share_nonce,
+                        Payload {
+                            msg: &descriptor.encrypted_share,
+                            aad: &descriptor.salt,
+                        },
+                    )
+                    .map_err(|_| {
+                        JsValue::from_str(&format!(
+                            "Invalid passphrase for custodian {}",
+                            descriptor.label
+                        ))
+                    })?;
 
                 pass_key.zeroize();
 
@@ -356,14 +384,19 @@ pub fn wasm_decrypt_payload(
                 recovered_shares.push(share);
             } else if descriptor.auth_type == AuthType::PostQuantum {
                 let priv_key_b64 = cred.pqc_private_key_base64.as_deref().ok_or_else(|| {
-                    JsValue::from_str(&format!("ML-KEM Private Key required for custodian {}", descriptor.label))
+                    JsValue::from_str(&format!(
+                        "ML-KEM Private Key required for custodian {}",
+                        descriptor.label
+                    ))
                 })?;
 
-                let pqc_share: PqcEncryptedShare = serde_json::from_slice(&descriptor.encrypted_share)
-                    .map_err(|e| JsValue::from_str(&format!("Parse PQC share error: {}", e)))?;
+                let pqc_share: PqcEncryptedShare =
+                    serde_json::from_slice(&descriptor.encrypted_share)
+                        .map_err(|e| JsValue::from_str(&format!("Parse PQC share error: {}", e)))?;
 
-                let share = decapsulate_share_ml_kem(priv_key_b64, &pqc_share)
-                    .map_err(|e| JsValue::from_str(&format!("ML-KEM Decapsulation error: {}", e)))?;
+                let share = decapsulate_share_ml_kem(priv_key_b64, &pqc_share).map_err(|e| {
+                    JsValue::from_str(&format!("ML-KEM Decapsulation error: {}", e))
+                })?;
                 recovered_shares.push(share);
             }
         }
@@ -377,8 +410,9 @@ pub fn wasm_decrypt_payload(
         )));
     }
 
-    let mut reconstructed_dek_vec = combine_shares(&recovered_shares[0..header.threshold_k as usize])
-        .map_err(|e| JsValue::from_str(&format!("Combine shares error: {}", e)))?;
+    let mut reconstructed_dek_vec =
+        combine_shares(&recovered_shares[0..header.threshold_k as usize])
+            .map_err(|e| JsValue::from_str(&format!("Combine shares error: {}", e)))?;
 
     if reconstructed_dek_vec.len() != 32 {
         reconstructed_dek_vec.zeroize();
@@ -401,7 +435,8 @@ pub fn wasm_decrypt_payload(
         total_cipher_payload,
         |_, _| {},
         None,
-    ).map_err(|e| JsValue::from_str(&format!("Stream decryption error: {}", e)))?;
+    )
+    .map_err(|e| JsValue::from_str(&format!("Stream decryption error: {}", e)))?;
 
     dek.zeroize();
     recovered_shares.zeroize();
