@@ -304,10 +304,51 @@ export async function executeWebEncryption(
         shareEncrypted: true,
       });
     } else if (cust.auth_type === "passphrase") {
+      const salt = new Uint8Array(32);
+      crypto.getRandomValues(salt);
+      let encryptedShareBytes: number[] = [];
+
+      if (cust.passphrase) {
+        const pwBytes = new TextEncoder().encode(cust.passphrase);
+        const baseKey = await crypto.subtle.importKey(
+          "raw",
+          pwBytes as unknown as BufferSource,
+          "PBKDF2",
+          false,
+          ["deriveKey"],
+        );
+        const derivedKey = await crypto.subtle.deriveKey(
+          {
+            name: "PBKDF2",
+            salt: salt as unknown as BufferSource,
+            iterations: 10000,
+            hash: "SHA-256",
+          },
+          baseKey,
+          { name: "AES-GCM", length: 256 },
+          false,
+          ["encrypt"],
+        );
+        const shareJsonBytes = new TextEncoder().encode(JSON.stringify(share));
+        const nonce = new Uint8Array(12);
+        crypto.getRandomValues(nonce);
+        const encBuffer = await crypto.subtle.encrypt(
+          { name: "AES-GCM", iv: nonce as unknown as BufferSource },
+          derivedKey,
+          shareJsonBytes as unknown as BufferSource,
+        );
+        const combined = new Uint8Array(12 + encBuffer.byteLength);
+        combined.set(nonce, 0);
+        combined.set(new Uint8Array(encBuffer), 12);
+        encryptedShareBytes = Array.from(combined);
+      }
+
       descriptors.push({
         id: cust.custodian_id,
         type: 1,
         label: cust.label,
+        salt: Array.from(salt),
+        encrypted_share: encryptedShareBytes,
         shareEncrypted: true,
       });
     } else {
@@ -455,6 +496,12 @@ export async function executeWebDecryption(
 
     let baseNonce: Uint8Array;
     let ciphertext: Uint8Array;
+    const rawCustodians: Array<{
+      id: number;
+      type: number;
+      salt: number[];
+      encrypted_share: number[];
+    }> = [];
 
     // 1. JSON Envelope format
     if (dencBytes.length >= 9 && dencBytes[8] === 123 /* '{' */) {
@@ -462,6 +509,16 @@ export async function executeWebDecryption(
       const headerBytes = dencBytes.subarray(8, 8 + headerLen);
       const headerJson = JSON.parse(new TextDecoder().decode(headerBytes));
       baseNonce = new Uint8Array(headerJson.base_nonce || Array(12).fill(0));
+      if (headerJson.custodians && Array.isArray(headerJson.custodians)) {
+        for (const c of headerJson.custodians) {
+          rawCustodians.push({
+            id: c.id ?? c.custodian_id ?? 1,
+            type: c.type ?? (c.auth_type === "passphrase" ? 1 : 2),
+            salt: c.salt || [],
+            encrypted_share: c.encrypted_share || [],
+          });
+        }
+      }
       const offset = 8 + headerLen;
       const payloadLen = view.getUint32(offset, true);
       ciphertext = dencBytes.subarray(offset + 4, offset + 4 + payloadLen);
@@ -481,11 +538,25 @@ export async function executeWebDecryption(
       const custodianCount = view.getUint16(pos, true);
       pos += 2;
       for (let i = 0; i < custodianCount; i++) {
-        pos += 2; // id + type
+        const custId = view.getUint8(pos);
+        pos += 1;
+        const authTypeByte = view.getUint8(pos);
+        pos += 1;
         const labelLen = view.getUint16(pos, true);
-        pos += 2 + labelLen + 32; // label + salt
+        pos += 2 + labelLen;
+        const saltBytes = Array.from(dencBytes.subarray(pos, pos + 32));
+        pos += 32;
         const shareLen = view.getUint16(pos, true);
-        pos += 2 + shareLen;
+        pos += 2;
+        const shareBytes = Array.from(dencBytes.subarray(pos, pos + shareLen));
+        pos += shareLen;
+
+        rawCustodians.push({
+          id: custId,
+          type: authTypeByte,
+          salt: saltBytes,
+          encrypted_share: shareBytes,
+        });
       }
       if (version >= 2) {
         const hasSig = view.getUint8(pos);
@@ -532,8 +603,61 @@ export async function executeWebDecryption(
             Array.isArray(parsed.share.data)
           ) {
             collectedShares.push(parsed.share);
+            continue;
           }
         } catch {}
+      }
+      if (cred.passphrase) {
+        const targetDesc = rawCustodians.find((c) => c.id === cred.custodian_id);
+        if (
+          targetDesc?.salt &&
+          targetDesc.encrypted_share &&
+          targetDesc.encrypted_share.length > 12
+        ) {
+          try {
+            const saltBytes = new Uint8Array(targetDesc.salt);
+            const encBytes = new Uint8Array(targetDesc.encrypted_share);
+            const nonce = encBytes.subarray(0, 12);
+            const encCiphertext = encBytes.subarray(12);
+
+            const pwBytes = new TextEncoder().encode(cred.passphrase);
+            const baseKey = await crypto.subtle.importKey(
+              "raw",
+              pwBytes as unknown as BufferSource,
+              "PBKDF2",
+              false,
+              ["deriveKey"],
+            );
+            const derivedKey = await crypto.subtle.deriveKey(
+              {
+                name: "PBKDF2",
+                salt: saltBytes as unknown as BufferSource,
+                iterations: 10000,
+                hash: "SHA-256",
+              },
+              baseKey,
+              { name: "AES-GCM", length: 256 },
+              false,
+              ["decrypt"],
+            );
+            const decryptedShareBuf = await crypto.subtle.decrypt(
+              { name: "AES-GCM", iv: nonce as unknown as BufferSource },
+              derivedKey,
+              encCiphertext as unknown as BufferSource,
+            );
+            const shareJson = new TextDecoder().decode(decryptedShareBuf);
+            const parsedShare = JSON.parse(shareJson);
+            if (typeof parsedShare.id === "number" && Array.isArray(parsedShare.data)) {
+              collectedShares.push(parsedShare);
+            }
+          } catch (err) {
+            console.warn(
+              "Passphrase share decryption failed for custodian:",
+              cred.custodian_id,
+              err,
+            );
+          }
+        }
       }
     }
 
