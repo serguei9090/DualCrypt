@@ -64,11 +64,24 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
         onFileSelected(selected, `📁 ${name} (Folder Archive)`);
       }
     } else {
-      onFileSelected(
-        "/mock/path/enterprise-folder",
-        "📁 enterprise-folder (Folder Archive)",
-        10485760,
-      );
+      const input = document.createElement("input");
+      input.type = "file";
+      input.webkitdirectory = true;
+      input.onchange = (ev) => {
+        const files = (ev.target as HTMLInputElement).files;
+        if (files && files.length > 0) {
+          const folderName = files[0].webkitRelativePath?.split("/")[0] || "Folder_Archive";
+          let totalSize = 0;
+          for (let i = 0; i < files.length; i++) totalSize += files[i].size;
+          onFileSelected(
+            folderName,
+            `📁 ${folderName} (${files.length} files)`,
+            totalSize,
+            files[0],
+          );
+        }
+      };
+      input.click();
     }
   };
 

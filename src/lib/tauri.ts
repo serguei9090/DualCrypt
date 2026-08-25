@@ -215,24 +215,16 @@ export interface PqcKeypair {
 
 export async function generatePqcKeypair(): Promise<PqcKeypair> {
   if (!isTauriEnvironment()) {
-    // Web fallback key generation placeholder
-    return {
-      public_key_base64: btoa("ML_KEM_768_PUBLIC_KEY_PLACEHOLDER"),
-      private_key_base64: btoa("ML_KEM_768_PRIVATE_KEY_PLACEHOLDER"),
-      algorithm: "NIST-FIPS-203-ML-KEM-768",
-    };
+    const { generateWebPqcKeypair } = await import("./webCrypto");
+    return await generateWebPqcKeypair();
   }
   return await invoke<PqcKeypair>("generate_pqc_keypair");
 }
 
 export async function generateMlDsaKeypair(): Promise<PqcKeypair> {
   if (!isTauriEnvironment()) {
-    // Web fallback key generation placeholder
-    return {
-      public_key_base64: btoa("ML_DSA_65_PUBLIC_KEY_PLACEHOLDER"),
-      private_key_base64: btoa("ML_DSA_65_PRIVATE_SEED_PLACEHOLDER"),
-      algorithm: "NIST-FIPS-204-ML-DSA-65",
-    };
+    const { generateWebMlDsaKeypair } = await import("./webCrypto");
+    return await generateWebMlDsaKeypair();
   }
   return await invoke<PqcKeypair>("generate_ml_dsa_keypair");
 }
