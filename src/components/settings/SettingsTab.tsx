@@ -1,12 +1,13 @@
-import { Cpu, Globe, Mail, Settings, Sliders } from "lucide-react";
+import { Cpu, Globe, Info, Mail, Settings, Sliders } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
+import { AboutPanel } from "./panels/AboutPanel";
 import { CryptoDefaultsPanel } from "./panels/CryptoDefaultsPanel";
 import { HardwarePanel } from "./panels/HardwarePanel";
 import { SmtpPanel } from "./panels/SmtpPanel";
 import { WebServerPanel } from "./panels/WebServerPanel";
 
-type SettingsSection = "smtp" | "webserver" | "hardware" | "crypto";
+type SettingsSection = "smtp" | "webserver" | "hardware" | "crypto" | "about";
 
 export const SettingsTab: React.FC = () => {
   const [activeSection, setActiveSection] = useState<SettingsSection>("smtp");
@@ -39,6 +40,13 @@ export const SettingsTab: React.FC = () => {
       description: "AEAD ciphers, quorum policy & zeroize",
       icon: Sliders,
       badge: null,
+    },
+    {
+      id: "about" as SettingsSection,
+      label: "About DualCrypt",
+      description: "Architecture, gratitude & feedback",
+      icon: Info,
+      badge: "v0.5.0",
     },
   ];
 
@@ -123,6 +131,7 @@ export const SettingsTab: React.FC = () => {
           {activeSection === "webserver" && <WebServerPanel />}
           {activeSection === "hardware" && <HardwarePanel />}
           {activeSection === "crypto" && <CryptoDefaultsPanel />}
+          {activeSection === "about" && <AboutPanel />}
         </div>
       </div>
     </div>

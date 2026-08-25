@@ -145,7 +145,8 @@ The `.denc` container encapsulates the metadata and chunked authenticated stream
 * **🌐 Embedded Zero-Knowledge Web Server**: Self-host locally from the desktop app or run headlessly via CLI (`denc serve`) with flexible interface binding:
   * `🔒 Localhost Only (127.0.0.1)` for local-machine security.
   * `🌐 Local LAN (0.0.0.0)` for team access across local subnet/Wi-Fi.
-* **⚙️ Enterprise Settings Sidebar**: 2-column sidebar navigation organizing Email/SMTP, Local Web Server, Hardware/YubiKey, and Cryptographic Defaults.
+* **⚙️ Enterprise Settings Sidebar & About Portal**: 2-column sidebar navigation organizing Email/SMTP, Local Web Server, Hardware/YubiKey, Cryptographic Defaults, and a dedicated **About DualCrypt** panel (providing architectural resumes, user appreciation, and direct channels for GitHub PRs / bug submissions to `serguei@aiopsforge.com`).
+* **❓ Integrated Mobile Help & About Dialog**: Tap the `?` header icon in the mobile authenticator to inspect air-gap security specifications, review app architecture, and access 1-click email/GitHub feedback channels.
 * **🛡️ $k$-of-$n$ Quorum Flexibility**: Configure strict dual-custody (2-of-2), majority board quorums (3-of-5), or disaster escrow models (2-of-3).
 * **⚡ High-Throughput Streaming**: Processes gigabyte-scale files at disk speeds with constant $O(1)$ memory consumption ($<20\text{ MB}$ RAM).
 * **📁 Directory & Folder Archiving**: Native streaming TAR bundling to encrypt entire directory hierarchies seamlessly into a single `.denc` container.
