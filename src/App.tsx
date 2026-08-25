@@ -13,6 +13,10 @@ import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { AirGapDesktopModal } from "./components/airgap/AirGapDesktopModal";
 import { EnrollmentQrModal } from "./components/airgap/EnrollmentQrModal";
+import {
+  type CollisionAction,
+  CollisionResolutionModal,
+} from "./components/dialogs/CollisionResolutionModal";
 import { FileDropzone } from "./components/dropzone/FileDropzone";
 import { FileMetadataCard } from "./components/dropzone/FileMetadataCard";
 import { KeyEscrowView } from "./components/escrow/KeyEscrowView";
@@ -29,6 +33,7 @@ import { useCryptoJob } from "./hooks/useCryptoJob";
 import { useQuorumState } from "./hooks/useQuorumState";
 import { logAuditEvent } from "./lib/historyStore";
 import {
+  checkPathCollision,
   executeDecryption,
   executeEncryption,
   generateMlDsaKeypair,
@@ -100,6 +105,23 @@ export const App: React.FC = () => {
     decryptedBytes?: Uint8Array;
     decryptedFilename?: string;
   } | null>(null);
+
+  // Collision Resolution State (Decrypt mode)
+  const [collisionState, setCollisionState] = useState<{
+    isOpen: boolean;
+    targetPath: string;
+    suggestedPath: string;
+    isDirectory: boolean;
+    pendingParams?: {
+      isDirectoryPayload: boolean;
+      baseFolderName: string;
+    };
+  }>({
+    isOpen: false,
+    targetPath: "",
+    suggestedPath: "",
+    isDirectory: false,
+  });
 
   // Quorum State
   const quorum = useQuorumState(2, 2);
@@ -280,42 +302,13 @@ export const App: React.FC = () => {
     }
   };
 
-  // Execute Decryption
-  const handleStartDecryption = async () => {
+  // Execute Decryption Pipeline
+  const runDecryptionExecution = async (
+    targetOutputPath: string,
+    isDirectoryPayload: boolean,
+    baseFolderName: string,
+  ) => {
     if (!filePath || !fileName) return;
-
-    const isDirectoryPayload = !!containerMetadata?.manifest?.is_directory;
-    const baseFolderName =
-      containerMetadata?.manifest?.original_filename || fileName.replace(/\.denc$/i, "");
-
-    let outputPath = filePath.replace(/\.denc$/i, ".decrypted");
-    if (outputPath === filePath) outputPath = `${filePath}.out`;
-
-    if (isTauriEnvironment()) {
-      if (isDirectoryPayload) {
-        const selected = await open({
-          directory: true,
-          multiple: false,
-          title: `Select Destination Folder to Extract ${baseFolderName}`,
-        });
-        if (!selected || typeof selected !== "string") return;
-
-        const lastComponent = selected.split(/[\\/]/).pop() || "";
-        if (lastComponent.toLowerCase() !== baseFolderName.toLowerCase()) {
-          const sep = selected.includes("/") ? "/" : "\\";
-          outputPath = `${selected}${sep}${baseFolderName}`;
-        } else {
-          outputPath = selected;
-        }
-      } else {
-        const defaultName = fileName.replace(/\.denc$/i, "");
-        const selected = await save({
-          defaultPath: defaultName,
-        });
-        if (!selected) return;
-        outputPath = selected;
-      }
-    }
 
     try {
       job.startJob("decrypt-job");
@@ -328,7 +321,7 @@ export const App: React.FC = () => {
       const res = await executeDecryption(
         {
           input_path: filePath,
-          output_path: outputPath,
+          output_path: targetOutputPath,
           credentials: quorum.custodians.map((c) => ({
             custodian_id: c.custodianId,
             passphrase: c.passphrase,
@@ -376,8 +369,8 @@ export const App: React.FC = () => {
           : "Quorum Attained & Decryption Succeeded",
         message: isTauriEnvironment()
           ? isDirectoryDecrypted
-            ? `Directory hierarchy and nested files restored safely to ${outputPath}`
-            : `Plaintext file restored safely to ${outputPath.split(/[\\/]/).pop()}`
+            ? `Directory hierarchy and nested files restored safely to ${targetOutputPath}`
+            : `Plaintext file restored safely to ${targetOutputPath.split(/[\\/]/).pop()}`
           : isDirectoryDecrypted
             ? `Directory archive restored and downloaded as ${restoredName}`
             : `Plaintext file restored and downloaded as ${restoredName}`,
@@ -402,6 +395,82 @@ export const App: React.FC = () => {
       });
     } catch (err) {
       job.failJob(String(err));
+    }
+  };
+
+  // Execute Decryption Entrypoint (with collision detection)
+  const handleStartDecryption = async () => {
+    if (!filePath || !fileName) return;
+
+    const isDirectoryPayload = !!containerMetadata?.manifest?.is_directory;
+    const baseFolderName =
+      containerMetadata?.manifest?.original_filename || fileName.replace(/\.denc$/i, "");
+
+    let outputPath = filePath.replace(/\.denc$/i, ".decrypted");
+    if (outputPath === filePath) outputPath = `${filePath}.out`;
+
+    if (isTauriEnvironment()) {
+      if (isDirectoryPayload) {
+        const selected = await open({
+          directory: true,
+          multiple: false,
+          title: `Select Destination Folder to Extract ${baseFolderName}`,
+        });
+        if (!selected || typeof selected !== "string") return;
+
+        const lastComponent = selected.split(/[\\/]/).pop() || "";
+        if (lastComponent.toLowerCase() !== baseFolderName.toLowerCase()) {
+          const sep = selected.includes("/") ? "/" : "\\";
+          outputPath = `${selected}${sep}${baseFolderName}`;
+        } else {
+          outputPath = selected;
+        }
+      } else {
+        const defaultName = fileName.replace(/\.denc$/i, "");
+        const selected = await save({
+          defaultPath: defaultName,
+        });
+        if (!selected) return;
+        outputPath = selected;
+      }
+
+      // Check for path collision
+      const collision = await checkPathCollision(outputPath);
+      if (collision.exists) {
+        setCollisionState({
+          isOpen: true,
+          targetPath: outputPath,
+          suggestedPath: collision.suggested_path,
+          isDirectory: isDirectoryPayload,
+          pendingParams: {
+            isDirectoryPayload,
+            baseFolderName,
+          },
+        });
+        return;
+      }
+    }
+
+    await runDecryptionExecution(outputPath, isDirectoryPayload, baseFolderName);
+  };
+
+  const handleCollisionAction = async (action: CollisionAction) => {
+    const { targetPath, suggestedPath, pendingParams } = collisionState;
+    setCollisionState((prev) => ({ ...prev, isOpen: false }));
+
+    if (action === "cancel") return;
+    if (action === "choose_different") {
+      handleStartDecryption();
+      return;
+    }
+
+    const finalPath = action === "overwrite" ? targetPath : suggestedPath;
+    if (pendingParams) {
+      await runDecryptionExecution(
+        finalPath,
+        pendingParams.isDirectoryPayload,
+        pendingParams.baseFolderName,
+      );
     }
   };
 
@@ -814,6 +883,14 @@ export const App: React.FC = () => {
                         }}
                       />
                     )}
+
+                    <CollisionResolutionModal
+                      isOpen={collisionState.isOpen}
+                      targetPath={collisionState.targetPath}
+                      suggestedPath={collisionState.suggestedPath}
+                      isDirectory={collisionState.isDirectory}
+                      onSelectAction={handleCollisionAction}
+                    />
 
                     <div className="pt-2">
                       <button

@@ -243,6 +243,9 @@ denc decrypt backup.denc \
   --pqc-key 1:custodian_1.pqc \
   -p 2:"SuperSecurePassword!" \
   --json
+
+# Force in-place overwrite when target destination folder/file already exists:
+denc decrypt backup.denc -o /data/vault --overwrite -p 1:Pass1 -p 2:Pass2
 ```
 
 #### 🔍 Inspecting Containers (`denc inspect`)

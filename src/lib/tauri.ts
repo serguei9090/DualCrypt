@@ -320,3 +320,16 @@ export async function getLocalWebServerStatus(): Promise<WebServerStatus> {
   }
   return await invoke<WebServerStatus>("get_local_web_server_status");
 }
+
+export interface CollisionCheckResult {
+  exists: boolean;
+  is_dir: boolean;
+  suggested_path: string;
+}
+
+export async function checkPathCollision(targetPath: string): Promise<CollisionCheckResult> {
+  if (!isTauriEnvironment()) {
+    return { exists: false, is_dir: false, suggested_path: targetPath };
+  }
+  return await invoke<CollisionCheckResult>("check_path_collision", { targetPath });
+}

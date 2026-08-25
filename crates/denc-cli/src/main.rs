@@ -13,6 +13,7 @@ use denc_core::{
 };
 use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashMap;
+use std::io::{IsTerminal, Write};
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 
@@ -167,6 +168,10 @@ pub struct DecryptArgs {
     /// Output machine-readable JSON summary for CI/CD automation pipelines
     #[arg(long)]
     pub json: bool,
+
+    /// Overwrite existing destination file or directory without prompting
+    #[arg(short = 'w', long = "overwrite", aliases = ["force", "f"])]
+    pub overwrite: bool,
 
     /// Suppress interactive progress bars and non-error messages
     #[arg(short = 'q', long)]
@@ -852,6 +857,73 @@ async fn handle_decrypt(args: DecryptArgs) -> Result<(), Box<dyn std::error::Err
 
     let is_json = args.json;
     let is_quiet = args.quiet || is_json;
+
+    let mut out_path = out_path;
+
+    if out_path.exists() && !args.overwrite {
+        let is_target_dir = out_path.is_dir() || is_dir;
+        let parent = out_path.parent().unwrap_or_else(|| Path::new(""));
+        let file_stem = out_path
+            .file_stem()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_default();
+        let extension = out_path
+            .extension()
+            .map(|e| format!(".{}", e.to_string_lossy()))
+            .unwrap_or_default();
+
+        let mut counter = 1;
+        let suggested_path = loop {
+            let candidate_name = if is_target_dir {
+                format!("{file_stem} ({counter})")
+            } else {
+                format!("{file_stem} ({counter}){extension}")
+            };
+            let candidate_path = parent.join(&candidate_name);
+            if !candidate_path.exists() {
+                break candidate_path;
+            }
+            counter += 1;
+        };
+
+        if is_json || !std::io::stdin().is_terminal() {
+            if !is_quiet {
+                eprintln!(
+                    "{}",
+                    format!(
+                        "⚠️  Destination already exists. Auto-versioning output to {:?} (pass --overwrite to replace)",
+                        suggested_path
+                    )
+                    .yellow()
+                );
+            }
+            out_path = suggested_path;
+        } else {
+            println!(
+                "{}",
+                "⚠️  WARNING: Destination already exists:".yellow().bold()
+            );
+            println!("  Path: {:?}", out_path);
+            print!(
+                "  Choose action: [O]verwrite / [V]ersion as {:?} / [C]ancel? [O/v/c]: ",
+                suggested_path.file_name().unwrap_or_default()
+            );
+            std::io::stdout().flush()?;
+
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+            let choice = input.trim().to_lowercase();
+            if choice == "o" || choice == "overwrite" {
+                // Keep out_path (overwrite)
+            } else if choice == "c" || choice == "cancel" {
+                println!("{}", "Decryption cancelled by user.".yellow());
+                return Ok(());
+            } else {
+                // Default / 'v' -> Auto-version
+                out_path = suggested_path;
+            }
+        }
+    }
 
     if !is_quiet {
         println!("{}", "═".repeat(60).green());
