@@ -47,6 +47,7 @@ Detailed architectural specifications and operational manuals are available in t
 | Document | Description |
 | :--- | :--- |
 | **[📖 User Guide](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/USER_GUIDE.md)** | Complete step-by-step manual for desktop, mobile air-gap, and CLI workflows. |
+| **[🛡️ Security & Assurance Manifest](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/SECURITY_MANIFEST.md)** | Comprehensive security specification: key protection, memory zeroization, O(1) streaming pipeline, and CI/CD security. |
 | **[🏛️ System Architecture](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/ARCHITECTURE.md)** | Technical layout across Rust crates, Tauri v2 bridge, TypeScript ESM packages, and mobile Android targets. |
 | **[🔐 Cryptographic Specification](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/CRYPTOGRAPHY_SPEC.md)** | Mathematical specifications for $GF(256)$ Shamir sharing, NIST FIPS 203/204 PQC, and AEAD framing. |
 | **[📱 Android Testing & Store Guide](file:///i:/01-Master_Code/Apps/Dual_Encryption/androidtest.md)** | LAN testing, keystore signing, and building `.apk` / `.aab` for Google Play Store. |
