@@ -161,7 +161,10 @@ The `.denc` container encapsulates the metadata and chunked authenticated stream
 * **❓ Integrated Mobile Help & About Dialog**: Tap the `?` header icon in the mobile authenticator to inspect air-gap security specifications, review app architecture, and access 1-click email/GitHub feedback channels.
 * **🛡️ $k$-of-$n$ Quorum Flexibility**: Configure strict dual-custody (2-of-2), majority board quorums (3-of-5), or disaster escrow models (2-of-3).
 * **⚡ High-Throughput Streaming**: Processes gigabyte-scale files at disk speeds with constant $O(1)$ memory consumption ($<20\text{ MB}$ RAM).
-* **📁 Directory & Folder Archiving**: Native streaming TAR bundling to encrypt entire directory hierarchies seamlessly into a single `.denc` container.
+* **📁 Directory & Folder Archiving with Zero-Friction Drag & Drop**:
+  * **Unified Folder Drag & Drop**: Drag and drop entire directory trees directly onto the dropzone in Desktop (native OS paths) and Web (HTML5 `webkitGetAsEntry` recursive scanner) environments.
+  * **Streaming In-Memory Packaging**: Bundles folder hierarchies into standardized POSIX USTAR archives without writing unencrypted temporary files to disk.
+  * **Automatic Directory Extraction on Decryption**: When decrypting a container holding a folder payload, the system automatically detects directory manifests and extracts the complete folder structure and nested files directly into the chosen destination (or outputs `.tar` if explicitly requested).
 * **🔑 Hardware Token & YubiKey Support**: Real physical USB device scanning (`VID_1050`) with an explicit 4-way selector (`[ Passphrase ]`, `[ Key File ]`, `[ YubiKey ]`, `[ ⚛️ PQC KEM ]`).
 
 ---

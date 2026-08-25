@@ -13,6 +13,7 @@ export interface DencManifest {
   organization?: string;
   created_at_utc: number;
   original_filename?: string;
+  is_directory?: boolean;
   custodian_timelocks?: Record<number, number>;
 }
 

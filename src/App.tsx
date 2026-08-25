@@ -1,4 +1,4 @@
-import { save } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import {
   AlertTriangle,
   Building2,
@@ -284,16 +284,28 @@ export const App: React.FC = () => {
   const handleStartDecryption = async () => {
     if (!filePath || !fileName) return;
 
+    const isDirectoryPayload = !!containerMetadata?.manifest?.is_directory;
     let outputPath = filePath.replace(/\.denc$/i, ".decrypted");
     if (outputPath === filePath) outputPath = `${filePath}.out`;
 
     if (isTauriEnvironment()) {
-      const defaultName = fileName.replace(/\.denc$/i, "");
-      const selected = await save({
-        defaultPath: defaultName,
-      });
-      if (!selected) return;
-      outputPath = selected;
+      if (isDirectoryPayload) {
+        const defaultName = fileName.replace(/\.denc$/i, "");
+        const selected = await open({
+          directory: true,
+          multiple: false,
+          title: `Select Destination Folder to Restore ${defaultName}`,
+        });
+        if (!selected || typeof selected !== "string") return;
+        outputPath = selected;
+      } else {
+        const defaultName = fileName.replace(/\.denc$/i, "");
+        const selected = await save({
+          defaultPath: defaultName,
+        });
+        if (!selected) return;
+        outputPath = selected;
+      }
     }
 
     try {
@@ -321,12 +333,19 @@ export const App: React.FC = () => {
 
       job.finishJob();
 
-      const restoredName = fileName.replace(/\.denc$/i, "");
+      const { isTarArchiveWeb } = await import("./lib/webCrypto");
+      const isDirectoryDecrypted =
+        isDirectoryPayload || (res.decrypted_bytes ? isTarArchiveWeb(res.decrypted_bytes) : false);
+
+      let restoredName = fileName.replace(/\.denc$/i, "");
+      if (isDirectoryDecrypted && !restoredName.toLowerCase().endsWith(".tar")) {
+        restoredName = `${restoredName}.tar`;
+      }
 
       // In browser mode, auto-download restored file
       if (!isTauriEnvironment() && res.decrypted_bytes) {
         const blob = new Blob([res.decrypted_bytes as unknown as BlobPart], {
-          type: "application/octet-stream",
+          type: isDirectoryDecrypted ? "application/x-tar" : "application/octet-stream",
         });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -339,10 +358,16 @@ export const App: React.FC = () => {
       }
 
       setCompletionData({
-        title: "Quorum Attained & Decryption Succeeded",
+        title: isDirectoryDecrypted
+          ? "Quorum Attained & Folder Hierarchy Restored"
+          : "Quorum Attained & Decryption Succeeded",
         message: isTauriEnvironment()
-          ? `Plaintext file restored safely to ${outputPath.split(/[\\/]/).pop()}`
-          : `Plaintext file restored and downloaded as ${restoredName}`,
+          ? isDirectoryDecrypted
+            ? `Directory hierarchy and nested files restored safely to ${outputPath}`
+            : `Plaintext file restored safely to ${outputPath.split(/[\\/]/).pop()}`
+          : isDirectoryDecrypted
+            ? `Directory archive restored and downloaded as ${restoredName}`
+            : `Plaintext file restored and downloaded as ${restoredName}`,
         bytes: res.bytes_decrypted,
         isDecryption: true,
         decryptedBytes: res.decrypted_bytes,

@@ -87,7 +87,7 @@ pub struct EncryptArgs {
     #[arg(long = "key-dir", value_name = "DIR")]
     pub key_dir: Option<PathBuf>,
 
-    /// Custodian definition in format 'id:label:auth_type[:passphrase_or_pubkey]' 
+    /// Custodian definition in format 'id:label:auth_type[:passphrase_or_pubkey]'
     /// (e.g. -c 1:"Alice (SecOps)":pqc -c 2:"Bob (Audit)":passphrase:Secret123)
     #[arg(short = 'c', long = "custodian", value_name = "SPEC")]
     pub custodians: Vec<String>,
@@ -295,7 +295,11 @@ async fn handle_encrypt(args: EncryptArgs) -> Result<(), Box<dyn std::error::Err
         })?;
 
     if !input_path.exists() {
-        eprintln!("{}: Input path does not exist: {:?}", "Error".red().bold(), input_path);
+        eprintln!(
+            "{}: Input path does not exist: {:?}",
+            "Error".red().bold(),
+            input_path
+        );
         std::process::exit(1);
     }
 
@@ -351,7 +355,10 @@ async fn handle_encrypt(args: EncryptArgs) -> Result<(), Box<dyn std::error::Err
                     c.id,
                     CustodianInput {
                         custodian_id: c.id,
-                        label: c.label.clone().unwrap_or_else(|| format!("Custodian {}", c.id)),
+                        label: c
+                            .label
+                            .clone()
+                            .unwrap_or_else(|| format!("Custodian {}", c.id)),
                         auth_type,
                         passphrase: c.passphrase.clone(),
                         public_key_base64: c.public_key_base64.clone(),
@@ -410,16 +417,28 @@ async fn handle_encrypt(args: EncryptArgs) -> Result<(), Box<dyn std::error::Err
                 } else {
                     format!("Custodian {}", id)
                 };
-                let auth_str = if parts.len() > 2 { parts[2].to_lowercase() } else { "pqc".to_string() };
+                let auth_str = if parts.len() > 2 {
+                    parts[2].to_lowercase()
+                } else {
+                    "pqc".to_string()
+                };
                 let (auth_type, pass, pk) = match auth_str.as_str() {
                     "passphrase" | "password" => {
-                        let p = if parts.len() > 3 { Some(parts[3].to_string()) } else { None };
+                        let p = if parts.len() > 3 {
+                            Some(parts[3].to_string())
+                        } else {
+                            None
+                        };
                         (AuthType::Passphrase, p, None)
                     }
                     "keyfile" => (AuthType::KeyFile, None, None),
                     "otp" => (AuthType::OtpChallenge, None, None),
                     _ => {
-                        let pk = if parts.len() > 3 { Some(parts[3].to_string()) } else { None };
+                        let pk = if parts.len() > 3 {
+                            Some(parts[3].to_string())
+                        } else {
+                            None
+                        };
                         (AuthType::PostQuantum, None, pk)
                     }
                 };
@@ -469,16 +488,27 @@ async fn handle_encrypt(args: EncryptArgs) -> Result<(), Box<dyn std::error::Err
 
     let classification = args
         .classification
-        .or_else(|| file_cfg.as_ref().and_then(|c| c.manifest.as_ref()).and_then(|m| m.classification.clone()))
+        .or_else(|| {
+            file_cfg
+                .as_ref()
+                .and_then(|c| c.manifest.as_ref())
+                .and_then(|m| m.classification.clone())
+        })
         .unwrap_or_else(|| "RESTRICTED".to_string());
 
-    let purpose = args
-        .purpose
-        .or_else(|| file_cfg.as_ref().and_then(|c| c.manifest.as_ref()).and_then(|m| m.purpose.clone()));
+    let purpose = args.purpose.or_else(|| {
+        file_cfg
+            .as_ref()
+            .and_then(|c| c.manifest.as_ref())
+            .and_then(|m| m.purpose.clone())
+    });
 
-    let organization = args
-        .organization
-        .or_else(|| file_cfg.as_ref().and_then(|c| c.manifest.as_ref()).and_then(|m| m.organization.clone()));
+    let organization = args.organization.or_else(|| {
+        file_cfg
+            .as_ref()
+            .and_then(|c| c.manifest.as_ref())
+            .and_then(|m| m.organization.clone())
+    });
 
     let created_at_utc = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -490,18 +520,35 @@ async fn handle_encrypt(args: EncryptArgs) -> Result<(), Box<dyn std::error::Err
         purpose,
         organization,
         created_at_utc,
-        original_filename: input_path.file_name().map(|n| n.to_string_lossy().to_string()),
-        custodian_timelocks: if timelocks.is_empty() { None } else { Some(timelocks) },
+        original_filename: input_path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string()),
+        is_directory: if input_path.is_dir() {
+            Some(true)
+        } else {
+            None
+        },
+        custodian_timelocks: if timelocks.is_empty() {
+            None
+        } else {
+            Some(timelocks)
+        },
     });
 
     // 5. Author Digital Signature
-    let author_signing_key = args
-        .author_signing_key
-        .or_else(|| file_cfg.as_ref().and_then(|c| c.author.as_ref()).and_then(|a| a.signing_key_base64.clone()));
+    let author_signing_key = args.author_signing_key.or_else(|| {
+        file_cfg
+            .as_ref()
+            .and_then(|c| c.author.as_ref())
+            .and_then(|a| a.signing_key_base64.clone())
+    });
 
-    let author_label = args
-        .author_label
-        .or_else(|| file_cfg.as_ref().and_then(|c| c.author.as_ref()).and_then(|a| a.label.clone()));
+    let author_label = args.author_label.or_else(|| {
+        file_cfg
+            .as_ref()
+            .and_then(|c| c.author.as_ref())
+            .and_then(|a| a.label.clone())
+    });
 
     let params = EncryptionParams {
         cipher: cipher_suite,
@@ -521,10 +568,27 @@ async fn handle_encrypt(args: EncryptArgs) -> Result<(), Box<dyn std::error::Err
         println!("{}", "═".repeat(60).cyan());
         println!(" {}", "DUALCRYPT ENTERPRISE ENCRYPTOR".cyan().bold());
         println!("{}", "═".repeat(60).cyan());
-        println!("  {:<18} {:?}", "Source Payload:".bright_white(), input_path);
-        println!("  {:<18} {:?}", "Encrypted Container:".bright_white(), out_path);
-        println!("  {:<18} {:?}", "Cipher Suite:".bright_white(), cipher_suite);
-        println!("  {:<18} {}-of-{} Custodians", "Quorum Policy:".bright_white(), threshold_k, total_n);
+        println!(
+            "  {:<18} {:?}",
+            "Source Payload:".bright_white(),
+            input_path
+        );
+        println!(
+            "  {:<18} {:?}",
+            "Encrypted Container:".bright_white(),
+            out_path
+        );
+        println!(
+            "  {:<18} {:?}",
+            "Cipher Suite:".bright_white(),
+            cipher_suite
+        );
+        println!(
+            "  {:<18} {}-of-{} Custodians",
+            "Quorum Policy:".bright_white(),
+            threshold_k,
+            total_n
+        );
     }
 
     let pb = if !is_quiet {
@@ -579,7 +643,10 @@ async fn handle_encrypt(args: EncryptArgs) -> Result<(), Box<dyn std::error::Err
             std::fs::write(&key_path, json)?;
 
             if !is_quiet {
-                println!("  ✔ Saved Post-Quantum Key P{} -> {:?}", s.custodian_id, key_path);
+                println!(
+                    "  ✔ Saved Post-Quantum Key P{} -> {:?}",
+                    s.custodian_id, key_path
+                );
             }
 
             exported_keys_json.push(CliExportedKeyJson {
@@ -659,7 +726,11 @@ async fn handle_decrypt(args: DecryptArgs) -> Result<(), Box<dyn std::error::Err
         })?;
 
     if !input_path.exists() {
-        eprintln!("{}: Container file does not exist: {:?}", "Error".red().bold(), input_path);
+        eprintln!(
+            "{}: Container file does not exist: {:?}",
+            "Error".red().bold(),
+            input_path
+        );
         std::process::exit(1);
     }
 
@@ -772,6 +843,13 @@ async fn handle_decrypt(args: DecryptArgs) -> Result<(), Box<dyn std::error::Err
         }
     }
 
+    let inspection = denc_core::inspect_container(&input_path).ok();
+    let is_dir = inspection
+        .as_ref()
+        .and_then(|i| i.manifest.as_ref())
+        .and_then(|m| m.is_directory)
+        .unwrap_or(false);
+
     let is_json = args.json;
     let is_quiet = args.quiet || is_json;
 
@@ -779,8 +857,29 @@ async fn handle_decrypt(args: DecryptArgs) -> Result<(), Box<dyn std::error::Err
         println!("{}", "═".repeat(60).green());
         println!(" {}", "DUALCRYPT ENTERPRISE DECRYPTOR".green().bold());
         println!("{}", "═".repeat(60).green());
-        println!("  {:<18} {:?}", "Encrypted Container:".bright_white(), input_path);
-        println!("  {:<18} {:?}", "Output Destination:".bright_white(), out_path);
+        println!(
+            "  {:<18} {:?}",
+            "Encrypted Container:".bright_white(),
+            input_path
+        );
+        if is_dir {
+            println!(
+                "  {:<18} {}",
+                "Payload Type:".bright_white(),
+                "📁 Directory Hierarchy (Auto-Extract)".cyan().bold()
+            );
+            println!(
+                "  {:<18} {:?}",
+                "Extract Destination:".bright_white(),
+                out_path
+            );
+        } else {
+            println!(
+                "  {:<18} {:?}",
+                "Output Destination:".bright_white(),
+                out_path
+            );
+        }
     }
 
     let pb = if !is_quiet {
@@ -828,7 +927,11 @@ async fn handle_decrypt(args: DecryptArgs) -> Result<(), Box<dyn std::error::Err
     } else if !is_quiet {
         println!("\n{}", "✔ Decryption Succeeded!".green().bold());
         println!("  Total Bytes Decrypted: {}", bytes_decrypted);
-        println!("  Saved To: {:?}", out_path);
+        if is_dir {
+            println!("  Restored Directory: {:?}", out_path);
+        } else {
+            println!("  Saved To: {:?}", out_path);
+        }
     }
 
     Ok(())
@@ -846,8 +949,16 @@ fn handle_inspect(args: InspectArgs) -> Result<(), Box<dyn std::error::Error>> {
     println!(" {}", "CONTAINER METADATA INSPECTOR".cyan().bold());
     println!("{}", "═".repeat(60).cyan());
     println!("  {:<20} {:?}", "File Path:".bright_white(), args.input);
-    println!("  {:<20} {}", "Format Version:".bright_white(), inspection.version);
-    println!("  {:<20} {:?}", "Cipher Suite:".bright_white(), inspection.cipher_suite);
+    println!(
+        "  {:<20} {}",
+        "Format Version:".bright_white(),
+        inspection.version
+    );
+    println!(
+        "  {:<20} {:?}",
+        "Cipher Suite:".bright_white(),
+        inspection.cipher_suite
+    );
     println!(
         "  {:<20} {}-of-{} Custodians",
         "Threshold Quorum:".bright_white(),
@@ -861,11 +972,18 @@ fn handle_inspect(args: InspectArgs) -> Result<(), Box<dyn std::error::Error>> {
             "✖ INVALID / TAMPERED".red().bold()
         };
         println!("  {:<20} {}", "Author Signature:".bright_white(), valid_str);
-        println!("  {:<20} {}", "Author Identity:".bright_white(), sig.author_label.cyan());
+        println!(
+            "  {:<20} {}",
+            "Author Identity:".bright_white(),
+            sig.author_label.cyan()
+        );
     }
 
     if let Some(man) = &inspection.manifest {
-        println!("\n{}", "  Governance & Compliance Manifest:".magenta().bold());
+        println!(
+            "\n{}",
+            "  Governance & Compliance Manifest:".magenta().bold()
+        );
         let class_badge = match man.classification.to_uppercase().as_str() {
             "TOP_SECRET" | "TOP SECRET" => man.classification.red().bold(),
             "CONFIDENTIAL" => man.classification.yellow().bold(),
@@ -895,7 +1013,9 @@ fn handle_inspect(args: InspectArgs) -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap_or_default()
                 .as_secs();
             if now < t {
-                format!(" | ⏳ Time-Locked (UTC {})", t).yellow().to_string()
+                format!(" | ⏳ Time-Locked (UTC {})", t)
+                    .yellow()
+                    .to_string()
             } else {
                 " | ✓ Timelock Expired (Active)".green().to_string()
             }
@@ -958,12 +1078,21 @@ fn handle_pqc_keygen(args: PqcKeygenArgs) -> Result<(), Box<dyn std::error::Erro
         println!("{}", serde_json::to_string_pretty(&json_out)?);
     } else {
         println!("{}", "═".repeat(60).magenta());
-        println!(" {}", format!("POST-QUANTUM KEYGEN ({})", alg_name).magenta().bold());
+        println!(
+            " {}",
+            format!("POST-QUANTUM KEYGEN ({})", alg_name)
+                .magenta()
+                .bold()
+        );
         println!("{}", "═".repeat(60).magenta());
         println!("  {:<18} {}", "Algorithm:".bright_white(), alg_name);
         println!("  {:<18} {}", "Key Type:".bright_white(), key_type);
         println!("  {:<18} {}", "Public Key (B64):".bright_white(), pub_b64);
-        println!("  {:<18} {}", "Private Key (B64):".bright_white(), "[PROTECTED / ZEROIZED ON PRINT]");
+        println!(
+            "  {:<18} {}",
+            "Private Key (B64):".bright_white(),
+            "[PROTECTED / ZEROIZED ON PRINT]"
+        );
         if let Some(out) = &args.output {
             println!("  {:<18} {:?}", "Saved To:".bright_white(), out);
         }
@@ -993,7 +1122,10 @@ fn handle_sss_keygen(args: SssKeygenArgs) -> Result<(), Box<dyn std::error::Erro
         println!("{}", "═".repeat(60).yellow());
         println!(" {}", "SHAMIR SECRET SHARING KEYGEN".yellow().bold());
         println!("{}", "═".repeat(60).yellow());
-        println!("  Threshold Policy: {}-of-{} required\n", args.threshold, args.total);
+        println!(
+            "  Threshold Policy: {}-of-{} required\n",
+            args.threshold, args.total
+        );
 
         for share in shares {
             println!("── Custodian Share #{} ──", share.id);
@@ -1017,9 +1149,15 @@ async fn handle_serve(host: String, port: u16) -> Result<(), Box<dyn std::error:
 
     let is_public = host == "0.0.0.0";
     if is_public {
-        println!("  {}: Bound to 0.0.0.0 (Accessible across Local LAN)", "Notice".yellow().bold());
+        println!(
+            "  {}: Bound to 0.0.0.0 (Accessible across Local LAN)",
+            "Notice".yellow().bold()
+        );
     } else {
-        println!("  {}: Bound to 127.0.0.1 (Localhost Only)", "Security".green().bold());
+        println!(
+            "  {}: Bound to 127.0.0.1 (Localhost Only)",
+            "Security".green().bold()
+        );
     }
 
     let app = Router::new()
@@ -1050,11 +1188,22 @@ async fn handle_serve(host: String, port: u16) -> Result<(), Box<dyn std::error:
         .route("/api/health", get(|| async { (StatusCode::OK, "{\"status\":\"healthy\",\"server\":\"DualCrypt-Embedded-v2\"}") }));
 
     let addr: SocketAddr = format!("{}:{}", host, port).parse()?;
-    println!("  {:<18} http://localhost:{}", "Web Address:".bright_white(), port);
+    println!(
+        "  {:<18} http://localhost:{}",
+        "Web Address:".bright_white(),
+        port
+    );
     if is_public {
-        println!("  {:<18} http://0.0.0.0:{}", "LAN Address:".bright_white(), port);
+        println!(
+            "  {:<18} http://0.0.0.0:{}",
+            "LAN Address:".bright_white(),
+            port
+        );
     }
-    println!("\n  Press {} to terminate web server.\n", "Ctrl+C".bright_red().bold());
+    println!(
+        "\n  Press {} to terminate web server.\n",
+        "Ctrl+C".bright_red().bold()
+    );
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;

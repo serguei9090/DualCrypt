@@ -60,6 +60,8 @@ pub struct DencManifest {
     pub created_at_utc: u64,
     pub original_filename: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub is_directory: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub custodian_timelocks: Option<HashMap<u8, u64>>,
 }
 
@@ -126,8 +128,9 @@ impl DencHeader {
         if effective_version >= FORMAT_VERSION_2 {
             if let Some(sig) = &self.signature_block {
                 buf.write_u8(1)?;
-                let sig_json = serde_json::to_vec(sig)
-                    .map_err(|e| DencError::Custom(format!("Failed to serialize signature block: {e}")))?;
+                let sig_json = serde_json::to_vec(sig).map_err(|e| {
+                    DencError::Custom(format!("Failed to serialize signature block: {e}"))
+                })?;
                 buf.write_u16::<LittleEndian>(sig_json.len() as u16)?;
                 buf.write_all(&sig_json)?;
             } else {
@@ -238,8 +241,9 @@ impl DencHeader {
                 let mut sig_buf = vec![0u8; sig_len];
                 reader.read_exact(&mut sig_buf)?;
                 raw_header_bytes.extend_from_slice(&sig_buf);
-                let s: DencSignatureBlock = serde_json::from_slice(&sig_buf)
-                    .map_err(|e| DencError::Custom(format!("Failed to parse signature block: {e}")))?;
+                let s: DencSignatureBlock = serde_json::from_slice(&sig_buf).map_err(|e| {
+                    DencError::Custom(format!("Failed to parse signature block: {e}"))
+                })?;
                 Some(s)
             } else {
                 None
@@ -406,6 +410,7 @@ mod tests {
                 organization: Some("Global Treasury".to_string()),
                 created_at_utc: 1771930000,
                 original_filename: Some("reserves_vault.tar.gz".to_string()),
+                is_directory: None,
                 custodian_timelocks: None,
             }),
         };
@@ -418,10 +423,7 @@ mod tests {
         assert_eq!(header, parsed_header);
         assert_eq!(digest1, digest2);
         assert_eq!(bytes.len(), bytes_read);
-        assert_eq!(
-            parsed_header.manifest.unwrap().classification,
-            "TOP_SECRET"
-        );
+        assert_eq!(parsed_header.manifest.unwrap().classification, "TOP_SECRET");
         assert!(parsed_header.signature_block.is_some());
     }
 }

@@ -212,6 +212,21 @@ export async function executeWebEncryption(
         phase: "WebAssembly AEAD Engine",
       });
 
+      const isTar = isTarArchiveWeb(payloadBytes);
+      const manifest = request.manifest
+        ? {
+            ...request.manifest,
+            is_directory: request.manifest.is_directory ?? (isTar || undefined),
+          }
+        : isTar
+          ? {
+              classification: "UNCLASSIFIED",
+              created_at_utc: Math.floor(Date.now() / 1000),
+              original_filename: request.input_path,
+              is_directory: true,
+            }
+          : undefined;
+
       const paramsJson = JSON.stringify({
         cipher: request.cipher === "xchacha20-poly1305" ? "XChaCha20Poly1305" : "Aes256Gcm",
         threshold_k: request.threshold_k,
@@ -231,7 +246,7 @@ export async function executeWebEncryption(
         })),
         author_signing_key_base64: request.author_signing_key_base64,
         author_label: request.author_label,
-        manifest: request.manifest,
+        manifest,
       });
 
       const result = wasm.wasm_encrypt_payload(payloadBytes, paramsJson);
@@ -989,4 +1004,122 @@ export function parseWebKeyFileContent(
     }
   }
   throw new Error("Unrecognized key file format. Expected a valid .dkey or .pqc JSON file.");
+}
+
+export interface TarEntry {
+  name: string;
+  data: Uint8Array;
+  mtime?: number;
+}
+
+/// Package multiple files with relative paths into a standard POSIX TAR byte archive in browser
+export function packTarWeb(entries: TarEntry[]): Uint8Array {
+  let totalBlocks = 0;
+  for (const entry of entries) {
+    const dataBlocks = Math.ceil(entry.data.length / 512);
+    totalBlocks += 1 + dataBlocks;
+  }
+  totalBlocks += 2; // End of archive (2 zero blocks)
+  const buffer = new Uint8Array(totalBlocks * 512);
+  let offset = 0;
+  const encoder = new TextEncoder();
+
+  for (const entry of entries) {
+    const header = buffer.subarray(offset, offset + 512);
+
+    // File name (0..100)
+    const nameBytes = encoder.encode(entry.name);
+    header.set(nameBytes.subarray(0, Math.min(100, nameBytes.length)), 0);
+
+    // File mode (100..108) e.g. "0000644\0"
+    header.set(encoder.encode("0000644\0"), 100);
+
+    // UID / GID (108..124)
+    header.set(encoder.encode("0000000\x0000\0"), 108);
+
+    // File size (124..136) in octal
+    const sizeOctal = `${entry.data.length.toString(8).padStart(11, "0")} `;
+    header.set(encoder.encode(sizeOctal), 124);
+
+    // MTime (136..148) in octal
+    const mtime = Math.floor((entry.mtime || Date.now()) / 1000);
+    const mtimeOctal = `${mtime.toString(8).padStart(11, "0")} `;
+    header.set(encoder.encode(mtimeOctal), 136);
+
+    // Checksum placeholder (8 spaces: 148..156)
+    header.fill(32, 148, 156);
+
+    // Typeflag (156) '0' for normal file
+    header[156] = 48; // '0'
+
+    // Magic (257..263) "ustar\0"
+    header.set(encoder.encode("ustar\0"), 257);
+    // Version (263..265) "00"
+    header.set(encoder.encode("00"), 263);
+
+    // Calculate checksum
+    let checksum = 0;
+    for (let i = 0; i < 512; i++) {
+      checksum += header[i];
+    }
+    const checksumOctal = `${checksum.toString(8).padStart(6, "0")}\0 `;
+    header.set(encoder.encode(checksumOctal), 148);
+
+    offset += 512;
+
+    // Write file data
+    buffer.set(entry.data, offset);
+    offset += Math.ceil(entry.data.length / 512) * 512;
+  }
+
+  return buffer;
+}
+
+/// Unpacks a TAR byte stream into separate files in browser
+export function unpackTarWeb(tarBytes: Uint8Array): TarEntry[] {
+  const entries: TarEntry[] = [];
+  let offset = 0;
+  const decoder = new TextDecoder();
+
+  while (offset + 512 <= tarBytes.length) {
+    const header = tarBytes.subarray(offset, offset + 512);
+    let isZero = true;
+    for (let i = 0; i < 512; i++) {
+      if (header[i] !== 0) {
+        isZero = false;
+        break;
+      }
+    }
+    if (isZero) break;
+
+    let nameEnd = 0;
+    while (nameEnd < 100 && header[nameEnd] !== 0) nameEnd++;
+    const name = decoder.decode(header.subarray(0, nameEnd)).trim();
+    if (!name) break;
+
+    let sizeStr = "";
+    for (let i = 124; i < 136; i++) {
+      if (header[i] >= 48 && header[i] <= 55) {
+        sizeStr += String.fromCharCode(header[i]);
+      }
+    }
+    const size = sizeStr ? parseInt(sizeStr, 8) : 0;
+    const typeflag = header[156];
+
+    offset += 512;
+    if (typeflag === 48 || typeflag === 0) {
+      const data = tarBytes.slice(offset, offset + size);
+      entries.push({ name, data });
+    }
+    offset += Math.ceil(size / 512) * 512;
+  }
+
+  return entries;
+}
+
+/// Check if a byte array contains a valid standard TAR archive header
+export function isTarArchiveWeb(bytes: Uint8Array): boolean {
+  if (!bytes || bytes.length < 512) return false;
+  const magic = new TextDecoder().decode(bytes.subarray(257, 262));
+  return magic === "ustar";
 }

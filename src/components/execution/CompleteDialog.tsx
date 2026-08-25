@@ -398,40 +398,61 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
         </div>
       )}
 
-      {isDecryption && (
-        <div className="rounded-xl border border-emerald-500/50 bg-gradient-to-r from-emerald-950/60 to-slate-900/80 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-[0_0_25px_rgba(16,185,129,0.15)]">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0">
-              <Download className="h-6 w-6" />
-            </div>
-            <div>
-              <div className="text-xs font-bold text-slate-100 font-mono flex items-center gap-2">
-                <span>{decryptedFilename || "restored_file"}</span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-500/40 text-emerald-300">
-                  AUTHENTICATED PLAINTEXT
-                </span>
+      {isDecryption &&
+        (() => {
+          const isFolderArchive =
+            decryptedFilename?.toLowerCase().endsWith(".tar") ||
+            message.toLowerCase().includes("folder") ||
+            message.toLowerCase().includes("directory");
+          return (
+            <div className="rounded-xl border border-emerald-500/50 bg-gradient-to-r from-emerald-950/60 to-slate-900/80 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-[0_0_25px_rgba(16,185,129,0.15)]">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0">
+                  {isFolderArchive ? (
+                    <FolderArchive className="h-6 w-6" />
+                  ) : (
+                    <Download className="h-6 w-6" />
+                  )}
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-100 font-mono flex items-center gap-2">
+                    <span>{decryptedFilename || "restored_file"}</span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-500/40 text-emerald-300">
+                      {isFolderArchive ? "📁 RESTORED DIRECTORY" : "AUTHENTICATED PLAINTEXT"}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-emerald-200/80 mt-0.5">
+                    {isTauriEnvironment()
+                      ? isFolderArchive
+                        ? "Restored folder hierarchy and all nested files written to disk."
+                        : "Restored plaintext file written to disk."
+                      : containerDownloaded
+                        ? isFolderArchive
+                          ? "✓ Restored folder archive downloaded to your browser."
+                          : "✓ Restored plaintext downloaded to your browser."
+                        : isFolderArchive
+                          ? "Folder archive payload restored and ready for download."
+                          : "Plaintext payload restored and ready for download."}
+                  </p>
+                </div>
               </div>
-              <p className="text-[11px] text-emerald-200/80 mt-0.5">
-                {isTauriEnvironment()
-                  ? "Restored plaintext file written to disk."
-                  : containerDownloaded
-                    ? "✓ Restored plaintext downloaded to your browser."
-                    : "Plaintext payload restored and ready for download."}
-              </p>
+              {(!isTauriEnvironment() || decryptedBytes) && (
+                <button
+                  type="button"
+                  onClick={handleDownloadDecrypted}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs px-4 py-2.5 shadow-lg shadow-emerald-900/40 transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none shrink-0"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>
+                    {isFolderArchive
+                      ? "Download Restored Directory Archive"
+                      : "Download Restored File"}
+                  </span>
+                </button>
+              )}
             </div>
-          </div>
-          {(!isTauriEnvironment() || decryptedBytes) && (
-            <button
-              type="button"
-              onClick={handleDownloadDecrypted}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs px-4 py-2.5 shadow-lg shadow-emerald-900/40 transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none shrink-0"
-            >
-              <Download className="h-4 w-4" />
-              <span>Download Restored File</span>
-            </button>
-          )}
-        </div>
-      )}
+          );
+        })()}
 
       {/* Verified Payload Size Card */}
       <div className="bg-slate-900/60 rounded-xl p-4 border border-slate-800 flex items-center justify-between">

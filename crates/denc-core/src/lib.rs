@@ -7,9 +7,7 @@ pub mod sss;
 
 use aes_gcm::aead::{Aead, KeyInit, Payload};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
-use cipher::{
-    encrypt_stream_chunks, generate_base_nonce, CipherSuite, DEFAULT_CHUNK_SIZE,
-};
+use cipher::{encrypt_stream_chunks, generate_base_nonce, CipherSuite, DEFAULT_CHUNK_SIZE};
 use container::{
     AuthType, CustodianDescriptor, DencHeader, DencManifest, DencSignatureBlock, FORMAT_VERSION_1,
     FORMAT_VERSION_2,
@@ -148,27 +146,45 @@ pub fn inspect_container<P: AsRef<Path>>(path: P) -> Result<HeaderInspection, De
 }
 
 /// Packages a directory recursively into a TAR archive stream
-pub fn pack_directory_to_tar<P: AsRef<Path>, W: Write>(dir_path: P, writer: &mut W) -> Result<(), DencError> {
+pub fn pack_directory_to_tar<P: AsRef<Path>, W: Write>(
+    dir_path: P,
+    writer: &mut W,
+) -> Result<(), DencError> {
     let mut tar_builder = tar::Builder::new(writer);
-    let dir_name = dir_path
-        .as_ref()
-        .file_name()
-        .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_else(|| "archive".to_string());
     tar_builder
-        .append_dir_all(&dir_name, dir_path.as_ref())
+        .append_dir_all(".", dir_path.as_ref())
         .map_err(DencError::Io)?;
     tar_builder.finish().map_err(DencError::Io)?;
     Ok(())
 }
 
 /// Unpacks a TAR archive from a reader into a destination directory
-pub fn unpack_tar_archive<R: Read, P: AsRef<Path>>(reader: &mut R, target_dir: P) -> Result<(), DencError> {
+pub fn unpack_tar_archive<R: Read, P: AsRef<Path>>(
+    reader: &mut R,
+    target_dir: P,
+) -> Result<(), DencError> {
+    let target_path = target_dir.as_ref();
+    std::fs::create_dir_all(target_path).map_err(DencError::Io)?;
+
     let mut archive = tar::Archive::new(reader);
-    archive
-        .unpack(target_dir.as_ref())
-        .map_err(DencError::Io)?;
+    archive.unpack(target_path).map_err(DencError::Io)?;
     Ok(())
+}
+
+fn is_tar_archive_file<P: AsRef<Path>>(path: P) -> bool {
+    if let Ok(mut file) = File::open(path) {
+        let mut header_buf = [0u8; 512];
+        if file.read_exact(&mut header_buf).is_ok() {
+            if &header_buf[257..262] == b"ustar" {
+                return true;
+            }
+            let checksum_field = &header_buf[148..156];
+            if checksum_field.iter().any(|&b| b.is_ascii_digit()) {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 /// High-level function to encrypt a file or entire directory with dual/threshold custody
@@ -188,7 +204,12 @@ pub fn encrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
     }
 
     let input_path_ref = input_path.as_ref();
-    let (real_input_path, _temp_tar_guard) = if input_path_ref.is_dir() {
+    let is_dir = input_path_ref.is_dir();
+    let original_name = input_path_ref
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string());
+
+    let (real_input_path, _temp_tar_guard) = if is_dir {
         let temp_tar = tempfile::Builder::new()
             .prefix("dual_archive_")
             .suffix(".tar")
@@ -203,6 +224,33 @@ pub fn encrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
     } else {
         (input_path_ref.to_path_buf(), None)
     };
+
+    let mut effective_manifest = params.manifest.clone();
+    if is_dir {
+        if let Some(m) = &mut effective_manifest {
+            m.is_directory = Some(true);
+            if m.original_filename.is_none() {
+                m.original_filename = original_name.clone();
+            }
+        } else {
+            effective_manifest = Some(DencManifest {
+                classification: "UNCLASSIFIED".to_string(),
+                purpose: None,
+                organization: None,
+                created_at_utc: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs(),
+                original_filename: original_name.clone(),
+                is_directory: Some(true),
+                custodian_timelocks: None,
+            });
+        }
+    } else if let Some(m) = &mut effective_manifest {
+        if m.original_filename.is_none() {
+            m.original_filename = original_name.clone();
+        }
+    }
 
     let input_file = File::open(&real_input_path)?;
     let total_bytes = input_file.metadata()?.len();
@@ -232,21 +280,31 @@ pub fn encrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
 
         match custodian.auth_type {
             AuthType::Passphrase => {
-                let passphrase = custodian
-                    .passphrase
-                    .as_deref()
-                    .ok_or_else(|| DencError::Custom(format!("Passphrase required for custodian {}", custodian.label)))?;
-                
+                let passphrase = custodian.passphrase.as_deref().ok_or_else(|| {
+                    DencError::Custom(format!(
+                        "Passphrase required for custodian {}",
+                        custodian.label
+                    ))
+                })?;
+
                 // Derive key from passphrase with Argon2id
                 let mut pass_key = derive_key_argon2id(passphrase.as_bytes(), &custodian_salt)?;
                 let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&pass_key));
                 let share_json = serde_json::to_vec(&share)?;
-                
+
                 let share_nonce = Nonce::from_slice(&custodian_salt[0..12]);
                 let encrypted_share = cipher
-                    .encrypt(share_nonce, Payload { msg: &share_json, aad: &custodian_salt })
-                    .map_err(|_| DencError::Custom("Failed to encrypt share with passphrase".to_string()))?;
-                
+                    .encrypt(
+                        share_nonce,
+                        Payload {
+                            msg: &share_json,
+                            aad: &custodian_salt,
+                        },
+                    )
+                    .map_err(|_| {
+                        DencError::Custom("Failed to encrypt share with passphrase".to_string())
+                    })?;
+
                 pass_key.zeroize();
 
                 descriptors.push(CustodianDescriptor {
@@ -284,7 +342,10 @@ pub fn encrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
                     (pk.to_string(), None)
                 } else {
                     let kp = pqc::generate_ml_kem_keypair()?;
-                    (kp.public_key_base64.clone(), Some(kp.private_key_base64.clone()))
+                    (
+                        kp.public_key_base64.clone(),
+                        Some(kp.private_key_base64.clone()),
+                    )
                 };
 
                 let pqc_share = encapsulate_share_ml_kem(&pub_key_b64, &share)?;
@@ -326,7 +387,7 @@ pub fn encrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
             base_nonce,
             custodians: descriptors.clone(),
             signature_block: None,
-            manifest: params.manifest.clone(),
+            manifest: effective_manifest.clone(),
         };
         let (_, draft_digest) = draft_header.serialize()?;
         let signature_base64 = pqc::sign_digest_ml_dsa(author_key, &draft_digest)?;
@@ -343,7 +404,7 @@ pub fn encrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
     };
 
     let header = DencHeader {
-        version: if signature_block.is_some() || params.manifest.is_some() {
+        version: if signature_block.is_some() || effective_manifest.is_some() {
             FORMAT_VERSION_2
         } else {
             FORMAT_VERSION_1
@@ -357,7 +418,7 @@ pub fn encrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
         base_nonce,
         custodians: descriptors,
         signature_block: signature_block.clone(),
-        manifest: params.manifest.clone(),
+        manifest: effective_manifest,
     };
 
     // Serialize header & compute AAD digest
@@ -442,10 +503,17 @@ pub fn decrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
             continue;
         }
 
-        if let Some(descriptor) = header.custodians.iter().find(|c| c.custodian_id == cred.custodian_id) {
+        if let Some(descriptor) = header
+            .custodians
+            .iter()
+            .find(|c| c.custodian_id == cred.custodian_id)
+        {
             if descriptor.auth_type == AuthType::Passphrase {
                 let pass = cred.passphrase.as_deref().ok_or_else(|| {
-                    DencError::Custom(format!("Passphrase required for custodian {}", descriptor.label))
+                    DencError::Custom(format!(
+                        "Passphrase required for custodian {}",
+                        descriptor.label
+                    ))
                 })?;
 
                 let mut pass_key = derive_key_argon2id(pass.as_bytes(), &descriptor.salt)?;
@@ -453,20 +521,36 @@ pub fn decrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
                 let share_nonce = Nonce::from_slice(&descriptor.salt[0..12]);
 
                 let decrypted_json = cipher
-                    .decrypt(share_nonce, Payload { msg: &descriptor.encrypted_share, aad: &descriptor.salt })
-                    .map_err(|_| DencError::Custom(format!("Invalid passphrase for custodian {}", descriptor.label)))?;
-                
+                    .decrypt(
+                        share_nonce,
+                        Payload {
+                            msg: &descriptor.encrypted_share,
+                            aad: &descriptor.salt,
+                        },
+                    )
+                    .map_err(|_| {
+                        DencError::Custom(format!(
+                            "Invalid passphrase for custodian {}",
+                            descriptor.label
+                        ))
+                    })?;
+
                 pass_key.zeroize();
 
                 let share: SecretShare = serde_json::from_slice(&decrypted_json)?;
                 recovered_shares.push(share);
             } else if descriptor.auth_type == AuthType::PostQuantum {
                 let priv_key_b64 = cred.pqc_private_key_base64.as_deref().ok_or_else(|| {
-                    DencError::Custom(format!("ML-KEM Private Key required for custodian {}", descriptor.label))
+                    DencError::Custom(format!(
+                        "ML-KEM Private Key required for custodian {}",
+                        descriptor.label
+                    ))
                 })?;
 
-                let pqc_share: PqcEncryptedShare = serde_json::from_slice(&descriptor.encrypted_share)
-                    .map_err(|e| DencError::Custom(format!("Failed to parse PQC share payload: {}", e)))?;
+                let pqc_share: PqcEncryptedShare =
+                    serde_json::from_slice(&descriptor.encrypted_share).map_err(|e| {
+                        DencError::Custom(format!("Failed to parse PQC share payload: {}", e))
+                    })?;
 
                 let share = decapsulate_share_ml_kem(priv_key_b64, &pqc_share)?;
                 recovered_shares.push(share);
@@ -482,7 +566,8 @@ pub fn decrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
     }
 
     // Combine shares to reconstruct DEK
-    let mut reconstructed_dek_vec = combine_shares(&recovered_shares[0..header.threshold_k as usize])?;
+    let mut reconstructed_dek_vec =
+        combine_shares(&recovered_shares[0..header.threshold_k as usize])?;
     if reconstructed_dek_vec.len() != 32 {
         reconstructed_dek_vec.zeroize();
         return Err(DencError::IntegrityCheckFailed);
@@ -492,22 +577,60 @@ pub fn decrypt_file<P1: AsRef<Path>, P2: AsRef<Path>, F: FnMut(u64, u64)>(
     dek.copy_from_slice(&reconstructed_dek_vec);
     reconstructed_dek_vec.zeroize();
 
-    let output_file = File::create(&output_path)?;
-    let mut writer = BufWriter::new(output_file);
+    let is_directory_manifest = header
+        .manifest
+        .as_ref()
+        .and_then(|m| m.is_directory)
+        .unwrap_or(false);
 
-    let decrypted_bytes = cipher::decrypt_stream_chunks(
-        &mut reader,
-        &mut writer,
-        &dek,
-        &header.base_nonce,
-        header.cipher_suite,
-        &header_digest,
-        total_cipher_payload,
-        progress_cb,
-        cancel_flag,
-    )?;
+    let output_path_ref = output_path.as_ref();
+    let is_explicit_tar_output = output_path_ref
+        .extension()
+        .map(|e| e.to_string_lossy().to_lowercase() == "tar")
+        .unwrap_or(false);
 
-    writer.flush()?;
+    let temp_decrypted = tempfile::Builder::new()
+        .prefix("dual_decrypted_")
+        .tempfile()?;
+
+    {
+        let temp_file = File::create(temp_decrypted.path())?;
+        let mut writer = BufWriter::new(temp_file);
+
+        cipher::decrypt_stream_chunks(
+            &mut reader,
+            &mut writer,
+            &dek,
+            &header.base_nonce,
+            header.cipher_suite,
+            &header_digest,
+            total_cipher_payload,
+            progress_cb,
+            cancel_flag,
+        )?;
+
+        writer.flush()?;
+    }
+
+    let is_tar = is_tar_archive_file(temp_decrypted.path());
+    let should_unpack = (is_directory_manifest || is_tar) && !is_explicit_tar_output;
+
+    let decrypted_bytes = if should_unpack {
+        std::fs::create_dir_all(output_path_ref)?;
+        let tar_file = File::open(temp_decrypted.path())?;
+        let mut tar_reader = BufReader::new(tar_file);
+        unpack_tar_archive(&mut tar_reader, output_path_ref)?;
+        temp_decrypted.path().metadata()?.len()
+    } else {
+        if let Some(parent) = output_path_ref.parent() {
+            if !parent.as_os_str().is_empty() {
+                std::fs::create_dir_all(parent)?;
+            }
+        }
+        std::fs::copy(temp_decrypted.path(), output_path_ref)?;
+        temp_decrypted.path().metadata()?.len()
+    };
+
     dek.zeroize();
     recovered_shares.zeroize();
 
@@ -607,7 +730,6 @@ mod tests {
     fn test_directory_encryption_roundtrip() {
         let temp_dir = tempfile::tempdir().unwrap();
         let encrypted_file = NamedTempFile::new().unwrap();
-        let decrypted_tar_file = NamedTempFile::new().unwrap();
 
         // Create sample files in temp_dir
         let file1 = temp_dir.path().join("doc1.txt");
@@ -668,22 +790,40 @@ mod tests {
             },
         ];
 
+        // Decrypt directly into a restored folder directory
+        let restored_folder_dir = tempfile::tempdir().unwrap();
         let dec_bytes = decrypt_file(
             encrypted_file.path(),
-            decrypted_tar_file.path(),
-            creds,
+            restored_folder_dir.path(),
+            creds.clone(),
             |_, _| {},
             None,
         )
-        .expect("Directory decryption failed");
+        .expect("Directory decryption into restored folder failed");
 
         assert!(dec_bytes > 0);
+        let restored_doc1 = restored_folder_dir.path().join("doc1.txt");
+        let restored_doc2 = restored_folder_dir.path().join("sub/doc2.txt");
+        assert!(restored_doc1.exists(), "restored doc1.txt must exist");
+        assert!(restored_doc2.exists(), "restored sub/doc2.txt must exist");
+        assert_eq!(
+            std::fs::read(&restored_doc1).unwrap(),
+            b"Hello inside archive 1"
+        );
+        assert_eq!(
+            std::fs::read(&restored_doc2).unwrap(),
+            b"Hello inside subfolder 2"
+        );
 
-        // Verify unpacking the decrypted tar
-        let extract_dir = tempfile::tempdir().unwrap();
-        let tar_file = File::open(decrypted_tar_file.path()).unwrap();
-        let mut tar_reader = BufReader::new(tar_file);
-        unpack_tar_archive(&mut tar_reader, extract_dir.path()).expect("Unpack failed");
+        // Verify explicit .tar output file preserves raw TAR without unpacking
+        let explicit_tar_file = NamedTempFile::new().unwrap();
+        let tar_out_path = explicit_tar_file.path().with_extension("tar");
+        let dec_tar_bytes =
+            decrypt_file(encrypted_file.path(), &tar_out_path, creds, |_, _| {}, None)
+                .expect("Explicit tar decryption failed");
+        assert!(dec_tar_bytes > 0);
+        assert!(is_tar_archive_file(&tar_out_path));
+        let _ = std::fs::remove_file(tar_out_path);
     }
 
     #[test]
@@ -843,6 +983,7 @@ mod tests {
             organization: Some("Global Corporate Legal".to_string()),
             created_at_utc: 1771935000,
             original_filename: Some("board_resolution.pdf".to_string()),
+            is_directory: None,
             custodian_timelocks: None,
         };
 
@@ -920,6 +1061,7 @@ mod tests {
             organization: Some("Corporate Treasury".to_string()),
             created_at_utc: 1771935000,
             original_filename: Some("disaster_recovery.bin".to_string()),
+            is_directory: None,
             custodian_timelocks: Some(timelocks),
         };
 
@@ -991,7 +1133,11 @@ mod tests {
         .expect_err("Decryption should fail because Custodian 3 is time-locked");
 
         match err {
-            DencError::TimelockActive { custodian_id, unlock_time, .. } => {
+            DencError::TimelockActive {
+                custodian_id,
+                unlock_time,
+                ..
+            } => {
                 assert_eq!(custodian_id, 3);
                 assert_eq!(unlock_time, future_timelock_utc);
             }
