@@ -50,6 +50,7 @@ Detailed architectural specifications and operational manuals are available in t
 | **[🏛️ System Architecture](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/ARCHITECTURE.md)** | Technical layout across Rust crates, Tauri v2 bridge, TypeScript ESM packages, and mobile Android targets. |
 | **[🔐 Cryptographic Specification](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/CRYPTOGRAPHY_SPEC.md)** | Mathematical specifications for $GF(256)$ Shamir sharing, NIST FIPS 203/204 PQC, and AEAD framing. |
 | **[📱 Android Testing & Store Guide](file:///i:/01-Master_Code/Apps/Dual_Encryption/androidtest.md)** | LAN testing, keystore signing, and building `.apk` / `.aab` for Google Play Store. |
+| **[🔮 Enterprise Feature Roadmap](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/FUTURE_ROADMAP_SPEC.md)** | Detailed problem statements and technical specifications for upcoming roadmap milestones. |
 
 ---
 
@@ -218,6 +219,18 @@ denc serve --host 0.0.0.0 --port 8080
 
 ### 🟠 Phase 5: Time-Locked Recovery & Advanced Quorums
 - [x] **Time-Locked Recovery Shares (Dead Man's Quorum)**: Cryptographically sealed recovery shares (`custodian_timelocks`) that cannot be reconstructed before a specified UTC release date. *(Completed)*
+
+### 🔒 Phase 6: Universal Hardware Security (Low–Medium Complexity)
+- [ ] **FIDO2 / WebAuthn & Passkey Integration**: Native hardware-backed authentication via standard CTAP2 / WebAuthn protocols across Desktop, WebAssembly, and Android (Touch ID, Windows Hello, and YubiKey FIDO2). See [Detailed Specification](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/FUTURE_ROADMAP_SPEC.md#1--phase-6-fido2--webauthn--passkey-hardware-integration).
+
+### 👥 Phase 7: Hierarchical & Role-Based Governance (Medium Complexity)
+- [ ] **Role-Based Quorums & Policy Trees**: Enforce multi-tier department signing rules (e.g., $(\text{Executive} \ge 1) \land (\text{Legal} \ge 1)$) to eliminate uniform quorum vulnerabilities and prevent custodian collusion. See [Detailed Specification](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/FUTURE_ROADMAP_SPEC.md#2--phase-7-role-based--hierarchical-quorums-multi-tier-policy-rules).
+
+### 🌐 Phase 8: Distributed Real-Time Co-Presence (Medium–High Complexity)
+- [ ] **WebRTC Zero-Knowledge Quorum Relay**: Real-time multi-party unlock rooms over peer-to-peer WebRTC data channels with post-quantum ML-KEM encapsulation, eliminating manual out-of-band keyfile/email transfers for remote teams. See [Detailed Specification](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/FUTURE_ROADMAP_SPEC.md#3--phase-8-webrtc--remote-zero-knowledge-quorum-relay).
+
+### 🏢 Phase 9: Enterprise Identity & Lifecycle (High Complexity)
+- [ ] **Enterprise SSO & Directory Sync (Okta First)**: OIDC/OAuth2 with PKCE, automated corporate public-key binding, and SCIM 2.0 deprovisioning/revocation webhooks with Okta universal directory support. See [Detailed Specification](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/FUTURE_ROADMAP_SPEC.md#4--phase-9-enterprise-sso--directory-sync-oidc--scim--active-directory--okta-1st).
 
 ---
 
