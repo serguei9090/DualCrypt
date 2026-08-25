@@ -5,6 +5,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [0.5.3] - 2026-08-25
+
+### 🌟 Release Highlights
+Version `0.5.3` introduces the authoritative **Security & Assurance Manifest** (`docs/SECURITY_MANIFEST.md`), integrates **Standalone Cross-Platform CLI Binaries** into CI/CD release workflows (producing standalone `denc-windows-x86_64.exe`, `denc-linux-x86_64`, and `denc-macos-universal` assets), and synchronizes end-to-end documentation across the platform.
+
+---
+
+### 🚀 Added
+- **Security & Assurance Manifest (`docs/SECURITY_MANIFEST.md`)**:
+  - Detailed threat modeling, $GF(256)$ information-theoretic threshold proofs, and AEAD stream framing specifications.
+  - Multi-tier key custody guarantees: NIST FIPS 203 ML-KEM-768, Argon2id ($m=64\text{ MB}, t=3, p=4$), YubiKey capacitive touch, and Air-Gapped Optical camera-to-screen QR enclaves.
+  - Memory zeroization (`ZeroizeOnDrop`) protocols, constant-time Russian Peasant finite field arithmetic, and strict $O(1)$ streaming memory consumption ($<20\text{ MB}$ RAM footprint).
+  - Headless CI/CD zero-leakage security posture (`stdin` recipe piping, isolated `/tmp` keys).
+- **Standalone Cross-Platform CLI Release Pipeline (`.github/workflows/release-desktop.yml`)**:
+  - Automated compilation and attachment of standalone `denc` CLI binaries on Windows (`.exe`), Linux (ELF binary), and macOS (universal Mach-O) for every release tag.
+
+---
+
+### 🔧 Improvements & Maintenance
+- **Version Harmonization**: Bumped workspace packages, crates, Android manifests, desktop components, and Tauri configuration to version `0.5.3`.
+
+---
+
 ## [0.5.2] - 2026-08-25
 
 ### 🌟 Release Highlights
