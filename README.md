@@ -176,25 +176,187 @@ A pre-configured CI/CD workflow is included at `.github/workflows/deploy-pages.y
 
 ---
 
-## 💻 Standalone CLI Tool (`denc`)
+## 💻 Standalone CLI Tool (`denc`) & Headless CI/CD Automation
 
-DualCrypt provides a native command-line utility for automation and headless server environments:
+DualCrypt provides a high-performance native CLI binary (`denc`) for headless automation, server backups, zero-trust distribution, and programmatic CI/CD pipelines (e.g. GitHub Actions, GitLab CI, Jenkins) with **zero human intervention**.
 
+### 1. Key Features
+* **Zero Human Intervention**: Pass all encryption recipes via CLI arguments, JSON/YAML recipe files, or direct `stdin` piping.
+* **Post-Quantum Key Distribution (NIST FIPS 203 ML-KEM-768)**: Generates quantum-safe asymmetric keypairs (`custodian_*.pqc`) into a temporary directory so CI pipelines can securely dispatch them to respective custodians via email or vault APIs.
+* **NIST FIPS 204 Container Signatures (ML-DSA-65)**: Sign production artifacts with the CI release bot's private key to guarantee origin authenticity.
+* **Machine-Readable `--json` Mode**: Emits structured JSON on `stdout` detailing container paths, byte counts, and key locations for easy parsing with `jq` or Python.
+* **Full Governance Manifest**: Configure classification (`TOP_SECRET`, `CONFIDENTIAL`), purpose, organization, and timelocks directly from CI.
+
+---
+
+### 2. Command Reference
+
+#### 🔐 Encrypting Artifacts (`denc encrypt`)
 ```bash
-# 1. Encrypt a file with 2-of-2 dual custody
-denc encrypt secret_backup.tar.gz -o backup.denc -k 2 -n 2 -p 1:CustOnePass -p 2:CustTwoPass
+# A. Quick CLI flags with Post-Quantum (PQC) custodians and manifest:
+denc encrypt release_v2.tar.gz \
+  -o release_v2.tar.gz.denc \
+  -k 2 -n 2 \
+  --key-dir /tmp/ci_keys \
+  --pqc 1:"Alice (SecOps Lead)" \
+  --pqc 2:"Bob (VP Engineering)" \
+  --classification "TOP_SECRET" \
+  --purpose "Automated Production Release" \
+  --organization "DualCrypt Enterprise Security" \
+  --author-signing-key "$CI_RELEASE_DSA_PRIVATE_KEY" \
+  --author-label "CI Automated Release Bot" \
+  --json
 
-# 2. Encrypt an entire directory and export keyfiles (.dkey)
-denc encrypt ./data_vault/ -o vault.denc -k 2 -n 3 --key-dir ./keys/
+# B. Programmatic recipe via YAML / JSON config file:
+denc encrypt --config ci_recipe.yaml --json
 
-# 3. Decrypt a container with passphrases & key files
-denc decrypt backup.denc -o restored_backup.tar.gz -p 1:CustOnePass -p 2:CustTwoPass
+# C. Direct dynamic stdin piping without writing config to disk:
+cat ci_recipe.json | denc encrypt --config - --json
+```
 
-# 4. Inspect container metadata without decrypting
-denc inspect backup.denc
+#### 🔓 Decrypting Containers (`denc decrypt`)
+```bash
+# Decrypt using generated Post-Quantum (.pqc) key files:
+denc decrypt release_v2.tar.gz.denc \
+  -o restored_release.tar.gz \
+  -f 1:/tmp/ci_keys/custodian_1.pqc \
+  -f 2:/tmp/ci_keys/custodian_2.pqc \
+  --json
 
-# 5. Launch the embedded web server on custom interface & port
-denc serve --host 0.0.0.0 --port 8080
+# Decrypt using hybrid credentials (PQC key + Passphrase):
+denc decrypt backup.denc \
+  --pqc-key 1:custodian_1.pqc \
+  -p 2:"SuperSecurePassword!" \
+  --json
+```
+
+#### 🔍 Inspecting Containers (`denc inspect`)
+```bash
+# Inspect container header, signatures, and compliance manifest:
+denc inspect release_v2.tar.gz.denc --json
+```
+
+#### ⚛️ Post-Quantum Key Generation (`denc pqc-keygen`)
+```bash
+# Generate ML-KEM-768 keypair for recipient encryption:
+denc pqc-keygen -a kem -o custodian_kem.json --json
+
+# Generate ML-DSA-65 signing keypair for CI release bot:
+denc pqc-keygen -a dsa -o bot_signing_key.json --json
+```
+
+---
+
+### 3. CI/CD Pipeline Integration Example (GitHub Actions)
+
+Here is a complete workflow demonstrating how CI builds an artifact, encrypts it with threshold Post-Quantum keys, and emails/dispatches each key to the respective custodian:
+
+```yaml
+name: Secure Threshold Release Pipeline
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  secure-encrypt-and-dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Application Payload
+        run: |
+          tar -czf release_payload.tar.gz ./dist
+
+      - name: Encrypt Payload & Generate PQC Keys via DualCrypt CLI
+        id: encrypt_step
+        run: |
+          # Run denc in JSON mode
+          RESULT=$(denc encrypt release_payload.tar.gz \
+            -o release_payload.tar.gz.denc \
+            -k 2 -n 2 \
+            --key-dir /tmp/keys \
+            --pqc 1:"Alice (SecOps Lead)" \
+            --pqc 2:"Bob (VP Engineering)" \
+            --classification "TOP_SECRET" \
+            --purpose "v${{ github.ref_name }} Production Release" \
+            --organization "Enterprise Security" \
+            --json)
+
+          echo "ENCRYPT_RESULT=$RESULT" >> $GITHUB_ENV
+
+          # Extract generated key paths using jq
+          KEY1=$(echo "$RESULT" | jq -r '.exported_keys[] | select(.custodian_id==1) | .file_path')
+          KEY2=$(echo "$RESULT" | jq -r '.exported_keys[] | select(.custodian_id==2) | .file_path')
+          echo "KEY1_PATH=$KEY1" >> $GITHUB_ENV
+          echo "KEY2_PATH=$KEY2" >> $GITHUB_ENV
+
+      - name: Dispatch Custodian 1 Key to Alice (SecOps)
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.enterprise.com
+          server_port: 587
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "[DualCrypt] Release Custodian 1 Key: ${{ github.ref_name }}"
+          to: alice-secops@enterprise.com
+          from: ci-release-bot@enterprise.com
+          body: "Hello Alice, attached is your Post-Quantum (ML-KEM-768) threshold key for release ${{ github.ref_name }}."
+          attachments: ${{ env.KEY1_PATH }}
+
+      - name: Dispatch Custodian 2 Key to Bob (VP Engineering)
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.enterprise.com
+          server_port: 587
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "[DualCrypt] Release Custodian 2 Key: ${{ github.ref_name }}"
+          to: bob-vpeng@enterprise.com
+          from: ci-release-bot@enterprise.com
+          body: "Hello Bob, attached is your Post-Quantum (ML-KEM-768) threshold key for release ${{ github.ref_name }}."
+          attachments: ${{ env.KEY2_PATH }}
+
+      - name: Upload Encrypted Container Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release_payload.tar.gz.denc
+```
+
+---
+
+### 4. Configuration Schema (`ci_recipe.yaml` / `ci_recipe.json`)
+
+```yaml
+# CI/CD Encryption Recipe
+input: "build/production_bundle.tar.gz"
+output: "artifacts/production_bundle.tar.gz.denc"
+threshold_k: 2
+total_n: 3
+cipher: "aes-256-gcm" # or 'xchacha20-poly1305'
+key_dir: "/tmp/release_keys"
+
+manifest:
+  classification: "TOP_SECRET"
+  purpose: "Automated Production Release Deployment"
+  organization: "Enterprise SecOps"
+  custodian_timelocks:
+    3: 1775000000 # Custodian 3 locked until specified UTC timestamp
+
+author:
+  label: "CI/CD Release Bot"
+  signing_key_base64: "..." # NIST FIPS 204 ML-DSA-65 Private Key
+
+custodians:
+  - id: 1
+    label: "Alice (SecOps)"
+    auth_type: "postquantum"
+  - id: 2
+    label: "Bob (Infra Lead)"
+    auth_type: "postquantum"
+  - id: 3
+    label: "Emergency Escrow Vault"
+    auth_type: "keyfile"
 ```
 
 ---
