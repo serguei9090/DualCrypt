@@ -22,7 +22,8 @@ use std::path::{Path, PathBuf};
     author = "DualCrypt Enterprise Security",
     version = "2.0.0",
     about = "Zero-Trust Multi-Party Threshold File Encryption & Automation CLI",
-    long_about = "DualCrypt Enterprise CLI - High-assurance threshold file encryption, post-quantum cryptography (NIST FIPS 203 ML-KEM / FIPS 204 ML-DSA), automated CI/CD pipeline integration, container inspection, key generation, and local web serving."
+    long_about = "DualCrypt Enterprise CLI - High-assurance threshold file encryption, post-quantum cryptography (NIST FIPS 203 ML-KEM / FIPS 204 ML-DSA), automated CI/CD pipeline integration, container inspection, key generation, and local web serving.",
+    after_help = "EXAMPLES:\n  # Quick 2-of-2 Post-Quantum Encryption for CI/CD:\n  denc encrypt release.tar.gz -o release.denc --key-dir /tmp/keys --pqc 1:\"Alice (SecOps)\" --pqc 2:\"Bob (Infra)\" --json\n\n  # Encrypt using a YAML recipe file:\n  denc encrypt --config ci_recipe.yaml --json\n\n  # Decrypt using custodian PQC key files:\n  denc decrypt release.denc -o restored.tar.gz -f 1:/tmp/keys/custodian_1.pqc -f 2:/tmp/keys/custodian_2.pqc\n\n  # Inspect container header & verify ML-DSA-65 signature:\n  denc inspect release.denc\n\n  # Generate standalone NIST FIPS 203 ML-KEM-768 keypair:\n  denc pqc-keygen -a kem --json\n\n  # Start local web server:\n  denc serve --host 127.0.0.1 --port 8080"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -52,6 +53,11 @@ enum Commands {
 }
 
 #[derive(Args, Debug)]
+#[command(
+    about = "Encrypt a file or directory into an authenticated .denc container",
+    long_about = "Encrypt a payload file or whole directory into an authenticated .denc container using threshold cryptography, Post-Quantum ML-KEM key encapsulation, and compliance manifests.",
+    after_help = "EXAMPLES:\n  # 1. Encrypt with 2-of-2 Post-Quantum ML-KEM keys and export .pqc files to /tmp/keys:\n  denc encrypt payload.tar.gz -o payload.denc -k 2 -n 2 --key-dir /tmp/keys --pqc 1:\"SecOps\" --pqc 2:\"Audit\" --json\n\n  # 2. Encrypt with custom passphrases:\n  denc encrypt secret.pdf -o secret.denc -k 2 -n 2 -p 1:PassphraseOne -p 2:PassphraseTwo\n\n  # 3. Encrypt with full governance manifest & ML-DSA-65 digital signature:\n  denc encrypt db.bak -o db.denc --classification TOP_SECRET --purpose \"Daily DB Backup\" --organization \"SecOps\" --author-signing-key \"$DSA_KEY\" --author-label \"Release Bot\"\n\n  # 4. Encrypt using a JSON or YAML configuration recipe:\n  denc encrypt --config pipeline_recipe.yaml --json\n\n  # 5. Dynamic stdin piping without writing recipe to disk:\n  cat config.json | denc encrypt --config - --json"
+)]
 pub struct EncryptArgs {
     /// Input file or directory to encrypt
     #[arg(value_name = "INPUT_PATH")]
@@ -128,6 +134,11 @@ pub struct EncryptArgs {
 }
 
 #[derive(Args, Debug)]
+#[command(
+    about = "Decrypt an authenticated .denc container with threshold quorum credentials",
+    long_about = "Decrypt an authenticated .denc container by providing quorum credentials (passphrases, .dkey share files, or Post-Quantum .pqc private key files).",
+    after_help = "EXAMPLES:\n  # 1. Decrypt container using Post-Quantum (.pqc) key files:\n  denc decrypt payload.denc -o restored_payload.tar.gz -f 1:/tmp/keys/custodian_1.pqc -f 2:/tmp/keys/custodian_2.pqc\n\n  # 2. Decrypt container using passphrases:\n  denc decrypt secret.denc -o secret.pdf -p 1:PassphraseOne -p 2:PassphraseTwo\n\n  # 3. Decrypt using hybrid credentials (PQC Key + Passphrase):\n  denc decrypt db.denc -o db.bak --pqc-key 1:custodian_1.pqc -p 2:PassphraseTwo --json\n\n  # 4. Decrypt using a YAML/JSON configuration recipe:\n  denc decrypt --config decrypt_recipe.yaml --json"
+)]
 pub struct DecryptArgs {
     /// Path to .denc container
     #[arg(value_name = "INPUT_PATH")]
@@ -163,6 +174,11 @@ pub struct DecryptArgs {
 }
 
 #[derive(Args, Debug)]
+#[command(
+    about = "Inspect a .denc container header, compliance manifest, and custodian roster",
+    long_about = "Inspect a .denc container without decrypting payload data. Displays cipher suite, threshold parameters, custodian roster, governance compliance manifest, and verifies ML-DSA-65 digital signature.",
+    after_help = "EXAMPLES:\n  # Standard human-readable inspection:\n  denc inspect payload.denc\n\n  # Raw JSON metadata inspection for CI/CD and scripts:\n  denc inspect payload.denc --json"
+)]
 pub struct InspectArgs {
     /// Path to .denc container
     #[arg(required = true, value_name = "CONTAINER_PATH")]
@@ -174,6 +190,11 @@ pub struct InspectArgs {
 }
 
 #[derive(Args, Debug)]
+#[command(
+    about = "Generate standalone NIST FIPS 203 (ML-KEM-768) or FIPS 204 (ML-DSA-65) keypairs",
+    long_about = "Generate quantum-resistant keypairs. 'kem' generates ML-KEM-768 keypairs for share encapsulation; 'dsa' generates ML-DSA-65 keypairs for container digital signing.",
+    after_help = "EXAMPLES:\n  # Generate ML-KEM-768 keypair for recipient encryption:\n  denc pqc-keygen -a kem -o custodian_kem.json --json\n\n  # Generate ML-DSA-65 signing keypair for CI release bot:\n  denc pqc-keygen -a dsa -o bot_signing_key.json --json"
+)]
 pub struct PqcKeygenArgs {
     /// Cryptographic algorithm: 'kem' / 'ml-kem-768' (default) or 'dsa' / 'ml-dsa-65'
     #[arg(short = 'a', long, default_value = "ml-kem-768")]
@@ -189,6 +210,11 @@ pub struct PqcKeygenArgs {
 }
 
 #[derive(Args, Debug)]
+#[command(
+    about = "Generate standalone Shamir secret shares for manual key distribution",
+    long_about = "Split a secret or CSPRNG 256-bit entropy into k-of-n Shamir Secret Shares over GF(256).",
+    after_help = "EXAMPLES:\n  # Split random 256-bit entropy into 2-of-3 threshold shares:\n  denc sss-keygen -k 2 -n 3\n\n  # Split specific secret string and output in JSON:\n  denc sss-keygen --secret \"EnterpriseMasterKey\" -k 3 -n 5 --json"
+)]
 pub struct SssKeygenArgs {
     /// Secret string or key to split (if omitted, CSPRNG generates 32 random bytes)
     #[arg(short, long)]
@@ -208,6 +234,11 @@ pub struct SssKeygenArgs {
 }
 
 #[derive(Args, Debug)]
+#[command(
+    about = "Launch the embedded local Web UI server",
+    long_about = "Launch the zero-knowledge local web server to serve the DualCrypt WebAssembly interface locally or across LAN.",
+    after_help = "EXAMPLES:\n  # Launch bound to localhost (127.0.0.1:8080):\n  denc serve --host 127.0.0.1 --port 8080\n\n  # Launch accessible across Local Area Network:\n  denc serve --host 0.0.0.0 --port 9000"
+)]
 pub struct ServeArgs {
     /// Network interface to bind: '127.0.0.1' (localhost only) or '0.0.0.0' (public/LAN)
     #[arg(short = 'H', long, default_value = "127.0.0.1")]
