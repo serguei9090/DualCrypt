@@ -1029,7 +1029,7 @@ dependencies = [
 
 [[package]]
 name = "denc-cli"
-version = "0.5.4"
+version = "0.5.5"
 dependencies = [
  "axum",
  "clap",
@@ -1047,7 +1047,7 @@ dependencies = [
 
 [[package]]
 name = "denc-core"
-version = "0.5.4"
+version = "0.5.5"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -1071,7 +1071,7 @@ dependencies = [
 
 [[package]]
 name = "denc-wasm"
-version = "0.5.4"
+version = "0.5.5"
 dependencies = [
  "aes-gcm",
  "denc-core",
@@ -1280,7 +1280,7 @@ checksum = "f678cf4a922c215c63e0de95eb1ff08a958a81d47e485cf9da1e27bf6305cfa5"
 
 [[package]]
 name = "dualcrypt-app"
-version = "0.5.4"
+version = "0.5.5"
 dependencies = [
  "axum",
  "denc-core",

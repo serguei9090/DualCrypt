@@ -5,6 +5,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [0.5.5] - 2026-08-25
+
+### 🌟 Release Highlights
+Version `0.5.5` introduces complete **Directory & Folder Hierarchy Encryption and Decryption** across Desktop, CLI, and Web platforms. It adds native directory drag-and-drop loading, in-memory streaming POSIX USTAR archiving, automatic subfolder extraction on decryption, an **Interactive Directory Collision Resolution Modal** in the Desktop UI, and a dedicated `--overwrite` (`-w`, `-f`, `--force`) CLI flag for automated workflows.
+
+---
+
+### 🚀 Added
+- **Unified Directory Drag & Drop**:
+  - **Desktop (Tauri v2)**: Native OS directory path capture via `onDragDropEvent` listener and Explorer / Finder drag-and-drop.
+  - **Web & Browser**: Recursive directory traversal via HTML5 `webkitGetAsEntry` and directory readers to load nested folder trees into in-memory TAR streams without temporary unencrypted disk writes.
+  - **Animated Packaging Feedback**: Real-time spinner and phase status during directory TAR packaging.
+- **Automatic Folder Hierarchy Extraction**:
+  - **`denc-core`**: Automatic detection of directory payloads via manifest and USTAR magic headers, unpacking nested file structures directly into destination directories.
+  - **Tauri Desktop**: Automatic creation of dedicated subfolders when extracting to parent folders (e.g. `D:\Downloads\IconsTest\`) with exact extraction path reporting.
+  - **Web Client**: Automatic packaging of decrypted directory hierarchies as `.tar` archives with clean `📁 RESTORED DIRECTORY` badges.
+- **Interactive Directory Collision Resolution (Desktop UI)**:
+  - Added `CollisionResolutionModal.tsx` displaying when a target folder or file already exists at the chosen destination.
+  - Offers 3 actionable choices: **[ Create "<Folder> (1)" (Safe Auto-Version) ]**, **[ Overwrite & Merge In-Place ]**, or **[ Select Another Destination Directory ]**.
+- **CLI Collision Handling & `--overwrite` Flag**:
+  - Added `--overwrite` (`-w`, `-f`, `--force`) flag to `denc decrypt`.
+  - Added interactive prompt in terminal mode (`[O]verwrite / [V]ersion / [C]ancel`) and safe auto-versioning fallback in headless CI/CD mode.
+
+---
+
 ## [0.5.4] - 2026-08-25
 
 ### 🌟 Release Highlights

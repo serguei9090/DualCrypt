@@ -35,7 +35,7 @@ export const AboutPanel: React.FC = () => {
             <h3 className="text-base font-bold text-slate-100">About DualCrypt</h3>
           </div>
           <span className="font-mono text-xs font-semibold px-2.5 py-1 rounded-full bg-cyan-950/80 text-cyan-400 border border-cyan-800/60">
-            v0.5.4 Enterprise
+            v0.5.5 Enterprise
           </span>
         </div>
         <p className="text-xs text-slate-400 mt-1">
@@ -196,7 +196,7 @@ export const AboutPanel: React.FC = () => {
           <Shield className="h-4 w-4 text-emerald-400" />
           <span>Memory Zeroization Guarantee • Local Isolation • No Telemetry</span>
         </div>
-        <div className="font-mono text-[11px] text-slate-500">DualCrypt Engine v0.5.4</div>
+        <div className="font-mono text-[11px] text-slate-500">DualCrypt Engine v0.5.5</div>
       </div>
     </div>
   );

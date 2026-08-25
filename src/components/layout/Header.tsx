@@ -22,7 +22,7 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange }) => {
                 DualCrypt <span className="text-cyan-400">Enterprise</span>
               </h1>
               <span className="rounded-full border border-cyan-500/30 bg-cyan-950/50 px-2 py-0.5 font-mono text-[10px] font-semibold text-cyan-300">
-                v0.5.4
+                v0.5.5
               </span>
             </div>
             <p className="text-xs text-slate-400">

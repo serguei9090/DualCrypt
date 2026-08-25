@@ -9,7 +9,7 @@
 [![License: DualCrypt 1.0](https://img.shields.io/badge/License-DualCrypt%20Source--Available%201.0-blue.svg)](LICENSE.md)
 
 > [!NOTE]
-> **Production Releases Ready**: Download pre-compiled native installers for Windows, macOS, Linux, and Android from the **[GitHub Releases Page](https://github.com/serguei9090/DualCrypt/releases/tag/v0.5.4)** or try the **[Zero-Knowledge Web Client](https://serguei9090.github.io/DualCrypt/)**.
+> **Production Releases Ready**: Download pre-compiled native installers for Windows, macOS, Linux, and Android from the **[GitHub Releases Page](https://github.com/serguei9090/DualCrypt/releases/tag/v0.5.5)** or try the **[Zero-Knowledge Web Client](https://serguei9090.github.io/DualCrypt/)**.
 
 ---
 
