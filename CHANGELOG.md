@@ -5,6 +5,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [0.5.4] - 2026-08-25
+
+### 🌟 Release Highlights
+Version `0.5.4` fixes the in-browser container header parsing RangeError, adds robust dual-format `.denc` container inspection (handling both standard binary containers and JSON envelopes), integrates genuine WebAssembly/WebCrypto post-quantum key generation, eliminates all legacy mock fallbacks across platforms, and enables HTML5 directory selection.
+
+---
+
+### 🐛 Fixed
+- **Web Container Parsing RangeError**: Fixed DataView boundary offset errors by implementing dual-format support for both native standard binary `.denc` containers and JSON envelope streams with strict length bounds checking.
+- **Passphrase Prompt Mismatch**: Fixed issue where files encrypted with keyfiles or PQC keys mistakenly prompted for passphrases on web decryption by reading genuine descriptor headers.
+- **Auto-Confirming Key Pickers**: Replaced immediate dummy share emission with standard HTML5 file pickers (`.pqc`, `.dkey`, `.json`) verifying uploaded key credentials before unlocking.
+- **Legacy Mock Elimination**: Replaced placeholder PQC key strings with real WebAssembly (`wasm_generate_pqc_keypair` / `wasm_generate_ml_dsa_keypair`) and CSPRNG key generation, and upgraded folder selection to standard HTML5 `webkitdirectory`.
+
+---
+
 ## [0.5.3] - 2026-08-25
 
 ### 🌟 Release Highlights
