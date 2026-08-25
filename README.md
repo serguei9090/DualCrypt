@@ -42,16 +42,27 @@ Traditional encryption creates a dangerous single point of failure: if one passw
 
 ## 📚 Documentation Hub
 
-Detailed architectural specifications and operational manuals are available in the [`docs/`](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs) directory:
+The complete enterprise documentation suite is hosted in the [`docs/`](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs) directory, anchored by the **[Master Documentation Portal](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/index.md)**:
 
-| Document | Description |
-| :--- | :--- |
-| **[📖 User Guide](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/USER_GUIDE.md)** | Complete step-by-step manual for desktop, mobile air-gap, and CLI workflows. |
-| **[🛡️ Security & Assurance Manifest](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/SECURITY_MANIFEST.md)** | Comprehensive security specification: key protection, memory zeroization, O(1) streaming pipeline, and CI/CD security. |
-| **[🏛️ System Architecture](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/ARCHITECTURE.md)** | Technical layout across Rust crates, Tauri v2 bridge, TypeScript ESM packages, and mobile Android targets. |
-| **[🔐 Cryptographic Specification](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/CRYPTOGRAPHY_SPEC.md)** | Mathematical specifications for $GF(256)$ Shamir sharing, NIST FIPS 203/204 PQC, and AEAD framing. |
-| **[📱 Android Testing & Store Guide](file:///i:/01-Master_Code/Apps/Dual_Encryption/androidtest.md)** | LAN testing, keystore signing, and building `.apk` / `.aab` for Google Play Store. |
-| **[🔮 Enterprise Feature Roadmap](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/FUTURE_ROADMAP_SPEC.md)** | Detailed problem statements and technical specifications for upcoming roadmap milestones. |
+### 📖 [User Documentation Hub](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/user/index.md)
+* **[🚀 5-Minute Quickstart](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/user/quickstart.md)**: Install desktop, CLI, or Android apps and perform your first 2-of-2 encryption.
+* **[🔒 File & Folder Encryption Manual](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/user/encryption_guide.md)**: Packaging payloads, setting $k$-of-$n$ quorums, timelocks, and digital signatures.
+* **[🔓 Container Decryption & Explorer 1-Click](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/user/decryption_guide.md)**: Opening containers, checking Provenance Passports, and unlocking shares.
+* **[👥 Custodian Authentication Methods](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/user/custodian_methods.md)**: Passphrases, `.dkey` Keyfiles, physical YubiKeys, and Post-Quantum ML-KEM keys.
+* **[📲 Air-Gapped Mobile Authenticator](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/user/airgap_authenticator.md)**: 100% offline Android sign-off via optical QR fountain framing.
+* **[🏛️ Key Escrow & Post-Quantum Vault](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/user/key_vault_escrow.md)**: Generating and testing ML-KEM and ML-DSA keys.
+* **[⚡ Standalone CLI Reference (`denc`)](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/user/cli_reference.md)**: Headless commands, recipe automation, and piping.
+* **[🌐 Zero-Knowledge Web Client](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/user/web_client.md)**: Browser-based WebAssembly decryptor and local LAN serving.
+* **[❓ Troubleshooting & FAQ](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/user/faq_troubleshooting.md)**: Common errors, timelock resolution, and disaster recovery.
+
+### 🛠️ [Developer Documentation Hub](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/dev/index.md)
+* **[🏛️ System Architecture & Diagrams](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/dev/architecture.md)**: Mermaid architecture diagrams, data flows, Tauri IPC, and WASM workers.
+* **[🔐 Cryptography Deep Dive](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/dev/cryptography_deep_dive.md)**: $GF(256)$ finite field arithmetic, constant-time multiplication, PQC, and AEAD framing.
+* **[📦 `.denc` Binary Container Format](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/dev/container_binary_format.md)**: Binary protocol specification, header layout, and chunk framing.
+* **[📂 Monorepo Topology](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/dev/codebase_structure.md)**: Codebase tour across Rust crates, Tauri backend, shared packages, and apps.
+* **[💻 Setup & Building Guide](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/dev/setup_and_building.md)**: Prerequisites, build matrix, and running automated test suites.
+* **[⚙️ CI/CD & Automation Snippets](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/dev/ci_cd_and_automation.md)**: GitHub Actions workflow, Bash scripts, and `uv` Python automation.
+* **[🤝 Contributing & Standards](file:///i:/01-Master_Code/Apps/Dual_Encryption/docs/dev/contributing.md)**: Engineering guidelines, memory hygiene checklist, and commit conventions.
 
 ---
 
