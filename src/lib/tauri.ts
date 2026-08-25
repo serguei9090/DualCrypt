@@ -21,30 +21,16 @@ export async function getLaunchFile(): Promise<string | null> {
   }
 }
 
-export async function inspectDencFile(filePath: string): Promise<ContainerHeaderInfo> {
+export async function inspectDencFile(
+  filePath: string,
+  fileBytes?: Uint8Array,
+): Promise<ContainerHeaderInfo> {
   if (!isTauriEnvironment()) {
-    // Web mock simulation
-    return {
-      version: 1,
-      cipher: "AES-256-GCM",
-      threshold_k: 2,
-      total_n: 2,
-      chunk_size: 65536,
-      custodians: [
-        {
-          custodian_id: 1,
-          label: "Party 1 (Primary Recipient)",
-          auth_type: "passphrase",
-          has_embedded_share: true,
-        },
-        {
-          custodian_id: 2,
-          label: "Party 2 (Security Custodian)",
-          auth_type: "keyfile",
-          has_embedded_share: false,
-        },
-      ],
-    };
+    if (fileBytes && fileBytes.length > 0) {
+      const { inspectWebDenc } = await import("./webCrypto");
+      return await inspectWebDenc(fileBytes);
+    }
+    throw new Error("Cannot inspect file on web without binary payload");
   }
   return await invoke<ContainerHeaderInfo>("inspect_denc_file", { filePath });
 }
@@ -251,14 +237,17 @@ export async function generateMlDsaKeypair(): Promise<PqcKeypair> {
   return await invoke<PqcKeypair>("generate_ml_dsa_keypair");
 }
 
-export async function parseKeyFile(filePath: string, pin?: string): Promise<KeyFileParseResult> {
+export async function parseKeyFile(
+  filePath: string,
+  pin?: string,
+  fileContent?: string,
+): Promise<KeyFileParseResult> {
   if (!isTauriEnvironment()) {
-    return {
-      custodian_id: 2,
-      share: { id: 2, data: Array(32).fill(0xbb) },
-      is_pin_protected: false,
-      is_pqc: false,
-    };
+    if (fileContent) {
+      const { parseWebKeyFileContent } = await import("./webCrypto");
+      return parseWebKeyFileContent(fileContent, pin);
+    }
+    throw new Error("No key file content provided in browser mode");
   }
   return await invoke<KeyFileParseResult>("parse_keyfile", { filePath, pin });
 }

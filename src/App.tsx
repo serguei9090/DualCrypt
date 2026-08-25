@@ -128,7 +128,11 @@ export const App: React.FC = () => {
       job.setError(null);
 
       try {
-        const meta = await inspectDencFile(path);
+        let fileBytes: Uint8Array | undefined;
+        if (fileObj) {
+          fileBytes = new Uint8Array(await fileObj.arrayBuffer());
+        }
+        const meta = await inspectDencFile(path, fileBytes);
         setContainerMetadata(meta);
         quorum.setFromHeaderCustodians(
           meta.threshold_k,

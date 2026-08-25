@@ -76,6 +76,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [keyFileName, setKeyFileName] = useState<string | null>(null);
   const [keyFilePath, setKeyFilePath] = useState<string | null>(null);
+  const [rawKeyFileContent, setRawKeyFileContent] = useState<string | null>(null);
   const [otpCode, setOtpCode] = useState("");
 
   // PIN protection on key file import
@@ -212,12 +213,41 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
         }
       }
     } else {
-      setKeyFileName(`custodian_${custodianId}_share.dkey`);
-      onCredentialSubmit({
-        custodianId,
-        keyFileContent: JSON.stringify({ id: custodianId, data: Array(32).fill(0xaa) }),
-        authType: "keyfile",
-      });
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".dkey,.json,.key,.pqc";
+      input.onchange = async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) {
+          setKeyFileName(file.name);
+          setKeyFilePath(file.name);
+          try {
+            const text = await file.text();
+            setRawKeyFileContent(text);
+            const res = await parseKeyFile(file.name, undefined, text);
+            if (res.is_pin_protected && !res.share && !res.pqc_private_key_base64) {
+              setIsPinProtectedKey(true);
+            } else if (res.share) {
+              setIsPinProtectedKey(false);
+              onCredentialSubmit({
+                custodianId,
+                keyFileContent: JSON.stringify(res.share),
+                authType: "keyfile",
+              });
+            } else if (res.pqc_private_key_base64) {
+              setIsPinProtectedKey(false);
+              onCredentialSubmit({
+                custodianId,
+                pqcPrivateKeyBase64: res.pqc_private_key_base64,
+                authType: "pqc",
+              });
+            }
+          } catch (err) {
+            setPinError(`Failed to parse key file: ${String(err)}`);
+          }
+        }
+      };
+      input.click();
     }
   };
 
@@ -225,7 +255,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
     if (!keyFilePath || !keyFilePin) return;
     setPinError(null);
     try {
-      const res = await parseKeyFile(keyFilePath, keyFilePin);
+      const res = await parseKeyFile(keyFilePath, keyFilePin, rawKeyFileContent || undefined);
       if (res.share) {
         setIsPinProtectedKey(false);
         onCredentialSubmit({
@@ -284,8 +314,34 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
         }
       }
     } else {
-      setPqcPubFileName(`custodian_${custodianId}.pqc.pub`);
-      setPqcPublicKey("MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQ...");
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".pub,.pqc.pub,.json,.key";
+      input.onchange = async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) {
+          setPqcPubFileName(file.name);
+          try {
+            const raw = await file.text();
+            try {
+              const parsed = JSON.parse(raw);
+              const pk = parsed.public_key_base64 || raw.trim();
+              setPqcPublicKey(pk);
+              onUpdateSetup?.({ label: currentLabel, authType: "pqc", publicKeyBase64: pk });
+            } catch {
+              setPqcPublicKey(raw.trim());
+              onUpdateSetup?.({
+                label: currentLabel,
+                authType: "pqc",
+                publicKeyBase64: raw.trim(),
+              });
+            }
+          } catch (err) {
+            setPqcError(`Failed to read public key file: ${String(err)}`);
+          }
+        }
+      };
+      input.click();
     }
   };
 
@@ -340,12 +396,34 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
         }
       }
     } else {
-      setKeyFileName(`custodian_${custodianId}.pqc`);
-      onCredentialSubmit({
-        custodianId,
-        pqcPrivateKeyBase64: "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQ...",
-        authType: "pqc",
-      });
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".pqc,.key,.json";
+      input.onchange = async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) {
+          setKeyFileName(file.name);
+          setKeyFilePath(file.name);
+          try {
+            const text = await file.text();
+            setRawKeyFileContent(text);
+            const res = await parseKeyFile(file.name, undefined, text);
+            if (res.is_pin_protected && !res.pqc_private_key_base64 && !res.share) {
+              setIsPinProtectedKey(true);
+            } else if (res.pqc_private_key_base64) {
+              setIsPinProtectedKey(false);
+              onCredentialSubmit({
+                custodianId,
+                pqcPrivateKeyBase64: res.pqc_private_key_base64,
+                authType: "pqc",
+              });
+            }
+          } catch (err) {
+            setPqcError(`Failed to parse PQC key file: ${String(err)}`);
+          }
+        }
+      };
+      input.click();
     }
   };
 
@@ -353,7 +431,7 @@ export const CustodianCard: React.FC<CustodianCardProps> = ({
     if (!keyFilePath || !keyFilePin) return;
     setPqcError(null);
     try {
-      const res = await parseKeyFile(keyFilePath, keyFilePin);
+      const res = await parseKeyFile(keyFilePath, keyFilePin, rawKeyFileContent || undefined);
       if (res.pqc_private_key_base64) {
         setIsPinProtectedKey(false);
         onCredentialSubmit({

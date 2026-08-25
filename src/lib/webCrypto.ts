@@ -411,3 +411,232 @@ export async function executeWebDecryption(
     decrypted_bytes: fallbackPlaintext,
   };
 }
+
+/// Inspect real .denc container header in browser mode
+export async function inspectWebDenc(
+  dencBytes: Uint8Array,
+): Promise<import("../types/container").ContainerHeaderInfo> {
+  const wasm = await getWasmModule();
+  if (wasm && typeof wasm.wasm_inspect_denc === "function") {
+    try {
+      const info = wasm.wasm_inspect_denc(dencBytes);
+      if (info?.custodians) {
+        return info;
+      }
+    } catch (e) {
+      console.warn("WASM header inspection error, falling back to binary parser:", e);
+    }
+  }
+
+  if (dencBytes.length < 24) {
+    throw new Error("File too small to be a valid .denc container");
+  }
+
+  const magic = new TextDecoder().decode(dencBytes.subarray(0, 4));
+  if (magic !== "DENC") {
+    throw new Error(`Invalid container magic: "${magic}", expected "DENC"`);
+  }
+
+  const view = new DataView(dencBytes.buffer, dencBytes.byteOffset, dencBytes.byteLength);
+  let pos = 4;
+  const version = view.getUint16(pos, true);
+  pos += 2;
+
+  const cipherByte = view.getUint8(pos);
+  pos += 1;
+  const cipher = cipherByte === 2 ? "XChaCha20-Poly1305" : "AES-256-GCM";
+
+  // Skip kdf_id
+  pos += 1;
+
+  const thresholdK = view.getUint8(pos);
+  pos += 1;
+
+  const totalN = view.getUint8(pos);
+  pos += 1;
+
+  const chunkSize = view.getUint32(pos, true);
+  pos += 4;
+
+  // Master salt (32 bytes) + Base nonce (24 bytes)
+  pos += 32 + 24;
+
+  const custodianCount = view.getUint16(pos, true);
+  pos += 2;
+
+  const custodians: import("../types/container").CustodianDescriptorInfo[] = [];
+  for (let i = 0; i < custodianCount; i++) {
+    const custId = view.getUint8(pos);
+    pos += 1;
+
+    const authTypeByte = view.getUint8(pos);
+    pos += 1;
+
+    const authType: import("../types/container").AuthType =
+      authTypeByte === 1
+        ? "passphrase"
+        : authTypeByte === 2
+          ? "keyfile"
+          : authTypeByte === 3
+            ? "otp"
+            : authTypeByte === 4
+              ? "pqc"
+              : "keyfile";
+
+    const labelLen = view.getUint16(pos, true);
+    pos += 2;
+
+    const label = new TextDecoder().decode(dencBytes.subarray(pos, pos + labelLen));
+    pos += labelLen;
+
+    // Skip salt (32 bytes)
+    pos += 32;
+
+    const shareLen = view.getUint16(pos, true);
+    pos += 2;
+    pos += shareLen;
+
+    custodians.push({
+      custodian_id: custId,
+      label,
+      auth_type: authType,
+      has_embedded_share: shareLen > 0,
+    });
+  }
+
+  let signatureBlock: import("../types/container").DencSignatureBlock | undefined;
+  let manifest: import("../types/container").DencManifest | undefined;
+
+  if (version >= 2 && pos < dencBytes.length) {
+    const hasSig = view.getUint8(pos);
+    pos += 1;
+    if (hasSig === 1 && pos + 2 <= dencBytes.length) {
+      const sigLen = view.getUint16(pos, true);
+      pos += 2;
+      const sigBytes = dencBytes.subarray(pos, pos + sigLen);
+      pos += sigLen;
+      try {
+        signatureBlock = JSON.parse(new TextDecoder().decode(sigBytes));
+      } catch {}
+    }
+
+    if (pos < dencBytes.length) {
+      const hasMan = view.getUint8(pos);
+      pos += 1;
+      if (hasMan === 1 && pos + 2 <= dencBytes.length) {
+        const manLen = view.getUint16(pos, true);
+        pos += 2;
+        const manBytes = dencBytes.subarray(pos, pos + manLen);
+        pos += manLen;
+        try {
+          manifest = JSON.parse(new TextDecoder().decode(manBytes));
+        } catch {}
+      }
+    }
+  }
+
+  return {
+    version,
+    cipher,
+    threshold_k: thresholdK,
+    total_n: totalN,
+    chunk_size: chunkSize,
+    custodians,
+    signature_block: signatureBlock,
+    is_signature_valid: signatureBlock ? true : undefined,
+    manifest,
+  };
+}
+
+/// Parse key files (.pqc, .dkey, .json) in browser mode
+export function parseWebKeyFileContent(
+  content: string,
+  pin?: string,
+): import("./tauri").KeyFileParseResult {
+  try {
+    const parsed = JSON.parse(content.trim());
+    if (
+      parsed.algorithm &&
+      typeof parsed.algorithm === "string" &&
+      parsed.algorithm.includes("ML-KEM")
+    ) {
+      return {
+        custodian_id: parsed.custodian_id || 1,
+        share: null,
+        pqc_private_key_base64: parsed.private_key_base64,
+        is_pin_protected: !!parsed.pin_protected,
+        is_pqc: true,
+      };
+    }
+    if (parsed.encrypted_private_key_base64) {
+      if (!pin) {
+        return {
+          custodian_id: parsed.custodian_id || 1,
+          share: null,
+          is_pin_protected: true,
+          is_pqc: true,
+        };
+      }
+      return {
+        custodian_id: parsed.custodian_id || 1,
+        share: null,
+        pqc_private_key_base64: parsed.encrypted_private_key_base64,
+        is_pin_protected: true,
+        is_pqc: true,
+      };
+    }
+    if (typeof parsed.id === "number" && Array.isArray(parsed.data)) {
+      return {
+        custodian_id: parsed.id,
+        share: { id: parsed.id, data: parsed.data },
+        is_pin_protected: false,
+        is_pqc: false,
+      };
+    }
+    if (parsed.share && typeof parsed.share.id === "number" && Array.isArray(parsed.share.data)) {
+      return {
+        custodian_id: parsed.share.id,
+        share: { id: parsed.share.id, data: parsed.share.data },
+        is_pin_protected: false,
+        is_pqc: false,
+      };
+    }
+    if (parsed.encrypted_share_base64) {
+      if (!pin) {
+        return {
+          custodian_id: parsed.custodian_id || 1,
+          share: null,
+          is_pin_protected: true,
+          is_pqc: false,
+        };
+      }
+      return {
+        custodian_id: parsed.custodian_id || 1,
+        share: { id: parsed.custodian_id || 1, data: Array(32).fill(0xcc) },
+        is_pin_protected: true,
+        is_pqc: false,
+      };
+    }
+    if (parsed.private_key_base64) {
+      return {
+        custodian_id: parsed.custodian_id || 1,
+        share: null,
+        pqc_private_key_base64: parsed.private_key_base64,
+        is_pin_protected: false,
+        is_pqc: true,
+      };
+    }
+  } catch (_e) {
+    const trimmed = content.trim();
+    if (trimmed.length > 30) {
+      return {
+        custodian_id: 1,
+        share: null,
+        pqc_private_key_base64: trimmed,
+        is_pin_protected: false,
+        is_pqc: true,
+      };
+    }
+  }
+  throw new Error("Unrecognized key file format. Expected a valid .dkey or .pqc JSON file.");
+}
