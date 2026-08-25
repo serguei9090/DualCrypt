@@ -1,6 +1,6 @@
 [package]
 name = "dualcrypt-app"
-version = "0.5.1"
+version = "0.5.2"
 description = "DualCrypt Enterprise - Zero-Trust Threshold File Encryption Platform"
 authors = ["DualCrypt Enterprise"]
 edition = "2021"

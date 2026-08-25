@@ -98,20 +98,71 @@ Switch to the **Key Escrow Vault** tab to:
 
 ---
 
-## 8. Standalone CLI Automation (`denc`)
+## 8. Standalone CLI Automation (`denc`) & Headless CI/CD
 
-For automated scripts, scheduled cron backups, and CI/CD pipelines:
+DualCrypt provides a high-performance standalone binary (`denc`) for automated server backups, scripts, and programmatic CI/CD pipelines (e.g. GitHub Actions, GitLab CI, Jenkins) with **zero human intervention**.
 
+### 8.1 Basic & Post-Quantum CLI Encryption
 ```bash
-# Encrypt backup with 2-of-2 dual custody
+# 1. Encrypt with 2-of-2 Post-Quantum (NIST FIPS 203 ML-KEM) keys:
+denc encrypt release.tar.gz -o release.denc -k 2 -n 2 --key-dir ./keys --pqc 1:"SecOps" --pqc 2:"Audit" --json
+
+# 2. Encrypt with custom passphrases:
 denc encrypt db_dump.sql -o db_dump.sql.denc -k 2 -n 2 -p 1:PassAlpha -p 2:PassBeta
 
-# Inspect container metadata
-denc inspect db_dump.sql.denc
+# 3. Encrypt with full compliance manifest & author signature:
+denc encrypt data.tar.gz -o data.denc \
+  --classification TOP_SECRET \
+  --purpose "Production DB Backup" \
+  --organization "Enterprise SecOps" \
+  --author-signing-key "$DSA_KEY" \
+  --author-label "CI Automated Release Bot"
+```
 
-# Decrypt container
-denc decrypt db_dump.sql.denc -o restored_db.sql -p 1:PassAlpha -p 2:PassBeta
+### 8.2 Declarative Recipe Automation (JSON / YAML / Stdin)
+```bash
+# A. Execute encryption using a YAML recipe file:
+denc encrypt --config ci_recipe.yaml --json
 
-# Launch local zero-knowledge web server
-denc serve --host 127.0.0.1 --port 3000
+# B. Stream dynamic recipe directly via stdin without saving to disk:
+cat ci_recipe.json | denc encrypt --config - --json
+```
+
+### 8.3 Decrypting Containers
+```bash
+# Decrypt using exported Post-Quantum (.pqc) key files:
+denc decrypt release.denc -o restored_release.tar.gz -f 1:./keys/custodian_1.pqc -f 2:./keys/custodian_2.pqc
+
+# Decrypt using hybrid credentials (PQC Key + Passphrase):
+denc decrypt data.denc -o restored_data.tar.gz --pqc-key 1:custodian_1.pqc -p 2:PassBeta --json
+```
+
+### 8.4 Container Header Inspection
+```bash
+# Human-readable inspection:
+denc inspect release.denc
+
+# Machine-readable JSON output:
+denc inspect release.denc --json
+```
+
+### 8.5 Standalone Key Generation
+```bash
+# Generate NIST FIPS 203 ML-KEM-768 keypair:
+denc pqc-keygen -a kem -o custodian_kem.json --json
+
+# Generate NIST FIPS 204 ML-DSA-65 signing keypair:
+denc pqc-keygen -a dsa -o bot_signing_key.json --json
+
+# Split secret with Shamir Secret Sharing:
+denc sss-keygen --secret "MasterSecret" -k 2 -n 3 --json
+```
+
+### 8.6 Local Web Server
+```bash
+# Launch zero-knowledge web server on localhost:
+denc serve --host 127.0.0.1 --port 8080
+
+# Launch accessible across Local Area Network:
+denc serve --host 0.0.0.0 --port 9000
 ```

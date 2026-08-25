@@ -1,6 +1,6 @@
 [package]
 name = "denc-cli"
-version = "0.5.1"
+version = "0.5.2"
 edition = "2021"
 authors = ["DualCrypt Enterprise"]
 description = "Headless CLI for DualCrypt Zero-Trust Threshold File Encryption & Web Server"

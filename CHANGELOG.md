@@ -5,6 +5,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [0.5.2] - 2026-08-25
+
+### 🌟 Release Highlights
+Version `0.5.2` delivers full **Headless CI/CD Pipeline Automation & PQC Key Generation** for the standalone CLI (`denc-cli`), enabling enterprise DevOps and SecOps teams to automate threshold encryption, post-quantum key distribution, and container verification in automated build pipelines (e.g. GitHub Actions, GitLab CI, Jenkins) with **zero human intervention**.
+
+---
+
+### 🚀 Added
+- **Headless CI/CD Automation Engine (`crates/denc-cli/src/config.rs`)**:
+  - Full YAML & JSON recipe file deserialization (`denc encrypt --config ci_recipe.yaml`).
+  - Dynamic standard input (`stdin`) streaming support (`--config -`) for passing sensitive configurations directly in-memory.
+  - Complete parity with desktop UI: custom custodian labels, auth types (`postquantum`, `passphrase`, `keyfile`, `otp`), compliance manifests, and timelocks.
+- **Automated Post-Quantum Key Export**:
+  - Automatic generation of NIST FIPS 203 (ML-KEM-768) keypairs per custodian and structured export into `--key-dir` (`custodian_*.pqc`).
+  - Standalone Post-Quantum Keygen (`denc pqc-keygen -a kem` and `denc pqc-keygen -a dsa`).
+- **Machine-Readable `--json` Output Mode**:
+  - Pure structured JSON emitted on `stdout` with byte counts, hashes, container paths, and exported key paths for automated scripting (`jq` / Python / PowerShell).
+- **Interactive Terminal Help & Copy-Pasteable Examples**:
+  - Comprehensive `--help` documentation and embedded usage examples across all subcommands (`encrypt`, `decrypt`, `inspect`, `pqc-keygen`, `sss-keygen`, `serve`).
+
+---
+
+### 🔧 Improvements & Maintenance
+- **Version Harmonization**: Bumped workspace packages, crates, Android manifests, desktop components, and Tauri configuration to version `0.5.2`.
+- **Automated Integration Test Suite (`scratch/test_ci_pipeline.py`)**: Added end-to-end integration tests validating PQC keygen, flag encryption, inspection, PQC decryption, YAML recipes, and hybrid threshold unlock.
+
+---
+
 ## [0.5.1] - 2026-08-25
 
 ### 🌟 Release Highlights

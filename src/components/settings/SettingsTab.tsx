@@ -46,7 +46,7 @@ export const SettingsTab: React.FC = () => {
       label: "About DualCrypt",
       description: "Architecture, gratitude & feedback",
       icon: Info,
-      badge: "v0.5.1",
+      badge: "v0.5.2",
     },
   ];
 
