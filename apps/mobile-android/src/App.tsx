@@ -199,7 +199,7 @@ export const App: React.FC = () => {
                   </div>
                   <div>
                     <div className="text-xs font-bold font-mono">DualCrypt Authenticator</div>
-                    <div className="text-[10px] text-slate-400">v0.5.0 • Air-Gapped Enclave</div>
+                    <div className="text-[10px] text-slate-400">v0.5.1 • Air-Gapped Enclave</div>
                   </div>
                 </div>
                 <button

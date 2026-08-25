@@ -5,6 +5,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [0.5.1] - 2026-08-25
+
+### 🌟 Release Highlights
+Version `0.5.1` introduces a dedicated **About DualCrypt & Feedback Portal** in the Enterprise Settings sidebar and an enhanced **Integrated Help & Feedback Dialog** on the Mobile Authenticator, giving users comprehensive architectural overviews, community appreciation, and direct pathways for submitting feature requests and reporting bugs via GitHub and direct email.
+
+---
+
+### 🚀 Added
+- **About DualCrypt Settings Section (`src/components/settings/panels/AboutPanel.tsx`)**:
+  - Full architectural overview of Shamir's Secret Sharing over $GF(256)$, NIST FIPS 203 (ML-KEM-768), NIST FIPS 204 (ML-DSA-65), and AEAD bulk encryption ciphers.
+  - User appreciation & community gratitude banner.
+  - Direct email action button and 1-click clipboard copy for `serguei@aiopsforge.com`.
+  - Direct repository link for GitHub Pull Requests and Issue reporting.
+  - System memory zeroization and zero-telemetry assurance notices.
+- **Enhanced Mobile Authenticator Help & Feedback Modal (`apps/mobile-android/src/App.tsx`)**:
+  - Two-tab modal interface accessible from the top header `?` icon:
+    - **About & Support**: App overview, gratitude message, direct email button to `serguei@aiopsforge.com`, email clipboard copy button, and GitHub links.
+    - **Air-Gap Specs**: Detailed air-gap specifications covering zero network permissions, optical camera-to-screen QR streams, and PBKDF2/AES-256-GCM encrypted vault storage.
+
+---
+
+### 🔧 Improvements & Maintenance
+- **Version Harmonization**: Bumped workspace packages, crates, Android manifests, and Tauri configuration to version `0.5.1`.
+- **Dynamic Release Packaging**: Enhanced Android CI/CD workflow to dynamically generate tagged `.apk` and `.aab` artifacts for every semantic release.
+
+---
+
 ## [0.5.0] - 2026-08-24
 
 ### 🌟 Release Highlights

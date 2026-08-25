@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: "Release Tag (e.g. v0.5.0)"
+        description: "Release Tag (e.g. v0.5.1)"
         required: true
-        default: "v0.5.0"
+        default: "v0.5.1"
 
 permissions:
   contents: write
@@ -72,26 +72,30 @@ jobs:
           mkdir -p dist-android
           APKSIGNER=$(find $ANDROID_SDK_ROOT/build-tools/ -name apksigner | sort -V | tail -n 1)
           ZIPALIGN=$(find $ANDROID_SDK_ROOT/build-tools/ -name zipalign | sort -V | tail -n 1)
+          REL_TAG="${{ github.ref_name || inputs.release_tag || 'v0.5.1' }}"
+          VERSION="${REL_TAG#v}"
           
           # 1. Align and Sign APK with v1, v2, v3, and v4 signatures
           RAW_APK=$(find apps/mobile-android/android/app/build/outputs/apk/release/ -type f -name "*.apk" | head -n 1)
           echo "Found raw APK: $RAW_APK"
-          $ZIPALIGN -v -p 4 "$RAW_APK" dist-android/DualCrypt.Enterprise_0.5.0.apk
-          $APKSIGNER sign --ks "$KEYSTORE_PATH" --ks-pass pass:"$KEY_PASS" --key-pass pass:"$KEY_PASS" --ks-key-alias "$KEY_ALIAS" --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true dist-android/DualCrypt.Enterprise_0.5.0.apk
+          $ZIPALIGN -v -p 4 "$RAW_APK" "dist-android/DualCrypt.Enterprise_${VERSION}.apk"
+          $APKSIGNER sign --ks "$KEYSTORE_PATH" --ks-pass pass:"$KEY_PASS" --key-pass pass:"$KEY_PASS" --ks-key-alias "$KEY_ALIAS" --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true "dist-android/DualCrypt.Enterprise_${VERSION}.apk"
 
           # 2. Sign AAB with jarsigner
           RAW_AAB=$(find apps/mobile-android/android/app/build/outputs/bundle/release/ -type f -name "*.aab" | head -n 1)
           echo "Found raw AAB: $RAW_AAB"
-          cp "$RAW_AAB" dist-android/DualCrypt.Enterprise_0.5.0.aab
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore "$KEYSTORE_PATH" -storepass "$KEY_PASS" -keypass "$KEY_PASS" dist-android/DualCrypt.Enterprise_0.5.0.aab "$KEY_ALIAS"
+          cp "$RAW_AAB" "dist-android/DualCrypt.Enterprise_${VERSION}.aab"
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore "$KEYSTORE_PATH" -storepass "$KEY_PASS" -keypass "$KEY_PASS" "dist-android/DualCrypt.Enterprise_${VERSION}.aab" "$KEY_ALIAS"
 
       - name: Verify Android Cryptographic Signatures
         run: |
           APKSIGNER=$(find $ANDROID_SDK_ROOT/build-tools/ -name apksigner | sort -V | tail -n 1)
+          REL_TAG="${{ github.ref_name || inputs.release_tag || 'v0.5.1' }}"
+          VERSION="${REL_TAG#v}"
           echo "=== APK Cryptographic Signature Verification ==="
-          $APKSIGNER verify --verbose --print-certs dist-android/DualCrypt.Enterprise_0.5.0.apk
+          $APKSIGNER verify --verbose --print-certs "dist-android/DualCrypt.Enterprise_${VERSION}.apk"
           echo "=== AAB Cryptographic Signature Verification ==="
-          jarsigner -verify -verbose -certs dist-android/DualCrypt.Enterprise_0.5.0.aab
+          jarsigner -verify -verbose -certs "dist-android/DualCrypt.Enterprise_${VERSION}.aab"
 
       - name: Upload Android Build Artifacts (Actions)
         uses: actions/upload-artifact@v4
