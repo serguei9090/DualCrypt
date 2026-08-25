@@ -54,32 +54,8 @@ export async function executeEncryption(
   onProgress: (payload: ProgressPayload) => void,
 ): Promise<EncryptResponse> {
   if (!isTauriEnvironment()) {
-    // Simulated progressive encryption in web mode
-    const total = 50 * 1024 * 1024;
-    for (let i = 1; i <= 20; i++) {
-      await new Promise((r) => setTimeout(r, 60));
-      const processed = (total / 20) * i;
-      onProgress({
-        job_id: "mock-job",
-        bytes_processed: processed,
-        total_bytes: total,
-        percentage: (i / 20) * 100,
-        throughput_bytes_per_sec: 42 * 1024 * 1024,
-        eta_seconds: Math.max(0, 20 - i) * 0.06,
-        phase: i === 20 ? "Finalizing Container" : "Streaming AEAD Cipher",
-      });
-    }
-    return {
-      job_id: "mock-job",
-      bytes_encrypted: total,
-      exported_shares: request.custodians
-        .filter((c) => c.auth_type !== "passphrase")
-        .map((c) => ({
-          custodian_id: c.custodian_id,
-          label: c.label,
-          share: { id: c.custodian_id, data: Array(32).fill(0xaa) },
-        })),
-    };
+    const { executeWebEncryption } = await import("./webCrypto");
+    return await executeWebEncryption(request, onProgress);
   }
 
   const channel = new Channel<ProgressPayload>();
@@ -96,24 +72,8 @@ export async function executeDecryption(
   onProgress: (payload: ProgressPayload) => void,
 ): Promise<DecryptResponse> {
   if (!isTauriEnvironment()) {
-    const total = 50 * 1024 * 1024;
-    for (let i = 1; i <= 20; i++) {
-      await new Promise((r) => setTimeout(r, 60));
-      const processed = (total / 20) * i;
-      onProgress({
-        job_id: "mock-job-dec",
-        bytes_processed: processed,
-        total_bytes: total,
-        percentage: (i / 20) * 100,
-        throughput_bytes_per_sec: 55 * 1024 * 1024,
-        eta_seconds: Math.max(0, 20 - i) * 0.06,
-        phase: i === 20 ? "Verified Authentication Tag" : "Streaming Decryption",
-      });
-    }
-    return {
-      job_id: "mock-job-dec",
-      bytes_decrypted: total,
-    };
+    const { executeWebDecryption } = await import("./webCrypto");
+    return await executeWebDecryption(request, onProgress);
   }
 
   const channel = new Channel<ProgressPayload>();

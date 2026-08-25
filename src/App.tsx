@@ -85,12 +85,20 @@ export const App: React.FC = () => {
   // Inspected Header State (Decrypt mode)
   const [containerMetadata, setContainerMetadata] = useState<ContainerHeaderInfo | null>(null);
 
+  // Raw file object for browser web mode
+  const [rawFile, setRawFile] = useState<File | null>(null);
+
   // Completed State
   const [completionData, setCompletionData] = useState<{
     title: string;
     message: string;
     bytes: number;
     shares?: ExportedShare[];
+    containerFilename?: string;
+    containerBytes?: Uint8Array;
+    isDecryption?: boolean;
+    decryptedBytes?: Uint8Array;
+    decryptedFilename?: string;
   } | null>(null);
 
   // Quorum State
@@ -100,20 +108,22 @@ export const App: React.FC = () => {
   const job = useCryptoJob();
 
   // Handle File Selection in Encrypt Mode
-  const handleEncryptFileSelected = (path: string, name: string, size?: number) => {
+  const handleEncryptFileSelected = (path: string, name: string, size?: number, fileObj?: File) => {
     setFilePath(path);
     setFileName(name);
     setFileSize(size || null);
+    setRawFile(fileObj || null);
     setCompletionData(null);
     job.setError(null);
   };
 
   // Handle File Selection in Decrypt Mode
   const handleDecryptFileSelected = useCallback(
-    async (path: string, name: string, size?: number) => {
+    async (path: string, name: string, size?: number, fileObj?: File) => {
       setFilePath(path);
       setFileName(name);
       setFileSize(size || null);
+      setRawFile(fileObj || null);
       setCompletionData(null);
       job.setError(null);
 
@@ -176,6 +186,11 @@ export const App: React.FC = () => {
       }
       const hasTimelocks = Object.keys(timelocksMap).length > 0;
 
+      let fileBytes: Uint8Array | undefined;
+      if (!isTauriEnvironment() && rawFile) {
+        fileBytes = new Uint8Array(await rawFile.arrayBuffer());
+      }
+
       const res = await executeEncryption(
         {
           input_path: filePath,
@@ -207,16 +222,40 @@ export const App: React.FC = () => {
                   custodian_timelocks: hasTimelocks ? timelocksMap : undefined,
                 }
               : undefined,
+          file_bytes: fileBytes,
         },
         job.updateProgress,
       );
 
       job.finishJob();
+
+      const containerName = `${fileName}.denc`;
+
+      // In browser mode, auto-download .denc container
+      if (!isTauriEnvironment() && res.encrypted_bytes) {
+        const blob = new Blob([res.encrypted_bytes as unknown as BlobPart], {
+          type: "application/octet-stream",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = containerName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      }
+
       setCompletionData({
         title: "Encryption & Quorum Split Completed",
-        message: `Successfully encrypted to ${outputPath.split(/[\\/]/).pop()}`,
+        message: isTauriEnvironment()
+          ? `Successfully encrypted to ${outputPath.split(/[\\/]/).pop()}`
+          : `Successfully encrypted and downloaded ${containerName}`,
         bytes: res.bytes_encrypted,
         shares: res.exported_shares,
+        containerFilename: containerName,
+        containerBytes: res.encrypted_bytes,
+        isDecryption: false,
       });
 
       logAuditEvent({
@@ -255,6 +294,12 @@ export const App: React.FC = () => {
 
     try {
       job.startJob("decrypt-job");
+
+      let fileBytes: Uint8Array | undefined;
+      if (!isTauriEnvironment() && rawFile) {
+        fileBytes = new Uint8Array(await rawFile.arrayBuffer());
+      }
+
       const res = await executeDecryption(
         {
           input_path: filePath,
@@ -265,15 +310,39 @@ export const App: React.FC = () => {
             share_data_json: c.shareDataJson,
             pqc_private_key_base64: c.pqcPrivateKeyBase64,
           })),
+          file_bytes: fileBytes,
         },
         job.updateProgress,
       );
 
       job.finishJob();
+
+      const restoredName = fileName.replace(/\.denc$/i, "");
+
+      // In browser mode, auto-download restored file
+      if (!isTauriEnvironment() && res.decrypted_bytes) {
+        const blob = new Blob([res.decrypted_bytes as unknown as BlobPart], {
+          type: "application/octet-stream",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = restoredName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      }
+
       setCompletionData({
         title: "Quorum Attained & Decryption Succeeded",
-        message: `Plaintext file restored safely to ${outputPath.split(/[\\/]/).pop()}`,
+        message: isTauriEnvironment()
+          ? `Plaintext file restored safely to ${outputPath.split(/[\\/]/).pop()}`
+          : `Plaintext file restored and downloaded as ${restoredName}`,
         bytes: res.bytes_decrypted,
+        isDecryption: true,
+        decryptedBytes: res.decrypted_bytes,
+        decryptedFilename: restoredName,
       });
 
       logAuditEvent({
@@ -354,6 +423,11 @@ export const App: React.FC = () => {
               message={completionData.message}
               bytesProcessed={completionData.bytes}
               exportedShares={completionData.shares}
+              containerFilename={completionData.containerFilename}
+              containerBytes={completionData.containerBytes}
+              isDecryption={completionData.isDecryption}
+              decryptedBytes={completionData.decryptedBytes}
+              decryptedFilename={completionData.decryptedFilename}
               onDone={handleReset}
               onEnrollPhone={(share) => setEnrollmentQrShare(share)}
             />

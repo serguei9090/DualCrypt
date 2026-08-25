@@ -34,6 +34,11 @@ interface CompleteDialogProps {
   message: string;
   bytesProcessed: number;
   exportedShares?: ExportedShare[];
+  containerFilename?: string;
+  containerBytes?: Uint8Array;
+  isDecryption?: boolean;
+  decryptedBytes?: Uint8Array;
+  decryptedFilename?: string;
   onDone: () => void;
   onEnrollPhone?: (share: ExportedShare) => void;
 }
@@ -43,6 +48,11 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
   message,
   bytesProcessed,
   exportedShares = [],
+  containerFilename,
+  containerBytes,
+  isDecryption = false,
+  decryptedBytes,
+  decryptedFilename,
   onDone,
   onEnrollPhone,
 }) => {
@@ -50,6 +60,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
   const [zipSavedPath, setZipSavedPath] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [containerDownloaded, setContainerDownloaded] = useState(false);
 
   // PIN protection per share
   const [sharePins, setSharePins] = useState<Record<number, string>>({});
@@ -61,6 +72,40 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
   const [smtpConfig, setSmtpConfig] = useState<SmtpConfig | null>(null);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailSuccessMsg, setEmailSuccessMsg] = useState<string | null>(null);
+
+  const handleDownloadContainer = () => {
+    if (!containerBytes) return;
+    const blob = new Blob([containerBytes as unknown as BlobPart], {
+      type: "application/octet-stream",
+    });
+    const fname = containerFilename || "encrypted_file.denc";
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fname;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setContainerDownloaded(true);
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  };
+
+  const handleDownloadDecrypted = () => {
+    if (!decryptedBytes) return;
+    const blob = new Blob([decryptedBytes as unknown as BlobPart], {
+      type: "application/octet-stream",
+    });
+    const fname = decryptedFilename || "restored_file.bin";
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fname;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setContainerDownloaded(true);
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  };
 
   useEffect(() => {
     loadSmtpConfig().then((cfg) => {
@@ -314,6 +359,77 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
       {saveError && (
         <div className="rounded-xl border border-rose-500/30 bg-rose-950/40 p-3 text-xs text-rose-300 font-mono">
           {saveError}
+        </div>
+      )}
+
+      {/* Primary Encrypted Container / Decrypted File Action Card */}
+      {!isDecryption && (
+        <div className="rounded-xl border border-cyan-500/50 bg-gradient-to-r from-cyan-950/60 to-slate-900/80 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-[0_0_25px_rgba(6,182,212,0.15)]">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 shrink-0">
+              <Download className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-slate-100 font-mono flex items-center gap-2">
+                <span>{containerFilename || "encrypted_payload.denc"}</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 border border-cyan-500/40 text-cyan-300">
+                  .DENC CONTAINER
+                </span>
+              </div>
+              <p className="text-[11px] text-cyan-200/80 mt-0.5">
+                {isTauriEnvironment()
+                  ? "Encrypted container file written to disk."
+                  : containerDownloaded
+                    ? "✓ Encrypted container downloaded to your browser."
+                    : "Encrypted container generated and ready for download."}
+              </p>
+            </div>
+          </div>
+          {(!isTauriEnvironment() || containerBytes) && (
+            <button
+              type="button"
+              onClick={handleDownloadContainer}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white font-bold text-xs px-4 py-2.5 shadow-lg shadow-cyan-900/40 transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none shrink-0"
+            >
+              <Download className="h-4 w-4" />
+              <span>Download Encrypted .denc File</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {isDecryption && (
+        <div className="rounded-xl border border-emerald-500/50 bg-gradient-to-r from-emerald-950/60 to-slate-900/80 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-[0_0_25px_rgba(16,185,129,0.15)]">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0">
+              <Download className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-slate-100 font-mono flex items-center gap-2">
+                <span>{decryptedFilename || "restored_file"}</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-500/40 text-emerald-300">
+                  AUTHENTICATED PLAINTEXT
+                </span>
+              </div>
+              <p className="text-[11px] text-emerald-200/80 mt-0.5">
+                {isTauriEnvironment()
+                  ? "Restored plaintext file written to disk."
+                  : containerDownloaded
+                    ? "✓ Restored plaintext downloaded to your browser."
+                    : "Plaintext payload restored and ready for download."}
+              </p>
+            </div>
+          </div>
+          {(!isTauriEnvironment() || decryptedBytes) && (
+            <button
+              type="button"
+              onClick={handleDownloadDecrypted}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs px-4 py-2.5 shadow-lg shadow-emerald-900/40 transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none shrink-0"
+            >
+              <Download className="h-4 w-4" />
+              <span>Download Restored File</span>
+            </button>
+          )}
         </div>
       )}
 

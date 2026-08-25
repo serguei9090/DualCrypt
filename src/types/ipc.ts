@@ -28,6 +28,7 @@ export interface StartEncryptRequest {
   author_signing_key_base64?: string;
   author_label?: string;
   manifest?: import("./container").DencManifest;
+  file_bytes?: Uint8Array;
 }
 
 export interface EncryptResponse {
@@ -35,6 +36,7 @@ export interface EncryptResponse {
   bytes_encrypted: number;
   exported_shares: ExportedShare[];
   author_signature_block?: import("./container").DencSignatureBlock;
+  encrypted_bytes?: Uint8Array;
 }
 
 export interface DecryptCredentialRequest {
@@ -48,9 +50,11 @@ export interface StartDecryptRequest {
   input_path: string;
   output_path: string;
   credentials: DecryptCredentialRequest[];
+  file_bytes?: Uint8Array;
 }
 
 export interface DecryptResponse {
   job_id: string;
   bytes_decrypted: number;
+  decrypted_bytes?: Uint8Array;
 }

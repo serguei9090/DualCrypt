@@ -6,7 +6,7 @@ import { isTauriEnvironment } from "../../lib/tauri";
 import { cn, formatBytes } from "../../lib/utils";
 
 interface FileDropzoneProps {
-  onFileSelected: (path: string, name: string, size?: number) => void;
+  onFileSelected: (path: string, name: string, size?: number, rawFile?: File) => void;
   selectedFileName?: string | null;
   selectedFileSize?: number | null;
   acceptDencOnly?: boolean;
@@ -44,7 +44,7 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
       input.onchange = (e) => {
         const file = (e.target as HTMLInputElement).files?.[0];
         if (file) {
-          onFileSelected(`/mock/path/${file.name}`, file.name, file.size);
+          onFileSelected(file.name, file.name, file.size, file);
         }
       };
       input.click();
@@ -85,7 +85,7 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({
         setIsDragging(false);
         const file = e.dataTransfer.files[0];
         if (file) {
-          onFileSelected(`/mock/path/${file.name}`, file.name, file.size);
+          onFileSelected(file.name, file.name, file.size, file);
         }
       }}
       className={cn(
