@@ -110,6 +110,25 @@ function gf256Mul(a: number, b: number): number {
   return p;
 }
 
+function gf256Inv(a: number): number {
+  if (a === 0) throw new Error("Division by zero in GF(256)");
+  let res = 1;
+  let base = a;
+  let exp = 254;
+  while (exp > 0) {
+    if (exp % 2 === 1) res = gf256Mul(res, base);
+    base = gf256Mul(base, base);
+    exp = Math.floor(exp / 2);
+  }
+  return res;
+}
+
+function gf256Div(a: number, b: number): number {
+  if (b === 0) throw new Error("Division by zero in GF(256)");
+  if (a === 0) return 0;
+  return gf256Mul(a, gf256Inv(b));
+}
+
 function splitSecretJs(
   secret: Uint8Array,
   k: number,
@@ -141,6 +160,33 @@ function splitSecretJs(
   }
 
   return shares;
+}
+
+export function reconstructSecretJs(shares: Array<{ id: number; data: number[] }>): Uint8Array {
+  if (shares.length === 0) throw new Error("No shares provided for reconstruction");
+  const secretLen = shares[0].data.length;
+  const secret = new Uint8Array(secretLen);
+
+  for (let b = 0; b < secretLen; b++) {
+    let secretByte = 0;
+    for (let i = 0; i < shares.length; i++) {
+      const xi = shares[i].id;
+      const yi = shares[i].data[b];
+
+      let li = 1;
+      for (let j = 0; j < shares.length; j++) {
+        if (i === j) continue;
+        const xj = shares[j].id;
+        const num = xj;
+        const den = xi ^ xj;
+        const term = gf256Div(num, den);
+        li = gf256Mul(li, term);
+      }
+      secretByte ^= gf256Mul(yi, li);
+    }
+    secret[b] = secretByte;
+  }
+  return secret;
 }
 
 /// Fallback / WebAssembly Browser Encryption
@@ -242,11 +288,12 @@ export async function executeWebEncryption(
 
     if (isPqc) {
       const pubKey = btoa(`PQC_KEM_PUBLIC_KEY_CUSTODIAN_${cust.custodian_id}`);
-      const privKey = btoa(`PQC_KEM_PRIVATE_KEY_CUSTODIAN_${cust.custodian_id}`);
+      const privKey = btoa(JSON.stringify(share));
       exportedShares.push({
         custodian_id: cust.custodian_id,
         label: cust.label,
         auth_type: "pqc",
+        share,
         pqc_public_key_base64: pubKey,
         pqc_private_key_base64: privKey,
       });
@@ -350,29 +397,7 @@ export async function executeWebDecryption(
 ): Promise<import("../types/ipc").DecryptResponse> {
   const dencBytes = request.file_bytes;
   if (!dencBytes || dencBytes.length < 12) {
-    // If no binary provided, return simulated progress
-    const total = 50 * 1024 * 1024;
-    for (let i = 1; i <= 20; i++) {
-      await new Promise((r) => setTimeout(r, 40));
-      const processed = (total / 20) * i;
-      onProgress({
-        job_id: "mock-job-dec",
-        bytes_processed: processed,
-        total_bytes: total,
-        percentage: (i / 20) * 100,
-        throughput_bytes_per_sec: 55 * 1024 * 1024,
-        eta_seconds: Math.max(0, 20 - i) * 0.04,
-        phase: i === 20 ? "Verified Authentication Tag" : "Streaming Decryption",
-      });
-    }
-    const samplePlaintext = new TextEncoder().encode(
-      "Restored Decrypted Plaintext Payload (Web Mode)",
-    );
-    return {
-      job_id: "web-dec-job",
-      bytes_decrypted: samplePlaintext.length,
-      decrypted_bytes: samplePlaintext,
-    };
+    throw new Error("No binary .denc file payload provided for decryption.");
   }
 
   const wasm = await getWasmModule();
@@ -420,48 +445,139 @@ export async function executeWebDecryption(
     }
   }
 
-  // Fallback parser for web-encrypted container
+  // Fallback real AES-GCM decryption with reconstructed DEK
   try {
     const view = new DataView(dencBytes.buffer, dencBytes.byteOffset, dencBytes.byteLength);
     const magic = new TextDecoder().decode(dencBytes.subarray(0, 4));
-    if (magic === "DENC") {
+    if (magic !== "DENC") {
+      throw new Error(`Invalid magic: "${magic}", expected "DENC"`);
+    }
+
+    let baseNonce: Uint8Array;
+    let ciphertext: Uint8Array;
+
+    // 1. JSON Envelope format
+    if (dencBytes.length >= 9 && dencBytes[8] === 123 /* '{' */) {
       const headerLen = view.getUint32(4, true);
       const headerBytes = dencBytes.subarray(8, 8 + headerLen);
-      JSON.parse(new TextDecoder().decode(headerBytes));
+      const headerJson = JSON.parse(new TextDecoder().decode(headerBytes));
+      baseNonce = new Uint8Array(headerJson.base_nonce || Array(12).fill(0));
       const offset = 8 + headerLen;
       const payloadLen = view.getUint32(offset, true);
-      const ciphertext = dencBytes.subarray(offset + 4, offset + 4 + payloadLen);
-
-      // In web simulation, decrypt using base nonce and mock key if available
-      onProgress({
-        job_id: "web-dec-job",
-        bytes_processed: payloadLen,
-        total_bytes: payloadLen,
-        percentage: 100,
-        throughput_bytes_per_sec: 50 * 1024 * 1024,
-        eta_seconds: 0,
-        phase: "Payload Decrypted",
-      });
-
-      return {
-        job_id: "web-dec-job",
-        bytes_decrypted: ciphertext.length > 16 ? ciphertext.length - 16 : ciphertext.length,
-        decrypted_bytes: ciphertext.subarray(
-          0,
-          ciphertext.length > 16 ? ciphertext.length - 16 : ciphertext.length,
-        ),
-      };
+      ciphertext = dencBytes.subarray(offset + 4, offset + 4 + payloadLen);
+    } else {
+      // 2. Standard Native Binary Format
+      let pos = 4;
+      const version = view.getUint16(pos, true);
+      pos += 2;
+      pos += 1; // cipher_suite
+      pos += 1; // kdf_id
+      pos += 1; // threshold_k
+      pos += 1; // total_n
+      pos += 4; // chunk_size
+      pos += 32; // master_salt
+      baseNonce = dencBytes.subarray(pos, pos + 24);
+      pos += 24;
+      const custodianCount = view.getUint16(pos, true);
+      pos += 2;
+      for (let i = 0; i < custodianCount; i++) {
+        pos += 2; // id + type
+        const labelLen = view.getUint16(pos, true);
+        pos += 2 + labelLen + 32; // label + salt
+        const shareLen = view.getUint16(pos, true);
+        pos += 2 + shareLen;
+      }
+      if (version >= 2) {
+        const hasSig = view.getUint8(pos);
+        pos += 1;
+        if (hasSig === 1) {
+          const sigLen = view.getUint16(pos, true);
+          pos += 2 + sigLen;
+        }
+        const hasMan = view.getUint8(pos);
+        pos += 1;
+        if (hasMan === 1) {
+          const manLen = view.getUint16(pos, true);
+          pos += 2 + manLen;
+        }
+      }
+      const chunkLen = view.getUint32(pos, true);
+      pos += 4;
+      ciphertext = dencBytes.subarray(pos, pos + chunkLen);
     }
-  } catch (e) {
-    console.warn("Fallback container parse error:", e);
-  }
 
-  const fallbackPlaintext = new TextEncoder().encode("Restored Decrypted Plaintext Payload");
-  return {
-    job_id: "web-dec-job",
-    bytes_decrypted: fallbackPlaintext.length,
-    decrypted_bytes: fallbackPlaintext,
-  };
+    // Collect Shamir Secret Shares from submitted credentials
+    const collectedShares: Array<{ id: number; data: number[] }> = [];
+    for (const cred of request.credentials) {
+      if (cred.share_data_json) {
+        try {
+          const s = JSON.parse(cred.share_data_json);
+          if (typeof s.id === "number" && Array.isArray(s.data)) {
+            collectedShares.push(s);
+            continue;
+          }
+        } catch {}
+      }
+      if (cred.pqc_private_key_base64) {
+        try {
+          const decoded = atob(cred.pqc_private_key_base64);
+          const parsed = JSON.parse(decoded);
+          if (typeof parsed.id === "number" && Array.isArray(parsed.data)) {
+            collectedShares.push(parsed);
+            continue;
+          }
+          if (
+            parsed.share &&
+            typeof parsed.share.id === "number" &&
+            Array.isArray(parsed.share.data)
+          ) {
+            collectedShares.push(parsed.share);
+          }
+        } catch {}
+      }
+    }
+
+    if (collectedShares.length === 0) {
+      throw new Error("No valid custodian key shares were submitted for reconstruction.");
+    }
+
+    const dek = reconstructSecretJs(collectedShares);
+    const cryptoKey = await crypto.subtle.importKey(
+      "raw",
+      dek as unknown as BufferSource,
+      { name: "AES-GCM" },
+      false,
+      ["decrypt"],
+    );
+
+    const iv = baseNonce.subarray(0, 12);
+    const decryptedBuffer = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: iv as unknown as BufferSource },
+      cryptoKey,
+      ciphertext as unknown as BufferSource,
+    );
+
+    const decBytes = new Uint8Array(decryptedBuffer);
+
+    onProgress({
+      job_id: "web-dec-job",
+      bytes_processed: decBytes.length,
+      total_bytes: decBytes.length,
+      percentage: 100,
+      throughput_bytes_per_sec: 50 * 1024 * 1024,
+      eta_seconds: 0,
+      phase: "Decryption Complete & Tag Verified",
+    });
+
+    return {
+      job_id: "web-dec-job",
+      bytes_decrypted: decBytes.length,
+      decrypted_bytes: decBytes,
+    };
+  } catch (e) {
+    console.error("WebCrypto real decryption failed:", e);
+    throw new Error(`AEAD Decryption Failed: ${String(e)}`);
+  }
 }
 
 /// Inspect real .denc container header in browser mode
