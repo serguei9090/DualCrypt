@@ -424,7 +424,10 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                   <p className="text-[11px] text-emerald-200/80 mt-0.5">
                     {isTauriEnvironment()
                       ? isFolderArchive
-                        ? "Restored folder hierarchy and all nested files written to disk."
+                        ? message.replace(
+                            /^Directory hierarchy and nested files restored safely to /i,
+                            "Extracted to: ",
+                          )
                         : "Restored plaintext file written to disk."
                       : containerDownloaded
                         ? isFolderArchive
@@ -436,7 +439,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                   </p>
                 </div>
               </div>
-              {(!isTauriEnvironment() || decryptedBytes) && (
+              {!isTauriEnvironment() && (
                 <button
                   type="button"
                   onClick={handleDownloadDecrypted}
@@ -445,7 +448,7 @@ export const CompleteDialog: React.FC<CompleteDialogProps> = ({
                   <Download className="h-4 w-4" />
                   <span>
                     {isFolderArchive
-                      ? "Download Restored Directory Archive"
+                      ? "Download Restored Directory Archive (.tar)"
                       : "Download Restored File"}
                   </span>
                 </button>

@@ -285,19 +285,28 @@ export const App: React.FC = () => {
     if (!filePath || !fileName) return;
 
     const isDirectoryPayload = !!containerMetadata?.manifest?.is_directory;
+    const baseFolderName =
+      containerMetadata?.manifest?.original_filename || fileName.replace(/\.denc$/i, "");
+
     let outputPath = filePath.replace(/\.denc$/i, ".decrypted");
     if (outputPath === filePath) outputPath = `${filePath}.out`;
 
     if (isTauriEnvironment()) {
       if (isDirectoryPayload) {
-        const defaultName = fileName.replace(/\.denc$/i, "");
         const selected = await open({
           directory: true,
           multiple: false,
-          title: `Select Destination Folder to Restore ${defaultName}`,
+          title: `Select Destination Folder to Extract ${baseFolderName}`,
         });
         if (!selected || typeof selected !== "string") return;
-        outputPath = selected;
+
+        const lastComponent = selected.split(/[\\/]/).pop() || "";
+        if (lastComponent.toLowerCase() !== baseFolderName.toLowerCase()) {
+          const sep = selected.includes("/") ? "/" : "\\";
+          outputPath = `${selected}${sep}${baseFolderName}`;
+        } else {
+          outputPath = selected;
+        }
       } else {
         const defaultName = fileName.replace(/\.denc$/i, "");
         const selected = await save({
@@ -337,8 +346,12 @@ export const App: React.FC = () => {
       const isDirectoryDecrypted =
         isDirectoryPayload || (res.decrypted_bytes ? isTarArchiveWeb(res.decrypted_bytes) : false);
 
-      let restoredName = fileName.replace(/\.denc$/i, "");
-      if (isDirectoryDecrypted && !restoredName.toLowerCase().endsWith(".tar")) {
+      let restoredName = baseFolderName;
+      if (
+        !isTauriEnvironment() &&
+        isDirectoryDecrypted &&
+        !restoredName.toLowerCase().endsWith(".tar")
+      ) {
         restoredName = `${restoredName}.tar`;
       }
 
